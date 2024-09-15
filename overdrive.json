@@ -1,0 +1,18 @@
+{
+  "name": "overdrive",
+  "description": "a simple overdrive effect",
+  "audio": "audio/overdrive.sc",
+  "visual": "visual/waveform.js",
+  "params": [
+    {
+      "name": "drive",
+      "value": 50,
+      "range": [10, 100]
+    },
+    {
+      "name": "tone",
+      "value": 0.5,
+      "range": [0, 1]
+    }
+  ]
+}

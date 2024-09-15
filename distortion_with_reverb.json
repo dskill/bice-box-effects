@@ -1,0 +1,36 @@
+{
+  "name": "distortion_with_reverb",
+  "scFilePath": "distortion_with_reverb.sc",
+  "params": [
+    {
+      "name": "drive",
+      "value": 50,
+      "range": [10, 100]
+    },
+    {
+      "name": "tone",
+      "value": 0.5,
+      "range": [0, 1]
+    },
+    {
+      "name": "decay",
+      "value": 1,
+      "range": [0, 1]
+    },
+    {
+      "name": "roomSize",
+      "value": 0.7,
+      "range": [0, 1]
+    },
+    {
+      "name": "wetLevelDist",
+      "value": 1,
+      "range": [0, 1]
+    },
+    {
+      "name": "wetLevelRev",
+      "value": 0.5,
+      "range": [0, 1]
+    }
+  ]
+}

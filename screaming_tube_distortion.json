@@ -1,0 +1,33 @@
+{
+  "name": "screaming_tube_distortion",
+  "description": "a high-gain tube distortion effect with additional tone shaping",
+  "audio": "audio/screaming_tube_distortion.sc",
+  "visual": "visual/waveform.js",
+  "params": [
+    {
+      "name": "drive",
+      "value": 50,
+      "range": [10, 100]
+    },
+    {
+      "name": "tone",
+      "value": 0.5,
+      "range": [0, 1]
+    },
+    {
+      "name": "midBoost",
+      "value": 0.7,
+      "range": [0, 1]
+    },
+    {
+      "name": "presence",
+      "value": 0.5,
+      "range": [0, 1]
+    },
+    {
+      "name": "reverbAmount",
+      "value": 0.2,
+      "range": [0, 1]
+    }
+  ]
+}
