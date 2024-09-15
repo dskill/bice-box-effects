@@ -1,0 +1,7 @@
+# Ignore macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Ignore .DS_Store files in all directories
+**/.DS_Store
