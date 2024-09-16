@@ -1,6 +1,8 @@
 {
   "name": "distortion_with_reverb",
-  "scFilePath": "distortion_with_reverb.sc",
+  "description": "a distortion effect with reverb",
+  "audio": "audio/distortion_with_reverb.sc",
+  "visual": "visual/waveform.js",
   "params": [
     {
       "name": "drive",

@@ -1,6 +1,8 @@
 {
   "name": "Bypass",
-  "scFilePath": "bypass.sc",
+  "description": "a passthrough bypass",
+  "audio": "audio/bypass.sc",
+  "visual": "visual/waveform.js",
   "params": [
   ]
 }
