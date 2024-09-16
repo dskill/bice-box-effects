@@ -2,7 +2,7 @@ const sketch = function(p) {
     p.waveform0 = [];
     p.waveform1 = [];
     let particles = [];
-    const numParticles = 100;
+    const numParticles = 10;
     const maxSpeed = 2;
     const trailLength = 20;
 
