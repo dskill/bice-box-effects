@@ -7,6 +7,7 @@ s.boot;
 (
 s.waitForBoot{
     var o, chunkSize, chunkDownsample, numChunks, relay_buffer0, relay_buffer1;
+    var rms_bus_input, rms_bus_output;
 
     "Server booted, initializing...".postln;
 
@@ -31,8 +32,12 @@ s.waitForBoot{
     relay_buffer1 = Buffer.alloc(s, chunkSize * numChunks);
     "New relay buffers allocated".postln;
 
+    rms_bus_input = Bus.control(s, 1);
+    rms_bus_output = Bus.control(s, 1);
+    "RMS control buses created".postln;
+
     SynthDef(\ping_pong_delay, {
-        |out = 0, delayTime = 0.4, feedback = 0.5, wetLevel = 0.5, gain = 1|
+        |out = 0, delayTime = 0.4, feedback = 0.5, wetLevel = 0.5, gain = 1, rms_out_input, rms_out_output|
         var sig, leftDelay, rightDelay, delaySig, dry, fbNode, finalSig;
         var phase, trig, partition;
 
@@ -45,6 +50,10 @@ s.waitForBoot{
         dry = sig;
         delaySig = delaySig * gain;  // Apply gain to the delay signal
         finalSig = dry.blend(dry + delaySig, wetLevel);  // Lerp between dry and dry+delay
+
+        // Calculate RMS values
+        Out.kr(rms_out_input, RunningSum.kr(sig[0].squared, 1024).sqrt / 32);
+        Out.kr(rms_out_output, RunningSum.kr(finalSig[0].squared, 1024).sqrt / 32);
 
         // MACHINERY FOR SAMPLING THE SIGNAL
         phase = Phasor.ar(0, 1, 0, chunkSize);
@@ -78,6 +87,9 @@ s.waitForBoot{
             data = data.resamp1(data.size/chunkDownsample);
             o.sendMsg(\waveform1, *(data.as(Array)));
         });
+
+        // Send RMS values
+        o.sendMsg(\audio_analysis, rms_bus_input.getSynchronous, rms_bus_output.getSynchronous);
     }, '/buffer_refresh');
     "New OSCdef created".postln;
 
@@ -91,7 +103,10 @@ s.waitForBoot{
     });
 
     // Create the Synth after synchronization
-    ~ping_pong_delay = Synth(\ping_pong_delay);
+    ~ping_pong_delay = Synth(\ping_pong_delay, [
+        rms_out_input: rms_bus_input,
+        rms_out_output: rms_bus_output
+    ]);
     "New ping_pong_delay synth created".postln;
 
     "Initialization complete".postln;

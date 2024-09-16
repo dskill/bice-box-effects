@@ -3,6 +3,9 @@ const sketch = function(p) {
     p.waveform1 = []; // Initialize waveform data for channel 1
     let decayingWaveform = []; // Local array for decaying waveform
     const decayFactor = 0.95; // Decay factor for exponential decay
+    // Add RMS properties
+    p.rmsInput = 0;
+    p.rmsOutput = 0;
 
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
@@ -11,21 +14,21 @@ const sketch = function(p) {
     p.draw = () => {
         p.background(0,0,0,30);
 
-        // Draw waveform0 in white at the top
-        drawWaveform(p.waveform0, p.color(255, 100, 0), -p.height / 4);
+        // Draw waveform0 in white at the top with RMS
+        drawWaveform(p.waveform0, p.color(255, 100, 0), -p.height / 4, p.rmsInput);
 
-        // Draw waveform1 in blue in the middle
-        drawWaveform(p.waveform1, p.color(0, 100, 255), 0);
+        // Draw waveform1 in blue in the middle with RMS
+        drawWaveform(p.waveform1, p.color(0, 100, 255), 0, p.rmsOutput);
 
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();
-        drawWaveform(decayingWaveform, p.color(255, 0, 0), 0);
+        drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, p.rmsOutput);
     };
 
-    const drawWaveform = (waveform, color, yOffset) => {
+    const drawWaveform = (waveform, color, yOffset, rms) => {
         if (waveform && waveform.length > 0) {
             p.stroke(color);
-            p.strokeWeight(2);
+            p.strokeWeight(1.0 + Math.max(rms, 0.002) * 100.0); // Adjust stroke weight based on RMS
             p.noFill();
             p.beginShape();
 

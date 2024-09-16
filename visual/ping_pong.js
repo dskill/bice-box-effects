@@ -15,7 +15,7 @@ const sketch = function(p) {
     };
 
     p.draw = () => {
-        p.background(0,0,0,30);
+        p.background(0,0,0);
 
         // Draw connection lines
         p.stroke(255, 30);
@@ -35,9 +35,9 @@ const sketch = function(p) {
             particle.display();
         });
 
-        // Draw waveforms
-        drawWaveform(p.waveform0, p.color(255, 100, 0, 150), -p.height / 4);
-        drawWaveform(p.waveform1, p.color(0, 100, 255, 150), p.height / 4);
+        // Draw waveforms with RMS values
+        drawWaveform(p.waveform0, p.color(255, 100, 0, 150), -p.height / 4, p.rmsInput);
+        drawWaveform(p.waveform1, p.color(0, 100, 255, 150), p.height / 4, p.rmsOutput);
     };
 
     class Particle {
@@ -76,10 +76,10 @@ const sketch = function(p) {
         }
     }
 
-    const drawWaveform = (waveform, color, yOffset) => {
+    const drawWaveform = (waveform, color, yOffset, rms) => {
         if (waveform && waveform.length > 0) {
             p.stroke(color);
-            p.strokeWeight(2);
+            p.strokeWeight(1.0 + Math.max(rms, 0.002) * 100.0); // Ensure RMS is at least 0.05
             p.noFill();
             p.beginShape();
             for (let i = 0; i < waveform.length; i++) {

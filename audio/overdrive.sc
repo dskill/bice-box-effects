@@ -7,6 +7,7 @@ s.boot;
 (
 s.waitForBoot{
     var o, chunkSize, chunkDownsample, numChunks, relay_buffer0, relay_buffer1;
+    var rms_bus_input, rms_bus_output;
 
     "Server booted, initializing...".postln;
 
@@ -31,10 +32,14 @@ s.waitForBoot{
     relay_buffer1 = Buffer.alloc(s, chunkSize * numChunks);
     "New relay buffers allocated".postln;
 
+    rms_bus_input = Bus.control(s, 1);
+    rms_bus_output = Bus.control(s, 1);
+    "RMS control buses created".postln;
+
     SynthDef(\effect, {
         |out = 0, 
         // START USER EFFECT CODE
-        drive = 0.5, tone = 0.5|
+        drive = 0.5, tone = 0.5, rms_out_input, rms_out_output|
         var sig, distorted, phase, trig, partition;
 
         sig = SoundIn.ar([0]);
@@ -43,6 +48,10 @@ s.waitForBoot{
 
         // END USER EFFECT CODE
         
+        // Calculate RMS values
+        Out.kr(rms_out_input, RunningSum.kr(sig.squared, 1024).sqrt / 32);
+        Out.kr(rms_out_output, RunningSum.kr(distorted.squared, 1024).sqrt / 32);
+
         // MACHINERY FOR SAMPLING THE SIGNAL
         phase = Phasor.ar(0, 1, 0, chunkSize);
         trig = HPZ1.ar(phase) < 0;
@@ -78,6 +87,9 @@ s.waitForBoot{
             o.sendMsg(\waveform1, *(data.as(Array)));
             //"Waveform1 data sent".postln;
         });
+
+        // Send RMS values
+        o.sendMsg(\audio_analysis, rms_bus_input.getSynchronous, rms_bus_output.getSynchronous);
     }, '/buffer_refresh');
     "New OSCdef created".postln;
 
@@ -91,7 +103,10 @@ s.waitForBoot{
     });
 
     // Create the Synth after synchronization
-    ~effect = Synth(\effect);
+    ~effect = Synth(\effect, [
+        rms_out_input: rms_bus_input,
+        rms_out_output: rms_bus_output
+    ]);
     "New effect synth created".postln;
 
     "Initialization complete".postln;
