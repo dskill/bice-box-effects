@@ -32,8 +32,7 @@ var relay_buffer2 = Buffer.alloc(s, 4096 * 2);
         var lfo = SinOsc.kr(rate) * depth + (1 - depth);
         var freq = LFNoise1.kr(rate).exprange(randFreqMin, randFreqMax);
         var sig = SinOsc.ar(freq) * lfo;
-		var final_sig = SinOsc.ar(freq * 2) * lfo;
-
+        var final_sig = SinOsc.ar(freq * 1) * 0.2;
 
 	// MACHINERY FOR SAMPLING THE SIGNAL
 	var phase = Phasor.ar(0, 1, 0, chunkSize);
@@ -51,7 +50,7 @@ var relay_buffer2 = Buffer.alloc(s, 4096 * 2);
 	// or send data at a specified framerate. This is wrong if you're sending a real audio signal
 	//SendReply.ar(fixed_timing_reset_trig, '/buffer_refresh', partition);
 
-	Out.ar(out, sig);
+	Out.ar(out, final_sig);
 
 
     }).add;

@@ -2,7 +2,7 @@
   "name": "pulsing_sin_wave",
   "description": "a sinusoidal wave effect with adjustable pulsing",
   "audio": "audio/pulsing_sin_wave.sc",
-  "visual": "visual/pulsing_sin_wave.js",
+  "visual": "visual/waveform.js",
   "params": [
     {
       "name": "depth",
