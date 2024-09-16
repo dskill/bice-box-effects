@@ -46,7 +46,7 @@ const sketch = function(p) {
                 // If decayingWaveform[i] exists, decay it and take the max with the new value
                 // Otherwise, just use the new value
                 decayingWaveform[i] = decayingWaveform[i] 
-                    ? -1.0 * Math.max( Math.abs(decayingWaveform[i]) * decayFactor, Math.abs(p.waveform0[i]))
+                    ? -1.0 * Math.max( Math.abs(decayingWaveform[i]) * decayFactor, Math.abs(p.waveform1[i]))
                     : Math.abs(p.waveform1[i]);
             }
         }

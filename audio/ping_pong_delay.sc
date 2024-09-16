@@ -42,8 +42,9 @@ s.waitForBoot{
         rightDelay = DelayC.ar(sig[1] + fbNode[0], 2, delayTime);
         LocalOut.ar([leftDelay, rightDelay] * feedback);
         delaySig = [leftDelay, rightDelay];
-        dry = sig * (1 - wetLevel);
-        finalSig = (dry + (delaySig * wetLevel)) * gain;
+        dry = sig;
+        delaySig = delaySig * gain;  // Apply gain to the delay signal
+        finalSig = dry.blend(dry + delaySig, wetLevel);  // Lerp between dry and dry+delay
 
         // MACHINERY FOR SAMPLING THE SIGNAL
         phase = Phasor.ar(0, 1, 0, chunkSize);
