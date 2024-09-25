@@ -3,12 +3,16 @@ Server.default.waitForBoot {
     
     Server.freeAll;
 
+    ~buffer = Buffer.read(Server.default, "~/bice-box-effects/resources/guitar-riff.wav".standardizePath);
+
     SynthDef(\distortion_with_reverb, {
         |out = 0, drive = 0.5, tone = 0.5, decay = 1, roomSize = 0.7, wetLevelDist = 0.5, wetLevelRev = 0.5|
         var sig, distorted, verb, dryDist, dryRev;
         
-        sig = SoundIn.ar([0]);
-        
+        //sig = SoundIn.ar([0]);
+        sig = PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), loop: 1);
+
+
         // Distortion effect
         distorted = (sig * drive).tanh();
         distorted = LPF.ar(distorted, tone.linexp(0, 1, 100, 20000));

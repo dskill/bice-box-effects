@@ -1,5 +1,5 @@
 {
-  "name": "Bypass",
+  "name": "bypass",
   "description": "a passthrough bypass",
   "audio": "audio/bypass.sc",
   "visual": "visual/waveform.js",
