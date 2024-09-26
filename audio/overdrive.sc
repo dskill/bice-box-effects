@@ -27,6 +27,8 @@
     "Effect SynthDef added".postln;
 
     fork {
+        s.sync;
+
         // Free existing synth if it exists
         if(~effect.notNil, {
             "Freeing existing effect synth".postln;
@@ -34,7 +36,5 @@
         });
 
 	    ~effect = Synth(\overdrive, [\in_bus, ~input_bus], ~effectGroup);
-	    ["input bus:", ~input_bus].postln;
-        ["Buffer 0:", ~relay_buffer0, "Buffer 1:", ~relay_buffer1].postln;
     };
 )

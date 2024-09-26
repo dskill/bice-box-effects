@@ -27,9 +27,9 @@
     "Effect SynthDef added".postln;
 
     fork {
-        Server.default.sync;
+        s.sync;
 
-	// Free existing synth if it exists
+        // Free existing synth if it exists
         if(~effect.notNil, {
             "Freeing existing effect synth".postln;
             ~effect.free;
@@ -38,8 +38,5 @@
         // Create new bypass synth in the effect group
         ~effect = Synth(\bypass, [\in_bus, ~input_bus], ~effectGroup);
         "New effect synth created".postln;
-
-	    ["input bus:", ~input_bus].postln;
-        ["Buffer 0:", ~relay_buffer0, "Buffer 1:", ~relay_buffer1].postln;
     };
 )
