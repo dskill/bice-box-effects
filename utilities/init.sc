@@ -25,7 +25,15 @@ s.waitForBoot{
 	~relay_buffer1 = Buffer.alloc(s, ~chunkSize * ~numChunks);
 	"New relay buffers allocated".postln;
 
-    ~input_bus = Bus.audio(s, 2);  // Ensure this is defined early
+	~input_bus = Bus.audio(s, 2);  // Ensure this is defined early
+
+	// Create groups for effects and sources
+	s.sync;
+	~effectGroup = Group.new;
+	s.sync;
+	~sourceGroup = Group.new(~effectGroup, \addBefore);
+	"Effect and source groups created".postln;
+
 
 	// in case we want a bus with some looping guitar
 	~buffer = Buffer.read(Server.default, "~/bice-box-effects/resources/guitar_riff.wav".standardizePath, action: { |buf|
@@ -37,12 +45,15 @@ s.waitForBoot{
 			// Update SynthDef to handle stereo input
 			SynthDef(\playGuitarRiff, {
 				var sig = PlayBuf.ar(buf.numChannels, buf, BufRateScale.kr(buf), loop: 1);
-				//var sig = SinOsc.ar(440, 0, 0.5);  // 440 Hz sine wave at half amplitude
-                //sig = if(buf.numChannels == 2, sig, [sig, sig]); // Ensure stereo output
 				Out.ar(~input_bus, sig);
 			}).add;
 
 			s.sync;
+
+			// Create the guitar riff synth in the source group
+			~guitarRiffSynth = Synth(\playGuitarRiff, target: ~sourceGroup);
+			"Guitar riff synth created in source group".postln;
+
 			s.status;
 			"done with guitar riff".postln;
 		}.play;
@@ -53,34 +64,33 @@ s.waitForBoot{
 	"Existing OSCdef freed".postln;
 
 	OSCdef(\k, { |msg|
-    var partition = (msg[3] - 1) % ~numChunks;
+		var partition = (msg[3] - 1) % ~numChunks;
 
-    [~relay_buffer0, ~relay_buffer1].do { |buf, i|
-        if(buf.notNil, {
-            buf.getn(partition.asInteger * ~chunkSize, ~chunkSize, { |data|
-                data = data.resamp1(data.size/~chunkDownsample);
-                ~o.sendMsg(("waveform" ++ i).asSymbol, *(data.as(Array)));
-            });
-        }, {
-            "Warning: Relay buffer % is nil".format(i).postln;
-        });
-    };
+		[~relay_buffer0, ~relay_buffer1].do { |buf, i|
+			if(buf.notNil, {
+				buf.getn(partition.asInteger * ~chunkSize, ~chunkSize, { |data|
+					data = data.resamp1(data.size/~chunkDownsample);
+					~o.sendMsg(("waveform" ++ i).asSymbol, *(data.as(Array)));
+				});
+			}, {
+				"Warning: Relay buffer % is nil".format(i).postln;
+			});
+		};
 
-    // Send RMS values
-    ~o.sendMsg(\audio_analysis, ~rms_bus_input.getSynchronous, ~rms_bus_output.getSynchronous);
-}, '/buffer_refresh');
+		// Send RMS values
+		~o.sendMsg(\audio_analysis, ~rms_bus_input.getSynchronous, ~rms_bus_output.getSynchronous);
+	}, '/buffer_refresh');
 
 	"New OSCdef created".postln;
 
 	s.sync;
 	"Server synced".postln;
 
-	// Add this to verify buffer allocation and input bus
+	// Add this to verify buffer allocation, input bus, and groups
 	["Buffer 0:", ~relay_buffer0, "Buffer 1:", ~relay_buffer1, "Input Bus:", ~input_bus].postln;
 
 	"Server booted successfully.".postln;
 };
 )
-
 
 

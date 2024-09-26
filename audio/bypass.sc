@@ -5,9 +5,9 @@
 
         var sig, phase, trig, partition;
 
-        sig = In.ar(in_bus); 
+        sig = In.ar(in_bus);
         //sig = SoundIn.ar(0);
-        sig = sig + SinOsc.ar(220 * test, 0, 0.1);
+       // sig = sig + SinOsc.ar(220 * test, 0, 0.5);
         // END USER EFFECT CODE
 
         // MACHINERY FOR SAMPLING THE SIGNAL
@@ -27,29 +27,19 @@
     "Effect SynthDef added".postln;
 
     fork {
-        // Wait for the SynthDef to be added to the server
         Server.default.sync;
 
-        if(~guitarRiffSynth.notNil,{
-            "Freeing existing guitar riff synth".postln;
-            ~guitarRiffSynth.free;
-        });
-
-        ["input bus:", ~input_bus].postln;
-
-        // Free existing synth if it exists
-        if(~bypass.notNil, {
+	// Free existing synth if it exists
+        if(~effect.notNil, {
             "Freeing existing effect synth".postln;
-            ~bypass.free;
+            ~effect.free;
         });
 
-        // Create new synths
-        ~bypass = Synth(\bypass, [\in_bus, ~input_bus]);
-        Server.default.sync;
-        ~guitarRiffSynth = Synth.before(~bypass, \playGuitarRiff);
-        Server.default.sync;
+        // Create new bypass synth in the effect group
+        ~effect = Synth(\bypass, [\in_bus, ~input_bus], ~effectGroup);
         "New effect synth created".postln;
 
+	    ["input bus:", ~input_bus].postln;
         ["Buffer 0:", ~relay_buffer0, "Buffer 1:", ~relay_buffer1].postln;
     };
 )
