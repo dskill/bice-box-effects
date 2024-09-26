@@ -7,6 +7,8 @@ s.waitForBoot{
 	"Server booted, initializing...".postln;
 	Server.freeAll;
 
+	~useTestLoop = false;  
+
 	~o = NetAddr.new("127.0.0.1", 57121);
 	~chunkSize = 512;
 	~chunkDownsample = 1;
@@ -25,7 +27,8 @@ s.waitForBoot{
 	~relay_buffer1 = Buffer.alloc(s, ~chunkSize * ~numChunks);
 	"New relay buffers allocated".postln;
 
-	~input_bus = Bus.audio(s, 2);  // Ensure this is defined early
+	~audio_input_bus = Bus.audio(s, 2);  // Ensure this is defined early
+	~test_loop_bus = Bus.audio(s,2);
 
 	// Create groups for effects and sources
 	s.sync;
@@ -34,6 +37,13 @@ s.waitForBoot{
 	~sourceGroup = Group.new(~effectGroup, \addBefore);
 	"Effect and source groups created".postln;
 
+	SynthDef(\audioIn, {
+		var sig = SoundIn.ar([0]);  // Assuming stereo input
+		Out.ar(~audio_input_bus, sig);	
+	}).add;
+	s.sync;
+	
+	~audioInSynth = Synth(\audioIn, target: ~sourceGroup);
 
 	// in case we want a bus with some looping guitar
 	~buffer = Buffer.read(Server.default, "~/bice-box-effects/resources/guitar_riff.wav".standardizePath, action: { |buf|
@@ -45,7 +55,7 @@ s.waitForBoot{
 			// Update SynthDef to handle stereo input
 			SynthDef(\playGuitarRiff, {
 				var sig = PlayBuf.ar(buf.numChannels, buf, BufRateScale.kr(buf), loop: 1);
-				Out.ar(~input_bus, sig);
+				Out.ar(~test_loop_bus, sig);
 			}).add;
 
 			s.sync;
@@ -58,6 +68,13 @@ s.waitForBoot{
 			"done with guitar riff".postln;
 		}.play;
 	});
+
+
+	// select which bus the effects should use
+	~input_bus = if (~useTestLoop,
+		{ ~test_loop_bus },
+		{ ~audio_input_bus }
+	);
 
 	// Remove existing OSCdef if it exists
 	OSCdef(\k).free;
