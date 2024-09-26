@@ -1,18 +1,11 @@
-// Ensure the server is booted before proceeding
-Server.default.waitForBoot {
-    
-    Server.freeAll;
-
-    ~buffer = Buffer.read(Server.default, "~/bice-box-effects/resources/guitar-riff.wav".standardizePath);
-
+(
     SynthDef(\distortion_with_reverb, {
-        |out = 0, drive = 0.5, tone = 0.5, decay = 1, roomSize = 0.7, wetLevelDist = 0.5, wetLevelRev = 0.5|
-        var sig, distorted, verb, dryDist, dryRev;
+        |out = 0, in_bus = 0, drive = 0.5, tone = 0.5, decay = 1, roomSize = 0.7, wetLevelDist = 0.5, wetLevelRev = 0.5|
+        // START USER EFFECT CODE
+        var sig, distorted, verb, dryDist, dryRev, phase, trig, partition;
         
-        //sig = SoundIn.ar([0]);
-        sig = PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), loop: 1);
-
-
+        sig = In.ar(in_bus);
+        
         // Distortion effect
         distorted = (sig * drive).tanh();
         distorted = LPF.ar(distorted, tone.linexp(0, 1, 100, 20000));
@@ -24,10 +17,35 @@ Server.default.waitForBoot {
         dryRev = sig * (1 - wetLevelRev);
         sig = dryRev + (verb * wetLevelRev);
         
+        // END USER EFFECT CODE
+
+        // MACHINERY FOR SAMPLING THE SIGNAL
+        phase = Phasor.ar(0, 1, 0, ~chunkSize);
+        trig = HPZ1.ar(phase) < 0;
+        partition = PulseCount.ar(trig) % ~numChunks;
+
+        // write to buffers that will contain the waveform data we send via OSC
+        BufWr.ar(In.ar(in_bus), ~relay_buffer0.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(sig, ~relay_buffer1.bufnum, phase + (~chunkSize * partition));
+
+        // send data as soon as it's available
+        SendReply.ar(trig, '/buffer_refresh', partition);
+
         Out.ar(out, sig);
     }).add;
+    "Effect SynthDef added".postln;
 
-    Server.default.sync;
+    fork {
+        s.sync;
 
-    ~distortion_with_reverb = Synth("distortion_with_reverb");
-};
+        // Free existing synth if it exists
+        if(~effect.notNil, {
+            "Freeing existing effect synth".postln;
+            ~effect.free;
+        });
+
+        // Create new distortion_with_reverb synth in the effect group
+        ~effect = Synth(\distortion_with_reverb, [\in_bus, ~input_bus], ~effectGroup);
+        "New effect synth created".postln;
+    };
+)
