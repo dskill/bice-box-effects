@@ -1,15 +1,12 @@
 (
-    SynthDef(\pulsing_sin_wave, {
-        |out = 0, in_bus = 0, rate = 2, depth = 0.5, randFreqMin = 200, randFreqMax = 800|
+    SynthDef(\test_sin_wave, {
+        |out = 0, in_bus = 0, freq = 50|
         // START USER EFFECT CODE
-        var sig, lfo, freq, final_sig;
+        var sig, final_sig;
         var phase, trig, partition;
 
         sig = In.ar(in_bus);
-        
-        lfo = SinOsc.kr(rate) * depth + (1 - depth);
-        freq = LFNoise1.kr(rate).exprange(randFreqMin, randFreqMax);
-        final_sig = SinOsc.ar(freq) * lfo * 0.2;
+        final_sig = SinOsc.ar(freq) * 0.2;
         
         // END USER EFFECT CODE
 
@@ -38,8 +35,8 @@
             ~effect.free;
         });
 
-        // Create new pulsing_sin_wave synth in the effect group
-        ~effect = Synth(\pulsing_sin_wave, [\in_bus, ~input_bus], ~effectGroup);
+        // Create new test_sin_wave synth in the effect group
+        ~effect = Synth(\test_sin_wave, [\in_bus, ~input_bus], ~effectGroup);
         "New effect synth created".postln;
     };
 )
