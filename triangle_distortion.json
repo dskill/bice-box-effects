@@ -1,13 +1,13 @@
 {
-  "name": "screaming_tube_distortion",
-  "description": "a high-gain tube distortion effect with additional tone shaping",
-  "audio": "audio/screaming_tube_distortion.sc",
-  "visual": "visual/waveform.js",
+  "name": "triangle_distortion",
+  "description": "a triangle chaos",
+  "audio": "audio/triangle_distortion.sc",
+  "visual": "visual/triangle_distortion.js",
   "params": [
     {
       "name": "drive",
-      "value": 50,
-      "range": [1, 100]
+      "value": 2,
+      "range": [1, 10]
     },
     {
       "name": "tone",
