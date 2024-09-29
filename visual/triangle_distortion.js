@@ -13,10 +13,12 @@ const sketch = function(p) {
     };
 
     p.draw = () => {
-        p.background(0,0,0,100);
+        p.background(0,0,0,30);
+        p.push();
+        p.blendMode(p.ADD);
 
         // Draw waveform0 in white at the top with RMS
-        drawWaveform(p.waveform0, p.color(255, 100, 0), -p.height / 4, 1, p.rmsInput);
+        drawWaveform(p.waveform0, p.color(0, 255, 0), -p.height / 4, 1, p.rmsInput);
 
         // Draw waveform1 in blue in the middle with RMS
         drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
@@ -28,12 +30,20 @@ const sketch = function(p) {
 
         // Draw the wiggling triangle
         drawWigglingTriangle(p.waveform1, p.color(255, 255, 0, 150)); // Yellow with some transparency
+        p.pop();
     };
 
     const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
         if (waveform && waveform.length > 0) {
-            //color.setRed(rms * 1000);
-            p.stroke(color);
+            p.colorMode(p.HSB, 360, 100, 100, 1);
+            // Get the hue of the original color
+            let hue = p.hue(color) + rms * 1000 + p.frameCount;
+            // Ensure hue stays within 0-360 range using modulo
+            hue = hue % 360;
+            let scaledColor = p.color(hue, 100, rms * 100 + 30);
+            let finalColor = scaledColor;
+           // color.setRed(rms);
+            p.stroke(finalColor);
             //p.strokeWeight(1.0 + Math.max(rms, 0.002) * 10.0); // Adjust stroke weight based on RMS
             p.noFill();
             p.beginShape();

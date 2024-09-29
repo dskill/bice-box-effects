@@ -4,6 +4,7 @@
         // START USER EFFECT CODE
 
         var sig, phase, trig, partition;
+        var rms_input, rms_output;
 
         sig = In.ar(in_bus);
         //sig = SoundIn.ar(0);
@@ -19,7 +20,17 @@
         BufWr.ar(sig, ~relay_buffer0.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(sig, ~relay_buffer1.bufnum, phase + (~chunkSize * partition));
 
-        // send data as soon as it's available
+        rms_input = RunningSum.rms(sig, 1024);
+        rms_output = RunningSum.rms(sig, 1024);
+
+        // END USER EFFECT CODE
+
+        // MACHINERY FOR SAMPLING THE SIGNAL
+        // ... existing code ...
+
+        // Send RMS values to the control buses
+        Out.kr(~rms_bus_input, rms_input);
+        Out.kr(~rms_bus_output, rms_output);
         SendReply.ar(trig, '/buffer_refresh', partition);
 
 	Out.ar(out, sig);

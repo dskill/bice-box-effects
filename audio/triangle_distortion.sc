@@ -6,8 +6,12 @@
         var sig, distorted, midFreq, presenceEnhance, reverb;
         var phase, trig, partition;
         var feedback, bitCrushed, stereoSig, pitchShifted;
+        var rms_input, rms_output;
 
         sig = In.ar(in_bus);
+
+        // Calculate RMS of input signal
+        rms_input = RunningSum.rms(sig, 1024);
 
         // Feedback loop with limiter
         feedback = LocalIn.ar(1);
@@ -36,6 +40,9 @@
         //reverb = FreeVerb.ar(distorted, mix: reverbAmount, damp: 0.5);
         reverb = reverbAmount * FreeVerb.ar(distorted, mix: 1, room: 0.5, damp: 0.5);
 
+        // Calculate RMS of output signal
+        rms_output = RunningSum.rms(reverb, 1024);
+
         // Complete the feedback loop with limiter
         LocalOut.ar(HPF.ar(reverb, 200).clip2(0.5));
 
@@ -55,6 +62,10 @@
 
         // send data as soon as it's available
         SendReply.ar(trig, '/buffer_refresh', partition);
+
+        // Send RMS values to the control buses
+        Out.kr(~rms_bus_input, rms_input);
+        Out.kr(~rms_bus_output, rms_output);
 
         Out.ar(out, distorted);
     }).add;
