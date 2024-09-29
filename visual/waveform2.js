@@ -10,10 +10,12 @@ const sketch = function(p) {
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
         p.background(0);
+        p.colorMode(p.HSB, 360, 100, 100, 100);
+
     };
 
     p.draw = () => {
-        p.background(0,0,0,30);
+        p.background(0,0,0,10);
         p.push();
         p.blendMode(p.ADD);
 
@@ -21,24 +23,21 @@ const sketch = function(p) {
         drawRMSIndicators();
 
         // Draw waveform0 in white at the top with RMS
-        drawWaveform(p.waveform0, p.color(0, 255, 0), -p.height / 4, 1, p.rmsInput);
+        drawWaveform(p.waveform0, p.color(0, 0, 0), -p.height / 4, 1, p.rmsInput);
 
         // Draw waveform1 in blue in the middle with RMS
-        drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
+        drawWaveform(p.waveform1, p.color(100, 0, 0), p.height / 4, 1, p.rmsOutput);
 
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();
-        drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, 1, p.rmsOutput);
-        drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, -1, p.rmsOutput);
+        drawWaveform(decayingWaveform, p.color(0, 0, 0), p.height / 4, 1, p.rmsOutput);
+        drawWaveform(decayingWaveform, p.color(0, 0, 0), p.height / 4, -1, p.rmsOutput);
 
-        // Draw the wiggling triangle
-        drawWigglingTriangle(p.waveform1, p.color(255, 255, 0, 150)); // Yellow with some transparency
         p.pop();
     };
 
     const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
         if (waveform && waveform.length > 0) {
-            p.colorMode(p.HSB, 360, 100, 100, 1);
             // Get the hue of the original color
             let hue = p.hue(color) + rms * 1000 + p.frameCount;
             // Ensure hue stays within 0-360 range using modulo
@@ -74,44 +73,12 @@ const sketch = function(p) {
         }
     };
 
-    const drawWigglingTriangle = (waveform, color) => {
-        if (waveform && waveform.length > 0) {
-            p.fill(color);
-            p.noStroke();
-            p.beginShape();
-
-            // Top vertex of the triangle
-            let topX = p.width / 2;
-            let topY = p.height / 4;
-            p.vertex(topX, topY);
-
-            // Bottom-left vertex
-            let leftX = p.width / 4;
-            let leftY = p.height * 3 / 4;
-            p.vertex(leftX, leftY);
-
-            // Wiggle the bottom edge
-            for (let i = 0; i < waveform.length; i++) {
-                let x = p.map(i, 0, waveform.length, leftX, p.width * 3 / 4);
-                let y = leftY + waveform[i] * p.height / 16; // Adjust the wiggle amplitude
-                p.vertex(x, y);
-            }
-
-            // Bottom-right vertex
-            let rightX = p.width * 3 / 4;
-            let rightY = p.height * 3 / 4;
-            p.vertex(rightX, rightY);
-
-            p.endShape(p.CLOSE);
-        }
-    };
-
     const drawRMSIndicators = () => {
         const rectHeight = p.height * 0.5; // 5% of the canvas height
         const maxWidth = p.width;
 
         // Set fill color to 20% opaque gray
-        p.fill(128, 128, 128, 15); // 51 is 20% of 255
+        p.fill(100, 20, 10, 20); // 51 is 20% of 255
         p.noStroke();
 
         // Draw input RMS indicator

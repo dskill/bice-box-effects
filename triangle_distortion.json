@@ -2,7 +2,7 @@
   "name": "triangle_distortion",
   "description": "a triangle chaos",
   "audio": "audio/triangle_distortion.sc",
-  "visual": "visual/triangle_distortion.js",
+  "visual": "visual/waveform2.js",
   "params": [
     {
       "name": "drive",
