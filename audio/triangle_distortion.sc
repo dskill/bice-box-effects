@@ -1,7 +1,7 @@
 (
     SynthDef(\triangle_distortion, {
         |out = 0, in_bus = 0, drive = 10, tone = 0.5, midBoost = 0.7, presence = 0.5, reverbAmount = 0.2,
-        feedbackAmount = 1, bitCrushAmount = 0.2, stereoWidth = 0.5, pitchShiftRatio = 1.0|
+        feedbackAmount = 0.1, bitCrushAmount = 0.2, stereoWidth = 0.5, pitchShiftRatio = 1.0|
         // START USER EFFECT CODE
         var sig, distorted, midFreq, presenceEnhance, reverb;
         var phase, trig, partition;
@@ -9,14 +9,14 @@
         var rms_input, rms_output;
 
         sig = In.ar(in_bus);
-
+ 
         // Calculate RMS of input signal
         rms_input = RunningSum.rms(sig, 1024);
 
-        // Feedback loop with limiter
-        feedback = LocalIn.ar(1);
+        // Feedback loop with limiter 
+       // feedback = LocalIn.ar(1);
         //feedback = FreqShift.ar(feedback, -30); 
-        sig = (sig + (feedback * feedbackAmount)).tanh;
+       //sig = (sig + (feedback * feedbackAmount)).tanh;
 
         // Triangle wave shaping
         distorted = (sig * drive).fold2(1) * 0.5;
@@ -38,16 +38,16 @@
         //stereoSig = XFade2.ar(distorted, stereoSig, stereoWidth * 2 - 1);
 
         //reverb = FreeVerb.ar(distorted, mix: reverbAmount, damp: 0.5);
-        reverb = reverbAmount * FreeVerb.ar(distorted, mix: 1, room: 0.5, damp: 0.5);
+        //reverb = distorted;//reverbAmount * FreeVerb.ar(distorted, mix: 1, room: 0.5, damp: 0.5);
 
         // Calculate RMS of output signal
-        rms_output = RunningSum.rms(reverb, 1024);
+        rms_output = RunningSum.rms(distorted, 1024);
 
         // Complete the feedback loop with limiter
-        LocalOut.ar(HPF.ar(reverb, 200).clip2(0.5));
+        LocalOut.ar(HPF.ar(distorted, 200).clip2(0.5));
 
         // Final output limiter
-        reverb = Limiter.ar(reverb, 0.95, 0.01);
+        distorted = Limiter.ar(distorted, 0.95, 0.01);
 
         // END USER EFFECT CODE
 

@@ -15,6 +15,9 @@ const sketch = function(p) {
     p.draw = () => {
         p.background(0,0,0,100);
 
+        // Draw RMS indicator rectangles
+        drawRMSIndicators();
+
         // Draw waveform0 in white at the top with RMS
         drawWaveform(p.waveform0, p.color(255, 100, 0), -p.height / 4, 1, p.rmsInput);
 
@@ -57,6 +60,23 @@ const sketch = function(p) {
                     : Math.abs(p.waveform1[i]);
             }
         }
+    };
+
+    const drawRMSIndicators = () => {
+        const rectHeight = p.height * 0.5; // 5% of the canvas height
+        const maxWidth = p.width;
+
+        // Set fill color to 20% opaque gray
+        p.fill(128, 128, 128, 15); // 51 is 20% of 255
+        p.noStroke();
+
+        // Draw input RMS indicator
+        const inputRectWidth = p.map(p.rmsInput, 0, 1, 0, maxWidth);
+        p.rect(0, p.height - rectHeight * 2, inputRectWidth, rectHeight);
+
+        // Draw output RMS indicator
+        const outputRectWidth = p.map(p.rmsOutput, 0, 1, 0, maxWidth);
+        p.rect(0, p.height - rectHeight, outputRectWidth, rectHeight);
     };
 
     p.windowResized = () => {
