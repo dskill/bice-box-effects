@@ -2,7 +2,7 @@
   "name": "flanger",
   "description": "An improved flanger effect with adjustable parameters",
   "audio": "audio/flanger.sc",
-  "visual": "visual/waveform.js",
+  "visual": "visual/waveform2.js",
   "params": [
     {
       "name": "rate",
