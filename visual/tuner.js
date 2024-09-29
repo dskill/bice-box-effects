@@ -7,6 +7,17 @@ const sketch = function(p) {
     p.rmsInput = 0;
     p.rmsOutput = 0;
 
+    /*
+    p.tunerData = {
+        freq: 0,
+        hasFreq: false
+    };*/
+
+    // Add properties for tuner data
+   // p.tunerData.freq = 0.0;
+   // p.tunerData.hasFreq = false;
+    //.difference = 0;
+
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
         p.background(0);
@@ -29,6 +40,8 @@ const sketch = function(p) {
         drawWaveform(decayingWaveform, p.color(100, 100, 0), p.height / 4, 1, p.rmsOutput);
         drawWaveform(decayingWaveform, p.color(100, 100, 0), p.height / 4, -1, p.rmsOutput);
 
+        // Add debug text for tuner data
+        drawTunerDebugText();
     };
 
     const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
@@ -77,6 +90,38 @@ const sketch = function(p) {
         // Draw output RMS indicator
         const outputRectWidth = p.map(p.rmsOutput, 0, 1, 0, maxWidth);
         p.rect(0, p.height - rectHeight, outputRectWidth, rectHeight);
+    };
+
+    const drawTunerDebugText = () => {
+        p.fill(255);
+        p.textSize(16);
+        p.textAlign(p.LEFT, p.TOP);
+    
+        let debugText = `Frequency: ${p.tunerData.freq.toFixed(2)} Hz\n`;
+        debugText += `Has Frequency: ${p.tunerData.hasFreq}\n`;
+        
+        // Log 6 channels of differences
+        debugText += "Differences:\n";
+        for (let i = 0; i < 6; i++) {
+            debugText += `  Channel ${i + 1}: ${p.tunerData.differences[i].toFixed(2)} cents\n`;
+        }
+        
+        // Log 6 channels of amplitudes
+        debugText += "Amplitudes:\n";
+        for (let i = 0; i < 6; i++) {
+            debugText += `  Channel ${i + 1}: ${p.tunerData.amplitudes[i].toFixed(4)}\n`;
+        }
+    
+        p.text(debugText, 10, 10);
+    };
+    
+    // ... existing code ...
+
+    // Add a method to update tuner data
+    p.updateTunerData = (data) => {
+        p.freq = data.freq;
+        p.hasFreq = data.hasFreq;
+        p.difference = data.difference;
     };
 
     p.windowResized = () => {

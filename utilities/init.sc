@@ -78,8 +78,6 @@ s.waitForBoot{
 
 	// Remove existing OSCdef if it exists
 	OSCdef(\k).free;
-	"Existing OSCdef freed".postln;
-
 	OSCdef(\k, { |msg|
 		var partition = (msg[3] - 1) % ~numChunks;
 
@@ -96,7 +94,22 @@ s.waitForBoot{
 
 		// Send RMS values
 		~o.sendMsg(\audio_analysis, ~rms_bus_input.getSynchronous, ~rms_bus_output.getSynchronous);
+
 	}, '/buffer_refresh');
+
+	// OSC responder to send tuner data to the client
+	OSCdef(\tunerData).free;
+	OSCdef(\tunerData, { |msg|
+		var freq = msg[3];
+		var hasFreq = msg[4];
+		var differences = msg.copyRange(5, 10); // Differences for six strings
+		var amplitudes = msg.copyRange(11, 16); // Amplitudes for six strings
+		// Send the data to the client
+		~o.sendMsg(\tuner_data, 
+			freq, hasFreq, 
+			differences[0], differences[1], differences[2], differences[3], differences[4], differences[5],
+			amplitudes[0], amplitudes[1], amplitudes[2], amplitudes[3], amplitudes[4], amplitudes[5]
+    );  	}, '/tuner_data', s.addr);
 
 	"New OSCdef created".postln;
 
