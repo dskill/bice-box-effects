@@ -1,0 +1,13 @@
+{
+  "name": "tuner",
+  "description": "a guitar tuner",
+  "audio": "audio/tuner.sc",
+  "visual": "visual/tuner.js",
+  "params": [
+    {
+      "name": "test",
+      "value": 0.5,
+      "range": [0, 1]
+    }
+  ]
+}
