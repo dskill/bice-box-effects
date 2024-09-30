@@ -93,10 +93,22 @@ const sketch = function(p) {
     };
 
     const drawTunerDebugText = () => {
+        if (!p.tunerData || 
+            !p.tunerData.freq || 
+            p.tunerData.hasFreq === undefined || 
+            !p.tunerData.differences || 
+            !p.tunerData.amplitudes) {
+            p.fill(255);
+            p.textSize(24);
+            p.textAlign(p.CENTER, p.CENTER);
+            p.text("No signal", p.width / 2, p.height / 2);
+            return;
+        }
+
         p.fill(255);
         p.textSize(16);
         p.textAlign(p.LEFT, p.TOP);
-    
+
         let debugText = `Frequency: ${p.tunerData.freq.toFixed(2)} Hz\n`;
         debugText += `Has Frequency: ${p.tunerData.hasFreq}\n`;
         
@@ -111,7 +123,7 @@ const sketch = function(p) {
         for (let i = 0; i < 6; i++) {
             debugText += `  Channel ${i + 1}: ${p.tunerData.amplitudes[i].toFixed(4)}\n`;
         }
-    
+
         p.text(debugText, 10, 10);
     };
     
