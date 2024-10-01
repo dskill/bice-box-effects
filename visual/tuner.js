@@ -24,37 +24,63 @@ const sketch = function(p) {
     };
 
     p.draw = () => {
-        p.background(0,0,0,255);
+        p.background(0, 0, 0, 255);
 
         // Draw RMS indicator rectangles
         drawRMSIndicators();
 
-        // Draw waveform0 in white at the top with RMS
-        drawWaveform(p.waveform0, p.color(255, 100, 0), -p.height / 4, 1, p.rmsInput);
-
-        // Draw waveform1 in blue in the middle with RMS
-        drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
-
-        // Update and draw decaying waveform in red at the bottom
-        updateDecayingWaveform();
-        drawWaveform(decayingWaveform, p.color(100, 100, 0), p.height / 4, 1, p.rmsOutput);
-        drawWaveform(decayingWaveform, p.color(100, 100, 0), p.height / 4, -1, p.rmsOutput);
+        // Draw 6 waveforms representing guitar strings
+        drawGuitarStrings();
 
         // Add debug text for tuner data
-        drawTunerDebugText();
+        //drawTunerDebugText();
     };
 
-    const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
+    const drawGuitarStrings = () => {
+        if (!p.tunerData || !p.waveform1 || p.waveform1.length === 0) return;
+
+        const stringSpacing = p.height / 7; // Divide height into 7 parts for 6 strings
+        const stringNames = ['E', 'A', 'D', 'G', 'B', 'e']; // Standard guitar tuning
+
+        for (let i = 0; i < 6; i++) {
+            const yOffset = (i + 1) * stringSpacing;
+            const amplitude = p.tunerData.amplitudes[i] || 0;
+            const difference = p.tunerData.differences[i] || 0;
+            difference_01 = calculateBrightness(difference);
+
+            // Draw string label and info
+            drawStringInfo(stringNames[i], amplitude, difference, yOffset);
+
+            // Draw waveform
+            drawWaveform(p.waveform1, difference_01, yOffset, amplitude);
+        }
+    };
+
+    const calculateBrightness = (difference) => {
+        const maxDifference = 50;
+        const t = p.constrain(Math.abs(difference) / maxDifference, 0, 1);
+        return p.lerp(1, 0, t);
+    };
+
+    const drawStringInfo = (stringName, amplitude, difference, yOffset) => {
+        p.fill(255);
+        p.textSize(14);
+        p.textAlign(p.LEFT, p.BOTTOM);
+        const info = `${stringName}: Amp ${amplitude.toFixed(4)}, Diff ${difference.toFixed(2)} cents`;
+        p.text(info, 10, yOffset - 5);
+    };
+
+    const drawWaveform = (waveform, difference_01, yOffset, amplitude) => {
         if (waveform && waveform.length > 0) {
-            //color.setRed(rms * 1000);
-            p.stroke(color);
-            //p.strokeWeight(1.0 + Math.max(rms, 0.002) * 10.0); // Adjust stroke weight based on RMS
+            p.stroke( difference_01 * 100 + 10);
+            p.strokeWeight(1)
+            //p.strokeWeight(1 + amplitude * 10); // Adjust stroke weight based on amplitude
             p.noFill();
             p.beginShape();
 
             for (let i = 0; i < waveform.length; i++) {
                 let x = p.map(i, 0, waveform.length, 0, p.width);
-                let y = p.height / 2 + yOffset + waveform[i] * p.height / 8 * yMult;
+                let y = yOffset + waveform[i] * p.height / 16 * difference_01;
                 p.vertex(x, y);
             }
 
@@ -127,15 +153,6 @@ const sketch = function(p) {
         p.text(debugText, 10, 10);
     };
     
-    // ... existing code ...
-
-    // Add a method to update tuner data
-    p.updateTunerData = (data) => {
-        p.freq = data.freq;
-        p.hasFreq = data.hasFreq;
-        p.difference = data.difference;
-    };
-
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
     };
