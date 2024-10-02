@@ -26,6 +26,8 @@ const sketch = function(p) {
         // Draw waveform1 in blue in the middle with RMS
         drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
 
+        drawWaveform(p.fft0, p.color(20, 100, 255), 0, 1, p.rmsOutput);
+
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();
         drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, 1, p.rmsOutput);

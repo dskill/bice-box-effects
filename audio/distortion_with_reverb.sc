@@ -25,8 +25,8 @@
         partition = PulseCount.ar(trig) % ~numChunks;
 
         // write to buffers that will contain the waveform data we send via OSC
-        BufWr.ar(In.ar(in_bus), ~relay_buffer0.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(sig, ~relay_buffer1.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(In.ar(in_bus), ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // send data as soon as it's available
         SendReply.ar(trig, '/buffer_refresh', partition);

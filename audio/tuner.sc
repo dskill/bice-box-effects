@@ -31,8 +31,8 @@
         rms_output = RunningSum.rms(sig, 1024);
 
         // Write to buffers
-        BufWr.ar(sig, ~relay_buffer0.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(sig, ~relay_buffer1.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);

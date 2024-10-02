@@ -20,12 +20,17 @@ s.waitForBoot{
 	"RMS control buses created".postln;
 
 	// Free existing buffers if they exist
-	if(~relay_buffer0.notNil, { ~relay_buffer0.free });
-	if(~relay_buffer1.notNil, { ~relay_buffer1.free });
+	if(~relay_buffer_in.notNil, { ~relay_buffer_in.free });
+	if(~relay_buffer_out.notNil, { ~relay_buffer_out.free });
 
-	~relay_buffer0 = Buffer.alloc(s, ~chunkSize * ~numChunks);
-	~relay_buffer1 = Buffer.alloc(s, ~chunkSize * ~numChunks);
+	~relay_buffer_in = Buffer.alloc(s, ~chunkSize * ~numChunks);
+	~relay_buffer_out = Buffer.alloc(s, ~chunkSize * ~numChunks);
 	"New relay buffers allocated".postln;
+
+	~fft_size = 1024;  // Set the FFT size
+	~fft_buffer_in = Buffer.alloc(s, ~fft_size);
+	~fft_buffer_out = Buffer.alloc(s, ~fft_size);
+	"FFT buffers allocated".postln;
 
 	~audio_input_bus = Bus.audio(s, 2);  // Ensure this is defined early
 	~test_loop_bus = Bus.audio(s,2);
@@ -81,7 +86,7 @@ s.waitForBoot{
 	OSCdef(\k, { |msg|
 		var partition = (msg[3] - 1) % ~numChunks;
 
-		[~relay_buffer0, ~relay_buffer1].do { |buf, i|
+		[~relay_buffer_in, ~relay_buffer_out].do { |buf, i|
 			if(buf.notNil, {
 				buf.getn(partition.asInteger * ~chunkSize, ~chunkSize, { |data|
 					data = data.resamp1(data.size/~chunkDownsample);
@@ -96,6 +101,22 @@ s.waitForBoot{
 		~o.sendMsg(\audio_analysis, ~rms_bus_input.getSynchronous, ~rms_bus_output.getSynchronous);
 
 	}, '/buffer_refresh');
+
+	// Add new OSCdef for FFT data
+	OSCdef(\fftData).free;
+	OSCdef(\fftData, { |msg|
+		[~fft_buffer_in, ~fft_buffer_out].do { |buf, i|
+			if(buf.notNil, {
+				buf.getn(0, ~fft_size, { |data|
+					~o.sendMsg(("fft_data" ++ i).asSymbol, *data);
+				});
+			}, {
+				"Warning: FFT buffer % is nil".format(i).postln;
+			});
+		};
+	}, '/fft_data');
+
+	"FFT OSCdef created".postln;
 
 	// OSC responder to send tuner data to the client
 	OSCdef(\tunerData).free;
@@ -117,10 +138,8 @@ s.waitForBoot{
 	"Server synced".postln;
 
 	// Add this to verify buffer allocation, input bus, and groups
-	["Buffer 0:", ~relay_buffer0, "Buffer 1:", ~relay_buffer1, "Input Bus:", ~input_bus].postln;
+	["Buffer 0:", ~relay_buffer_in, "Buffer 1:", ~relay_buffer_out, "Input Bus:", ~input_bus].postln;
 
 	"Server booted successfully.".postln;
 };
 )
-
-

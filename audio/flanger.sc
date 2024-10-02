@@ -26,8 +26,8 @@
         partition = PulseCount.ar(trig) % ~numChunks;
 
         // write to buffers that will contain the waveform data we send via OSC
-        BufWr.ar(sig, ~relay_buffer0.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(final_sig, ~relay_buffer1.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(final_sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);
