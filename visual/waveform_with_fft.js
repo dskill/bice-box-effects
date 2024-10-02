@@ -12,10 +12,11 @@ const sketch = function(p) {
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
         p.background(0);
+        p.angleMode(p.DEGREES); // Use degrees for angle calculations
     };
 
     p.draw = () => {
-        p.background(0,0,0,100);
+        p.background(0, 0, 0, 100);
 
         // Draw RMS indicator rectangles
         drawRMSIndicators();
@@ -26,7 +27,8 @@ const sketch = function(p) {
         // Draw waveform1 in blue in the middle with RMS
         drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
 
-        drawWaveform(p.fft0, p.color(20, 100, 255), 0, 1, p.rmsOutput);
+        // Draw FFT as concentric circles
+        drawFFTCircles(p.fft0, p.color(20, 100, 255));
 
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();
@@ -81,6 +83,56 @@ const sketch = function(p) {
         // Draw output RMS indicator
         const outputRectWidth = p.map(p.rmsOutput, 0, 1, 0, maxWidth);
         p.rect(0, p.height - rectHeight, outputRectWidth, rectHeight);
+    };
+
+    const drawFFTCircles = (fftData, color) => {
+        if (fftData && fftData.length > 0) {
+            p.push();
+            p.translate(p.width / 2, p.height / 2);
+            p.noFill();
+            p.stroke(color);
+
+            const maxRadius = Math.min(p.width, p.height) * 0.4;
+            const fftSize = fftData.length / 2; // Since fftData contains both real and imaginary parts
+            const sampleRate = 48000; // Adjust this to match your actual sample rate
+            const nyquist = sampleRate / 2;
+            const binFrequency = nyquist / fftSize;
+
+            const minFreq = 20; // Lowest frequency to display (in Hz)
+            const maxFreq = 20000; // Highest frequency to display (in Hz)
+            const numOctaves = Math.log2(maxFreq / minFreq);
+
+            for (let octave = 0; octave < numOctaves; octave++) {
+                p.beginShape();
+                for (let angle = 0; angle <= 360; angle+=1) {
+                    const baseRadius = (octave + 1) * (maxRadius / numOctaves);
+                    
+                    // Calculate frequency for this angle and octave
+                    const freq = minFreq * Math.pow(2, octave + angle / 360);
+                    
+                    // Find the corresponding FFT bin
+                    const bin = Math.floor(freq / binFrequency);
+                    
+                    // Get the real and imaginary parts for this bin
+                    const real = fftData[2 * bin];
+                    const imag = fftData[2 * bin + 1];
+                    
+                    // Calculate the magnitude
+                    let magnitude = Math.sqrt(real * real + imag * imag);
+                    magnitude = Math.pow(magnitude, 0.5);
+                    
+                    // Calculate the deformed radius using a logarithmic scale for amplitude
+                    const logAmplitude = magnitude > 0 ? Math.log10(magnitude + 1) : 0; // Adding 1 to avoid log(0)
+                    const deformedRadius = baseRadius + magnitude * (maxRadius / numOctaves);
+                    
+                    const x = deformedRadius * p.cos(angle);
+                    const y = deformedRadius * p.sin(angle);
+                    p.vertex(x, y);
+                }
+                p.endShape(p.CLOSE);
+            }
+            p.pop();
+        }
     };
 
     p.windowResized = () => {

@@ -22,7 +22,7 @@
         BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // FFT Analysis
-        fft_trig = Impulse.kr(30);  // Trigger 60 times per second
+        fft_trig = Impulse.kr(60);  // Trigger 60 times per second
         chain_in = FFT(~fft_buffer_in, sig);
         chain_out = FFT(~fft_buffer_out, sig);  // In bypass, input = output
 
