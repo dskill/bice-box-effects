@@ -1,7 +1,7 @@
 (
     SynthDef(\tuner, {
         |out = 0, in_bus = 0|
-        var sig, freq, hasFreq, differences, amplitudes;
+        var sig, normalized_sig, freq, hasFreq, differences, amplitudes;
         var phase, trig, partition;
         var rms_input, rms_output;
         var kr_trig;
@@ -9,10 +9,21 @@
 
         // Input signal
         sig = In.ar(in_bus);
+        normalized_sig = Normalizer.ar(sig, level: 1, dur: 0.01);
+
 
         // Pitch detection 
-        # freq, hasFreq = Pitch.kr(sig, ampThreshold: 0.02, median: 7);
-        freq = Lag.kr(freq, 0.1); // Smooth frequency changes over 100ms
+        # freq, hasFreq = Pitch.kr(normalized_sig, 
+            initFreq: 50, 
+            minFreq: 60, 
+            maxFreq: 400, 
+            ampThreshold: 0.04, 
+            median: 10,
+            execFreq: 100.0,
+             maxBinsPerOctave: 16,
+             peakThreshold: 0.5, downSample: 1, clar: 0
+        );
+        freq = Lag.kr(freq, 0.2); // Increase smoothing time slightly
          
         // Calculate differences between detected frequency and each guitar string
         differences = freq - guitarStringsHz;

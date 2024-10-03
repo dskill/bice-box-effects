@@ -31,7 +31,7 @@
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition);
 
-        Out.ar(out, finalSig);
+        Out.ar(out, [delaySig,delaySig]);
     }).add;
     "Effect SynthDef added".postln;
 

@@ -44,7 +44,7 @@
         SendReply.kr(kr_impulse, '/fft_data');
 
 
-	Out.ar(out, sig);
+	Out.ar(out, [sig, sig]);
     }).add;
     "Effect SynthDef added".postln;
 

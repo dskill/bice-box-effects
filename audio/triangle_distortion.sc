@@ -68,7 +68,7 @@
         Out.kr(~rms_bus_input, rms_input);
         Out.kr(~rms_bus_output, rms_output);
 
-        Out.ar(out, distorted);
+        Out.ar(out, [distorted, distorted]);
     }).add;
     "Effect SynthDef added".postln;
 

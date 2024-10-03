@@ -25,7 +25,7 @@
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
 
-        Out.ar(out, finalSig);
+        Out.ar(out, [finalSig,finalSig]);
     }).add;
     "Effect SynthDef added".postln;
 

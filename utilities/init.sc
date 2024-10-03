@@ -10,7 +10,7 @@ s.waitForBoot{
 	~useTestLoop = false;  
 
 	~o = NetAddr.new("127.0.0.1", 57121);
-	~chunkSize = 256;
+	~chunkSize = 512;
 	~chunkDownsample = 1;
 	~numChunks = 16;
 	"Network address and variables initialized".postln;
@@ -27,7 +27,7 @@ s.waitForBoot{
 	~relay_buffer_out = Buffer.alloc(s, ~chunkSize * ~numChunks);
 	"New relay buffers allocated".postln;
 
-	~fft_size = 1024;  // Set the FFT size
+	~fft_size = 2048;  // Set the FFT size
 	~fft_buffer_in = Buffer.alloc(s, ~fft_size);
 	~fft_buffer_out = Buffer.alloc(s, ~fft_size);
 	"FFT buffers allocated".postln;

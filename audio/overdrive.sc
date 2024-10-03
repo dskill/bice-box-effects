@@ -23,7 +23,7 @@
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition);
 
-        Out.ar(out, distorted);
+        Out.ar(out, [distorted,distorted]);
     }).add;
     "Effect SynthDef added".postln;
 
