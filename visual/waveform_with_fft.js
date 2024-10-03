@@ -28,7 +28,7 @@ const sketch = function(p) {
         drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
 
         // Draw FFT as concentric circles
-        drawFFTCircles(p.fft0, p.color(20, 100, 255));
+        drawFFTCircles(p.fft0, p.color(255, 100, 255));
 
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();

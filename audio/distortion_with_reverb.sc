@@ -2,7 +2,7 @@
     SynthDef(\distortion_with_reverb, {
         |out = 0, in_bus = 0, drive = 0.5, tone = 0.5, decay = 1, roomSize = 0.7, wetLevelDist = 0.5, wetLevelRev = 0.5|
         // START USER EFFECT CODE
-        var sig, distorted, verb, dryDist, dryRev, phase, trig, partition;
+        var sig, distorted, verb, dryDist, dryRev, phase, trig, partition, kr_impulse;
         
         sig = In.ar(in_bus);
         
@@ -23,13 +23,14 @@
         phase = Phasor.ar(0, 1, 0, ~chunkSize);
         trig = HPZ1.ar(phase) < 0;
         partition = PulseCount.ar(trig) % ~numChunks;
+        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
 
         // write to buffers that will contain the waveform data we send via OSC
         BufWr.ar(In.ar(in_bus), ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // send data as soon as it's available
-        SendReply.ar(trig, '/buffer_refresh', partition);
+        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
 
         Out.ar(out, sig);
     }).add;

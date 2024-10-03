@@ -4,7 +4,7 @@
         feedbackAmount = 0.1, bitCrushAmount = 0.2, stereoWidth = 0.5, pitchShiftRatio = 1.0|
         // START USER EFFECT CODE
         var sig, distorted, midFreq, presenceEnhance, reverb;
-        var phase, trig, partition;
+        var phase, trig, partition, kr_impulse;
         var feedback, bitCrushed, stereoSig, pitchShifted;
         var rms_input, rms_output;
 
@@ -55,13 +55,14 @@
         phase = Phasor.ar(0, 1, 0, ~chunkSize);
         trig = HPZ1.ar(phase) < 0;
         partition = PulseCount.ar(trig) % ~numChunks;
+        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
 
         // write to buffers that will contain the waveform data we send via OSC
         BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(distorted, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // send data as soon as it's available
-        SendReply.ar(trig, '/buffer_refresh', partition);
+        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
 
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);

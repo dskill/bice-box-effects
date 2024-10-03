@@ -6,6 +6,8 @@ const sketch = function(p) {
     // Add RMS properties
     p.rmsInput = 0;
     p.rmsOutput = 0;
+    p.fft0 = [];
+    p.fft1 = [];
 
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
@@ -15,7 +17,7 @@ const sketch = function(p) {
     };
 
     p.draw = () => {
-        p.background(0,0,0,10);
+        p.background(0,0,0,100);
         p.push();
         p.blendMode(p.ADD);
 
@@ -33,6 +35,9 @@ const sketch = function(p) {
         drawWaveform(decayingWaveform, p.color(0, 0, 0), p.height / 4, 1, p.rmsOutput);
         drawWaveform(decayingWaveform, p.color(0, 0, 0), p.height / 4, -1, p.rmsOutput);
 
+        // Draw FFT as concentric circles
+        drawFFTCircles(p.fft1, p.color(20,100,10));
+
         p.pop();
     };
 
@@ -42,7 +47,7 @@ const sketch = function(p) {
             let hue = p.hue(color) + rms * 1000 + p.frameCount;
             // Ensure hue stays within 0-360 range using modulo
             hue = hue % 360;
-            let scaledColor = p.color(hue, 100, rms * 100 + 30);
+            let scaledColor = p.color(hue, 100, rms * 100 + 50);
             let finalColor = scaledColor;
            // color.setRed(rms);
             p.stroke(finalColor);
@@ -78,7 +83,7 @@ const sketch = function(p) {
         const maxWidth = p.width;
 
         // Set fill color to 20% opaque gray
-        p.fill(100, 20, 10, 20); // 51 is 20% of 255
+        p.fill(100, 20, 40, 20); // 51 is 20% of 255
         p.noStroke();
 
         // Draw input RMS indicator
@@ -88,6 +93,57 @@ const sketch = function(p) {
         // Draw output RMS indicator
         const outputRectWidth = p.map(p.rmsOutput, 0, 1, 0, maxWidth);
         p.rect(0, p.height - rectHeight, outputRectWidth, rectHeight);
+    };
+
+    const drawFFTCircles = (fftData, color) => {
+        if (fftData && fftData.length > 0) {
+            p.push();
+            p.translate(p.width / 2, p.height / 2);
+            p.noFill();
+            p.stroke(color);
+
+            const maxRadius = Math.min(p.width, p.height) * 0.4;
+            const fftSize = fftData.length / 2; // Since fftData contains both real and imaginary parts
+            const sampleRate = 48000; // Adjust this to match your actual sample rate
+            const nyquist = sampleRate / 2;
+            const binFrequency = nyquist / fftSize;
+
+            const minFreq = 20; // Lowest frequency to display (in Hz)
+            const maxFreq = 20000; // Highest frequency to display (in Hz)
+            const numOctaves = Math.log2(maxFreq / minFreq);
+
+            for (let octave = 0; octave < numOctaves; octave++) {
+                p.beginShape();
+                for (let angle = 0; angle <= 360; angle+=1) {
+                    const baseRadius = (octave + 1) * (maxRadius / numOctaves);
+                    
+                    // Calculate frequency for this angle and octave
+                    const freq = minFreq * Math.pow(2, octave + angle / 360);
+                    
+                    // Find the corresponding FFT bin
+                    const bin = Math.floor(freq / binFrequency);
+                    
+                    // Get the real and imaginary parts for this bin
+                    const real = fftData[2 * bin];
+                    const imag = fftData[2 * bin + 1];
+                    
+                    // Calculate the magnitude
+                    let magnitude = Math.sqrt(real * real + imag * imag);
+                    //p.stroke(p.color(magnitude,80,100,magnitude * .4 + 40));
+                    magnitude = Math.pow(magnitude, 0.5);
+
+                    // Calculate the deformed radius using a logarithmic scale for amplitude
+                    const logAmplitude = magnitude > 0 ? Math.log10(magnitude + 1) : 0; // Adding 1 to avoid log(0)
+                    const deformedRadius = baseRadius + magnitude * (maxRadius / numOctaves);
+                    
+                    const x = deformedRadius * p.cos(angle);
+                    const y = deformedRadius * p.sin(angle);
+                    p.vertex(x, y);
+                }
+                p.endShape(p.CLOSE);
+            }
+            p.pop();
+        }
     };
 
     p.windowResized = () => {

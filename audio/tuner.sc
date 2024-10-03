@@ -4,6 +4,7 @@
         var sig, freq, hasFreq, differences, amplitudes;
         var phase, trig, partition;
         var rms_input, rms_output;
+        var kr_trig;
         var guitarStringsHz = #[82.41, 110.00, 146.83, 196.00, 246.94, 329.63]; // Frequencies of E2, A2, D3, G3, B3, E4
 
         // Input signal
@@ -15,7 +16,7 @@
          
         // Calculate differences between detected frequency and each guitar string
         differences = freq - guitarStringsHz;
-
+ 
         // Extract amplitude for each string frequency using bandpass filters
         amplitudes = guitarStringsHz.collect { |hz|
             var band = BPF.ar(sig, hz, 0.01); // Bandpass filter with narrow bandwidth
@@ -26,6 +27,7 @@
         phase = Phasor.ar(0, 1, 0, ~chunkSize);
         trig = HPZ1.ar(phase) < 0;
         partition = PulseCount.ar(trig) % ~numChunks;
+        kr_trig = Impulse.kr(60);  // Trigger 60 times per second
 
         rms_input = RunningSum.rms(sig, 1024);
         rms_output = RunningSum.rms(sig, 1024);
@@ -39,7 +41,7 @@
         Out.kr(~rms_bus_output, rms_output);
 
         // Send tuner data to the client
-        SendReply.ar(trig, '/buffer_refresh', partition);
+        SendReply.kr(kr_trig, '/buffer_refresh', partition);
         SendReply.kr(Impulse.kr(10), '/tuner_data', [freq, hasFreq] ++ differences ++ amplitudes);
         
         Out.ar(out, sig);
