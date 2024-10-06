@@ -6,10 +6,13 @@
         var sig, phase, trig, partition;
         var rms_input, rms_output;
         var chain_in, chain_out, kr_impulse;
+        var fft_output, fft_input;
+        var freq; 
 
         sig = In.ar(in_bus);
         //sig = SoundIn.ar(0);
-       // sig = sig + SinOsc.ar(220 * test, 0, 0.5);
+        freq = LFTri.kr(1/10, 0).range(82.41, 1*164.82);  // Triangle LFO from low E to E one octave up
+        //sig = SinOsc.ar(freq, 0, 0.5);
         // END USER EFFECT CODE
 
         // MACHINERY FOR SAMPLING THE SIGNAL
@@ -20,11 +23,19 @@
         // write to buffers that will contain the waveform data we send via OSC
         BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
+ 
         // FFT Analysis
         kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
-        chain_in = FFT(~fft_buffer_in, sig);
-        chain_out = FFT(~fft_buffer_out, sig);  // In bypass, input = output
+
+        //sig = BPF.ar(sig, 2000, 0.1);  // Narrower bandwidth to focus more on 550Hz
+
+        // Read from relay buffers for FFT analysis
+        fft_input = BufRd.ar(1, ~relay_buffer_in.bufnum, Phasor.ar(0, 1, 0, ~chunkSize * ~numChunks));
+        fft_output = BufRd.ar(1, ~relay_buffer_out.bufnum, Phasor.ar(0, 1, 0, ~chunkSize * ~numChunks));
+
+ 
+        chain_in = FFT(~fft_buffer_in, sig, wintype: 1); 
+        chain_out = FFT(~fft_buffer_out, fft_output, wintype: 1);
 
         // Store FFT data in buffers
         chain_in.do(~fft_buffer_in); 
@@ -40,7 +51,7 @@
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);
         Out.kr(~rms_bus_output, rms_output);
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
+        SendReply.ar(trig, '/buffer_refresh', partition); //trig if you want audio rate
         SendReply.kr(kr_impulse, '/fft_data');
 
 

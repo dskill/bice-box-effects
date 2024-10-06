@@ -27,7 +27,7 @@ s.waitForBoot{
 	~relay_buffer_out = Buffer.alloc(s, ~chunkSize * ~numChunks);
 	"New relay buffers allocated".postln;
 
-	~fft_size = 2048;  // Set the FFT size
+	~fft_size = 4096;  // Set the FFT size
 	~fft_buffer_in = Buffer.alloc(s, ~fft_size);
 	~fft_buffer_out = Buffer.alloc(s, ~fft_size);
 	"FFT buffers allocated".postln;

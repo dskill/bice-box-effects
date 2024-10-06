@@ -35,7 +35,37 @@ const sketch = function(p) {
         drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, 1, p.rmsOutput);
         drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, -1, p.rmsOutput);
 
+        drawFFT(p.fft0, p.color(255, 0, 0));
+
+        drawFFT(p.fft1, p.color(0, 255, 0));
+
+
     };
+
+
+const drawFFT = (fftData, color) => {
+    if (fftData && fftData.length > 0) {
+        p.push();
+        p.stroke(color);
+        p.fill(color);
+        
+        const fftSize = 200; // fftData.length / 2;
+        for (let i = 0; i < fftSize; i++) {
+            const real = fftData[2 * i];
+            const imag = fftData[2 * i + 1];
+            let magnitude = Math.sqrt(real * real + imag * imag);
+            magnitude = Math.log(magnitude + 1) / Math.log(10); // Apply logarithmic scaling
+            const x = p.map(i, 0, fftSize, 0, p.width);
+            const y = p.map(magnitude, 0, 1, p.height, p.height - 100);
+            
+            
+            // Draw a dot for each bin
+            p.ellipse(x, y, 4, 4);
+        }
+
+        p.pop();
+    }
+};
 
     const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
         if (waveform && waveform.length > 0) {
@@ -89,47 +119,49 @@ const sketch = function(p) {
         if (fftData && fftData.length > 0) {
             p.push();
             p.translate(p.width / 2, p.height / 2);
-            p.noFill();
-            p.stroke(color);
+            p.noStroke();
+            p.fill(color);
 
-            const maxRadius = Math.min(p.width, p.height) * 0.4;
-            const fftSize = fftData.length / 2; // Since fftData contains both real and imaginary parts
-            const sampleRate = 48000; // Adjust this to match your actual sample rate
+            const maxRadius = Math.min(p.width, p.height) * 0.45;
+            const fftSize = fftData.length / 2;
+            const sampleRate = 48000;
             const nyquist = sampleRate / 2;
-            const binFrequency = nyquist / fftSize;
 
-            const minFreq = 20; // Lowest frequency to display (in Hz)
-            const maxFreq = 20000; // Highest frequency to display (in Hz)
-            const numOctaves = Math.log2(maxFreq / minFreq);
+            const minFreq = 82.41 / 2.0; // Frequency of the low E string (E2) on a standard guitar
+            const maxFreq = 1318.51; // Approximately the frequency of the highest E (E6) on a standard guitar
+            const minLog = Math.log2(minFreq);
+            const maxLog = Math.log2(maxFreq);
+            const totalOctaves = Math.ceil(maxLog - minLog);
 
-            for (let octave = 0; octave < numOctaves; octave++) {
-                p.beginShape();
-                for (let angle = 0; angle <= 360; angle+=1) {
-                    const baseRadius = (octave + 1) * (maxRadius / numOctaves);
-                    
-                    // Calculate frequency for this angle and octave
-                    const freq = minFreq * Math.pow(2, octave + angle / 360);
-                    
-                    // Find the corresponding FFT bin
-                    const bin = Math.floor(freq / binFrequency);
-                    
-                    // Get the real and imaginary parts for this bin
+            for (let bin = 0; bin < fftSize; bin++) {
+                const freq = (bin / fftSize) * nyquist;
+                if (freq >= minFreq && freq <= maxFreq) {
                     const real = fftData[2 * bin];
                     const imag = fftData[2 * bin + 1];
                     
-                    // Calculate the magnitude
                     let magnitude = Math.sqrt(real * real + imag * imag);
-                    magnitude = Math.pow(magnitude, 0.5);
+                    magnitude = Math.log(magnitude + 1) / Math.log(10); // Apply logarithmic scaling
                     
-                    // Calculate the deformed radius using a logarithmic scale for amplitude
-                    const logAmplitude = magnitude > 0 ? Math.log10(magnitude + 1) : 0; // Adding 1 to avoid log(0)
-                    const deformedRadius = baseRadius + magnitude * (maxRadius / numOctaves);
+                    // Calculate octave and position within octave
+                    const logFreq = Math.log2(freq) - minLog;
+                    const octave = Math.floor(logFreq);
+                    const octaveFraction = logFreq - octave;
+
+                    // Calculate angle (0 degrees is at the top, moving clockwise)
+                    const angle = 270 - (octaveFraction * 360); // This is already in degrees
+
+                    // Calculate radius (inner octaves have smaller radius)
+                    let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
+                    // Calculate circle size based on magnitude
+                    //magnitude = 1;
+                    const circleSize = magnitude * (maxRadius / 20);
                     
-                    const x = deformedRadius * p.cos(angle);
-                    const y = deformedRadius * p.sin(angle);
-                    p.vertex(x, y);
+                    // Use p.cos and p.sin directly with the angle in degrees
+                    const x = radius * p.cos(angle);
+                    const y = radius * p.sin(angle);
+                    
+                    p.ellipse(x, y, circleSize);
                 }
-                p.endShape(p.CLOSE);
             }
             p.pop();
         }
