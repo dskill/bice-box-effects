@@ -29,11 +29,11 @@
 
         //sig = BPF.ar(sig, 2000, 0.1);  // Narrower bandwidth to focus more on 550Hz
  
-        chain_in = FFT(~fft_buffer_in, sig, wintype: 1); 
+        //chain_in = FFT(~fft_buffer_in, sig, wintype: 1); 
         chain_out = FFT(~fft_buffer_out, sig, wintype: 1);
 
         // Store FFT data in buffers
-        chain_in.do(~fft_buffer_in); 
+        //chain_in.do(~fft_buffer_in); 
         chain_out.do(~fft_buffer_out);
 
         rms_input = RunningSum.rms(sig, 1024);

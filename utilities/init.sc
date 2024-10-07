@@ -105,7 +105,7 @@ s.waitForBoot{
 	// Add new OSCdef for FFT data
 	OSCdef(\fftData).free;
 	OSCdef(\fftData, { |msg|
-		[~fft_buffer_in, ~fft_buffer_out].do { |buf, i|
+		[ ~fft_buffer_out].do { |buf, i|
 			if(buf.notNil, {
 				buf.getn(0, ~fft_size, { |data|
 					~o.sendMsg(("fft_data" ++ i).asSymbol, *data);

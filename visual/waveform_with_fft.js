@@ -26,7 +26,7 @@ const sketch = function(p) {
         p.frameRate(30);
     };
 
-    p.draw = () => { 
+    p.draw = () => {
         p.background(0, 0, 0, 255);
 
         // Draw RMS indicator rectangles
@@ -137,8 +137,8 @@ const sketch = function(p) {
             const sampleRate = 48000;
             const nyquist = sampleRate / 2;
 
-            const minFreq = 82.41 / 2.0; // Frequency of the low E string (E2) on a standard guitar
-            const maxFreq = 1318.51; // Approximately the frequency of the highest E (E6) on a standard guitar
+            const minFreq = 82.41/2.0; // Frequency of the low E string (E2) on a standard guitar
+            const maxFreq = 2318.51; // Approximately the frequency of the highest E (E6) on a standard guitar
             const minLog = Math.log2(minFreq);
             const maxLog = Math.log2(maxFreq);
             const totalOctaves = Math.ceil(maxLog - minLog);
@@ -150,7 +150,8 @@ const sketch = function(p) {
                     const imag = fftData[2 * bin + 1];
                     
                     let magnitude = Math.sqrt(real * real + imag * imag);
-                    magnitude = Math.log(magnitude + 1) / Math.log(10); // Apply logarithmic scaling
+                    magnitude *= .05;
+                    //magnitude = Math.log(magnitude + 1) / Math.log(10); // Apply logarithmic scaling
                     
                     // Calculate octave and position within octave
                     const logFreq = Math.log2(freq) - minLog;
@@ -158,7 +159,7 @@ const sketch = function(p) {
                     const octaveFraction = logFreq - octave;
 
                     // Calculate angle (0 degrees is at the top, moving clockwise)
-                    const angle = 270 - (octaveFraction * 360); // This is already in degrees
+                    const angle = 270 + (octaveFraction * 360); // This is already in degrees
 
                     // Calculate radius (inner octaves have smaller radius)
                     let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
