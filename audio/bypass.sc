@@ -25,17 +25,12 @@
         BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
  
         // FFT Analysis
-        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
+        kr_impulse = Impulse.kr(30);  // Trigger 60 times per second
 
         //sig = BPF.ar(sig, 2000, 0.1);  // Narrower bandwidth to focus more on 550Hz
-
-        // Read from relay buffers for FFT analysis
-        fft_input = BufRd.ar(1, ~relay_buffer_in.bufnum, Phasor.ar(0, 1, 0, ~chunkSize * ~numChunks));
-        fft_output = BufRd.ar(1, ~relay_buffer_out.bufnum, Phasor.ar(0, 1, 0, ~chunkSize * ~numChunks));
-
  
         chain_in = FFT(~fft_buffer_in, sig, wintype: 1); 
-        chain_out = FFT(~fft_buffer_out, fft_output, wintype: 1);
+        chain_out = FFT(~fft_buffer_out, sig, wintype: 1);
 
         // Store FFT data in buffers
         chain_in.do(~fft_buffer_in); 
@@ -51,7 +46,7 @@
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);
         Out.kr(~rms_bus_output, rms_output);
-        SendReply.ar(trig, '/buffer_refresh', partition); //trig if you want audio rate
+        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
         SendReply.kr(kr_impulse, '/fft_data');
 
 

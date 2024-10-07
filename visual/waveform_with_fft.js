@@ -9,14 +9,25 @@ const sketch = function(p) {
     p.fft0 = [];
     p.fft1 = [];
 
+    // Add FPS variables
+    let fps;
+    let fpsArray = [];
+    const fpsArraySize = 10;
+
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight);
         p.background(0);
         p.angleMode(p.DEGREES); // Use degrees for angle calculations
+        // Initialize fps
+        fps = p.createP('');
+        fps.position(10, 10);
+        fps.style('color', 'white');
+
+        p.frameRate(30);
     };
 
-    p.draw = () => {
-        p.background(0, 0, 0, 100);
+    p.draw = () => { 
+        p.background(0, 0, 0, 255);
 
         // Draw RMS indicator rectangles
         drawRMSIndicators();
@@ -35,37 +46,36 @@ const sketch = function(p) {
         drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, 1, p.rmsOutput);
         drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, -1, p.rmsOutput);
 
-        drawFFT(p.fft0, p.color(255, 0, 0));
+        //drawFFT(p.fft0, p.color(255, 0, 0));
 
-        drawFFT(p.fft1, p.color(0, 255, 0));
+        //drawFFT(p.fft1, p.color(0, 255, 0));
 
-
+        // Update FPS counter
+        updateFPS();
     };
 
+    const drawFFT = (fftData, color) => {
+        if (fftData && fftData.length > 0) {
+            p.push();
+            p.stroke(color);
+            p.fill(color);
+            
+            const fftSize = 200; // fftData.length / 2;
+            for (let i = 0; i < fftSize; i++) {
+                const real = fftData[2 * i];
+                const imag = fftData[2 * i + 1];
+                let magnitude = Math.sqrt(real * real + imag * imag);
+                magnitude = Math.log(magnitude + 1) / Math.log(10); // Apply logarithmic scaling
+                const x = p.map(i, 0, fftSize, 0, p.width);
+                const y = p.map(magnitude, 0, 1, p.height, p.height - 100);
+                
+                // Draw a dot for each bin
+                p.ellipse(x, y, 4, 4);
+            }
 
-const drawFFT = (fftData, color) => {
-    if (fftData && fftData.length > 0) {
-        p.push();
-        p.stroke(color);
-        p.fill(color);
-        
-        const fftSize = 200; // fftData.length / 2;
-        for (let i = 0; i < fftSize; i++) {
-            const real = fftData[2 * i];
-            const imag = fftData[2 * i + 1];
-            let magnitude = Math.sqrt(real * real + imag * imag);
-            magnitude = Math.log(magnitude + 1) / Math.log(10); // Apply logarithmic scaling
-            const x = p.map(i, 0, fftSize, 0, p.width);
-            const y = p.map(magnitude, 0, 1, p.height, p.height - 100);
-            
-            
-            // Draw a dot for each bin
-            p.ellipse(x, y, 4, 4);
+            p.pop();
         }
-
-        p.pop();
-    }
-};
+    };
 
     const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
         if (waveform && waveform.length > 0) {
@@ -165,6 +175,15 @@ const drawFFT = (fftData, color) => {
             }
             p.pop();
         }
+    };
+
+    const updateFPS = () => {
+        fpsArray.push(p.frameRate());
+        if (fpsArray.length > fpsArraySize) {
+            fpsArray.shift();
+        }
+        const averageFPS = fpsArray.reduce((sum, value) => sum + value, 0) / fpsArray.length;
+        fps.html('Avg FPS: ' + averageFPS.toFixed(2));
     };
 
     p.windowResized = () => {
