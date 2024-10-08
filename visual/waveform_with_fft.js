@@ -22,36 +22,42 @@ const sketch = function(p) {
         fps = p.createP('');
         fps.position(10, 10);
         fps.style('color', 'white');
-
+        p.colorMode(p.HSB, 360, 100, 100, 100);
         p.frameRate(30);
     };
 
     p.draw = () => {
-        p.background(0, 0, 0, 255);
+        p.background(0,0,0,255); 
+        p.push();
+        p.blendMode(p.ADD);
 
         // Draw RMS indicator rectangles
         drawRMSIndicators();
 
         // Draw waveform0 in white at the top with RMS
-        drawWaveform(p.waveform0, p.color(255, 100, 0), -p.height / 4, 1, p.rmsInput);
-
+        drawWaveform(p.waveform0, p.color(255, 100, 100), -p.height / 4, 1, p.rmsInput);
+ 
         // Draw waveform1 in blue in the middle with RMS
-        drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
+        drawWaveform(p.waveform1, p.color(0, 100, 100), p.height / 4, 1, p.rmsOutput);
 
         // Draw FFT as concentric circles
-        drawFFTCircles(p.fft0, p.color(255, 100, 255));
+        drawFFTCircles(p.fft0, p.color(255, 100, 100));
 
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();
-        drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, 1, p.rmsOutput);
-        drawWaveform(decayingWaveform, p.color(255, 0, 0), p.height / 4, -1, p.rmsOutput);
+        drawWaveform(decayingWaveform, p.color(200, 40, 40), p.height / 4, 1, p.rmsOutput);
+        drawWaveform(decayingWaveform, p.color(200, 40, 40), p.height / 4, -1, p.rmsOutput);
 
-        //drawFFT(p.fft0, p.color(255, 0, 0));
+        //drawFFT(p.fft0, p.color(255, 0, 200));
 
         //drawFFT(p.fft1, p.color(0, 255, 0));
 
+        // remove additive blend mode
+        p.pop();
+
         // Update FPS counter
         updateFPS();
+        
     };
 
     const drawFFT = (fftData, color) => {
@@ -113,7 +119,7 @@ const sketch = function(p) {
         const maxWidth = p.width;
 
         // Set fill color to 20% opaque gray
-        p.fill(128, 128, 128, 15); // 51 is 20% of 255
+        p.fill(128, 20, 10); // 51 is 20% of 255
         p.noStroke();
 
         // Draw input RMS indicator
@@ -125,14 +131,13 @@ const sketch = function(p) {
         p.rect(0, p.height - rectHeight, outputRectWidth, rectHeight);
     };
 
-    const drawFFTCircles = (fftData, color) => {
+    const drawFFTCircles = (fftData, baseColor) => {
         if (fftData && fftData.length > 0) {
             p.push();
             p.translate(p.width / 2, p.height / 2);
             p.noStroke();
-            p.fill(color);
 
-            const maxRadius = Math.min(p.width, p.height) * 0.45;
+            const maxRadius = Math.min(p.width, p.height) * 0.75;
             const fftSize = fftData.length / 2;
             const sampleRate = 48000;
             const nyquist = sampleRate / 2;
@@ -150,9 +155,20 @@ const sketch = function(p) {
                     const imag = fftData[2 * bin + 1];
                     
                     let magnitude = Math.sqrt(real * real + imag * imag);
-                    magnitude *= .05;
-                    //magnitude = Math.log(magnitude + 1) / Math.log(10); // Apply logarithmic scaling
+                    //magnitude *= 0.02;
+                    //magnitude = Math.log2(magnitude);
                     
+                    // Calculate color based on magnitude
+                    const intensityColor = p.lerpColor(
+                        p.color(0, 100, 10),  // Cool color (blue) for low intensity
+                        p.color(200, 80, 100),  // Warm color (red) for high intensity
+                        p.constrain(magnitude*.05, 0, 1)  // Map magnitude to 0-1 range
+                    );
+                    
+                    // Blend the intensity color with the base color
+                    const finalColor = p.lerpColor(baseColor, intensityColor, 1.0);
+                    p.fill(finalColor);
+
                     // Calculate octave and position within octave
                     const logFreq = Math.log2(freq) - minLog;
                     const octave = Math.floor(logFreq);
@@ -162,16 +178,19 @@ const sketch = function(p) {
                     const angle = 270 + (octaveFraction * 360); // This is already in degrees
 
                     // Calculate radius (inner octaves have smaller radius)
-                    let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
+                    // let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
+                    let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius * (p.rmsOutput + .5));
                     // Calculate circle size based on magnitude
                     //magnitude = 1;
-                    const circleSize = magnitude * (maxRadius / 20);
+                    const circleSize = Math.log2(magnitude * .5) * (maxRadius / 80);
                     
                     // Use p.cos and p.sin directly with the angle in degrees
                     const x = radius * p.cos(angle);
                     const y = radius * p.sin(angle);
                     
                     p.ellipse(x, y, circleSize);
+                    //p.triangle(x1, y1, x2, y2, x3, y3)
+                    //p.triangle(x,y,x+14,y+14,x-14,y);
                 }
             }
             p.pop();

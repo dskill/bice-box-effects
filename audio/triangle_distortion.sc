@@ -7,6 +7,7 @@
         var phase, trig, partition, kr_impulse;
         var feedback, bitCrushed, stereoSig, pitchShifted;
         var rms_input, rms_output;
+        var chain_out;
 
         sig = In.ar(in_bus);
  
@@ -55,7 +56,12 @@
         phase = Phasor.ar(0, 1, 0, ~chunkSize);
         trig = HPZ1.ar(phase) < 0;
         partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
+        kr_impulse = Impulse.kr(30);  // Trigger 60 times per second
+
+        chain_out = FFT(~fft_buffer_out, distorted, wintype: 1);
+
+        // Store FFT data in buffers
+        chain_out.do(~fft_buffer_out);
 
         // write to buffers that will contain the waveform data we send via OSC
         BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
@@ -63,6 +69,7 @@
 
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
+        SendReply.kr(kr_impulse, '/fft_data');
 
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);

@@ -11,8 +11,9 @@
 
         sig = In.ar(in_bus);
         //sig = SoundIn.ar(0);
-        freq = LFTri.kr(1/10, 0).range(82.41, 1*164.82);  // Triangle LFO from low E to E one octave up
+        //freq = LFTri.kr(1/10, 0).range(82.41, 82.41*2);  // Triangle LFO from low E to E one octave up
         //sig = SinOsc.ar(freq, 0, 0.5);
+
         // END USER EFFECT CODE
 
         // MACHINERY FOR SAMPLING THE SIGNAL
@@ -27,21 +28,12 @@
         // FFT Analysis
         kr_impulse = Impulse.kr(30);  // Trigger 60 times per second
 
-        //sig = BPF.ar(sig, 2000, 0.1);  // Narrower bandwidth to focus more on 550Hz
- 
-        //chain_in = FFT(~fft_buffer_in, sig, wintype: 1); 
+        // FFT
         chain_out = FFT(~fft_buffer_out, sig, wintype: 1);
-
-        // Store FFT data in buffers
-        //chain_in.do(~fft_buffer_in); 
         chain_out.do(~fft_buffer_out);
 
         rms_input = RunningSum.rms(sig, 1024);
         rms_output = RunningSum.rms(sig, 1024);
-
-        // END USER EFFECT CODE
-
-        // MACHINERY FOR SAMPLING THE SIGNAL
 
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);
