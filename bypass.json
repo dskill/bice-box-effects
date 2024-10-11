@@ -2,7 +2,7 @@
   "name": "bypass",
   "description": "a passthrough bypass",
   "audio": "audio/bypass.sc",
-  "visual": "visual/waveform_with_fft.js",
+  "visual": "visual/waveform_with_fft_simple.js",
   "params": [
     {
       "name": "test",

@@ -146,7 +146,6 @@ const sketch = function(p) {
             const maxFreq = 2318.51; // Approximately the frequency of the highest E (E6) on a standard guitar
             const minLog = Math.log2(minFreq);
             const maxLog = Math.log2(maxFreq);
-            const totalOctaves = Math.ceil(maxLog - minLog);
 
             for (let bin = 0; bin < fftSize; bin++) {
                 const freq = (bin / fftSize) * nyquist;
@@ -155,8 +154,6 @@ const sketch = function(p) {
                     const imag = fftData[2 * bin + 1];
                     
                     let magnitude = Math.sqrt(real * real + imag * imag);
-                    //magnitude *= 0.02;
-                    //magnitude = Math.log2(magnitude);
                     
                     // Calculate color based on magnitude
                     const intensityColor = p.lerpColor(
@@ -179,10 +176,10 @@ const sketch = function(p) {
 
                     // Calculate radius (inner octaves have smaller radius)
                     // let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
-                    let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius * (p.rmsOutput + .5));
+                    let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius );
                     // Calculate circle size based on magnitude
                     //magnitude = 1;
-                    const circleSize = Math.log2(magnitude * .5) * (maxRadius / 40);
+                    const circleSize =(magnitude*.04 + 2) * (maxRadius / 40);
                     
                     // Use p.cos and p.sin directly with the angle in degrees
                     const x = radius * p.cos(angle);

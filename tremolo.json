@@ -2,7 +2,7 @@
   "name": "tremolo",
   "description": "a classic tremolo effect with adjustable rate and depth",
   "audio": "audio/tremolo.sc",
-  "visual": "visual/waveform.js",
+  "visual": "visual/tremolo.js",
   "params": [
     {
       "name": "rate",

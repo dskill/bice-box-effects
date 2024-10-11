@@ -3,7 +3,7 @@
         |out = 0, in_bus = 0, rate = 2, depth = 0.5, wetLevel = 0.5|
         // START USER EFFECT CODE
         var sig, trem, dry, finalSig;
-        var phase, trig, partition, kr_impulse;
+        var phase, trig, partition, kr_impulse, chain_out;
 
         sig = In.ar(in_bus);
         trem = sig * (depth * SinOsc.kr(rate) + (1 - depth));
@@ -16,7 +16,13 @@
         phase = Phasor.ar(0, 1, 0, ~chunkSize);
         trig = HPZ1.ar(phase) < 0;
         partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
+
+        // FFT Analysis
+        kr_impulse = Impulse.kr(30);  // Trigger 60 times per second
+
+        // FFT
+        chain_out = FFT(~fft_buffer_out, sig, wintype: 1);
+        chain_out.do(~fft_buffer_out);
 
         // write to buffers that will contain the waveform data we send via OSC
         BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
@@ -24,6 +30,7 @@
 
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
+        SendReply.kr(kr_impulse, '/fft_data');
 
         Out.ar(out, [finalSig,finalSig]);
     }).add;
