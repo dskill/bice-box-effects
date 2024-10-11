@@ -49,7 +49,7 @@ void main() {
     vec4 diffusion = (left + right + up + down) * 0.25;// - center;
     */
     /*
-    // Reaction-diffusion
+    // Reaction-diffusion 
     float a = center.r;
     float b = center.g;
     float reaction = a * b * b;
@@ -63,7 +63,7 @@ void main() {
     // Add some variation based on frame count
    // float variation = sin(uv.x * 10.0 + float(u_framecount) * 0.1) * 0.5 + 0.5;
     //vec4 test = texture2D(u_previous, uv - .1 * vec2(texel.x, 0.0));
-    gl_FragColor = texture2D(u_previous, uv + vec2(0,.005)) * vec4(.99,.96,.94,1.0) + texture2D(u_next, uv); //vec4(1,0,0,1);// diffusion;//vec4(a, b, 0, 1.0); 
+    gl_FragColor = texture2D(u_previous, uv + vec2(0,.005));// * vec4(.99,.96,.94,1.0) + texture2D(u_next, uv); //vec4(1,0,0,1);// diffusion;//vec4(a, b, 0, 1.0); 
 }
     
     `; 
@@ -80,6 +80,7 @@ const sketch = function (p)
     p.fft0 = [];
     p.fft1 = [];
 
+    let pingPong = [];
 
     p.preload = () =>
     {
@@ -89,50 +90,51 @@ const sketch = function (p)
     p.setup = () =>
     {
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
-        previous = p.createFramebuffer(p.width, p.height); //, { format: p.FLOAT });
-        next = p.createFramebuffer(p.width, p.height); //, { format: p.FLOAT });
+        pingPong = [
+            p.createFramebuffer({ width: p.width, height: p.height, depth: false, antialias: false }),
+            p.createFramebuffer({ width: p.width, height: p.height, depth: false, antialias: false }),
+        ];
         
         p.imageMode(p.CENTER);
 
-        previous.begin();
-        p.background(0,20,0,255); 
-        p.ellipse(0,0,20,20); 
-        previous.end();
+        // Initialize the first buffer
+        pingPong[0].begin();
+        p.background(0, 20, 0, 255);
+        p.ellipse(0, 0, 20, 20);
+        pingPong[0].end();
 
-        next.begin();
-        p.background(0,0,0,255); 
-        p.fill(10,0,255,255); 
-        p.ellipse(0,0,41,41); 
-        next.end();
- 
+        // Initialize the second buffer
+        pingPong[1].begin();
+        p.background(0, 0, 0, 255);
+        p.fill(10, 0, 255, 255);
+        p.ellipse(0, 0, 41, 41);
+        pingPong[1].end();
 
         // FPS counter setup
         p.fps = p.createP('');
         p.fps.position(10, 10);
         p.fps.style('color', 'white');
+        p.frameRate(30);
+
     };
 
     p.draw = () =>
     {
        p.background(0,0,0,255);
         
-        [previous, next] = [next, previous];
+        let read = pingPong[p.frameCount % 2]; 
+        let write = pingPong[(p.frameCount + 1) % 2];
 
-        next.begin();
+        write.begin();
         p.clear();
     
-        // Draw waveform0 in white at the top with RMS
-       // drawWaveform(p.waveform0, p.color(255, 100, 0), -p.height / 4, 1, p.rmsInput);
         // Draw waveform1 in blue in the middle with RMS
-        drawWaveform(p.waveform1, p.color(0, 100, 255), p.height / 4, 1, p.rmsOutput);
-        next.end();
-        //p.image(previous, 1000, 0);
+        drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 4, 1, p.rmsOutput);
+        write.end();
 
-       
-
-        next.begin();
-        feedback.setUniform('u_previous', previous);
-        feedback.setUniform('u_next', next);
+        write.begin();
+        feedback.setUniform('u_previous', read);
+        feedback.setUniform('u_next', write);
 
         feedback.setUniform('u_resolution', [p.width * p.pixelDensity(), p.height * p.pixelDensity()]);
         feedback.setUniform('u_framecount', p.frameCount);
@@ -146,9 +148,8 @@ const sketch = function (p)
 
         p.shader(feedback);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
-        next.end();
-        p.image(next, 0, 0);
-
+        write.end();
+        p.image(write, 0, 0);
 
         // copy the final buffer back to next, which will become previous in the next frame
         
@@ -186,8 +187,8 @@ const sketch = function (p)
     p.windowResized = () =>
     {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
-        previous = p.createFramebuffer(p.width, p.height, { format: p.FLOAT });
-        next = p.createFramebuffer(p.width, p.height, { format: p.FLOAT });
+        pingPong[0] = p.createFramebuffer(p.width, p.height, { format: p.FLOAT });
+        pingPong[1] = p.createFramebuffer(p.width, p.height, { format: p.FLOAT });
     };
 
 };

@@ -30,7 +30,7 @@
 
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
-        SendReply.kr(kr_impulse, '/fft_data');
+        //SendReply.kr(kr_impulse, '/fft_data');
 
         Out.ar(out, [finalSig,finalSig]);
     }).add;
