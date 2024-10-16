@@ -40,9 +40,9 @@
         Out.kr(~rms_bus_output, rms_output);
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
         SendReply.kr(kr_impulse, '/fft_data');
+        SendReply.kr(kr_impulse, '/rms'); 
 
-
-	Out.ar(out, [sig, sig]);
+	    Out.ar(out, [sig, sig]);
     }).add;
     "Effect SynthDef added".postln;
 

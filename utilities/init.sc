@@ -81,9 +81,7 @@ s.waitForBoot{
 		{ ~audio_input_bus }
 	);
 
-	// Remove existing OSCdef if it exists
-	OSCdef(\k).free;
-	OSCdef(\k, { |msg|
+	OSCdef(\buffer_refresh, { |msg|
 		var partition = (msg[3] - 1) % ~numChunks;
 
 		[~relay_buffer_in, ~relay_buffer_out].do { |buf, i|
@@ -94,13 +92,21 @@ s.waitForBoot{
 				});
 			}, {
 				"Warning: Relay buffer % is nil".format(i).postln;
-			});
+			}); 
 		};
 
 		// Send RMS values
-		~o.sendMsg(\audio_analysis, ~rms_bus_input.getSynchronous, ~rms_bus_output.getSynchronous);
+		//~o.sendMsg(\audio_analysis, ~rms_bus_input.getSynchronous, ~rms_bus_output.getSynchronous);
 
 	}, '/buffer_refresh');
+
+
+	OSCdef(\rms, { |msg|
+		// Send RMS values
+		~o.sendMsg(\audio_analysis, ~rms_bus_input.getSynchronous, ~rms_bus_output.getSynchronous);
+
+	}, '/rms');
+	
 
 	// Add new OSCdef for FFT data
 	OSCdef(\fftData).free;

@@ -56,9 +56,11 @@ void main() {
     
     vec2 texel = 1.0 / u_resolution;
     vec4 center = texture2D(u_previous, uv);
-    texel *= 6.0;
+    texel *= 2.0;
     //texel.y += .01;
     // Simple diffusion
+
+    uv = (uv - .5) * .98 + .5;
     vec4 left = texture2D(u_previous, uv - vec2(texel.x, 0.0));
     vec4 right = texture2D(u_previous, uv + vec2(texel.x, 0.0));
     vec4 up = texture2D(u_previous, uv - vec2(0.0, texel.y));
@@ -84,9 +86,9 @@ void main() {
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
     
     // Modify HSV values
-    hsvColor.x = mod(hsvColor.x + 0.1, 1.0); // Shift hue
-    //hsvColor.y = min(hsvColor.y * 1.05, 1.0); // Increase saturation
-    hsvColor.z *= 0.99; // Slightly decrease value for decay effect
+    hsvColor.x = mod(hsvColor.x + 0.5, 1.0); // Shift hue
+    hsvColor.y =  min(hsvColor.y + .05, .99); // Increase saturation
+    hsvColor.z *= 0.97; // Slightly decrease value for decay effect
     
     // Convert back to RGB
     vec3 remappedColor = hsv2rgb(hsvColor);
@@ -141,6 +143,7 @@ const sketch = function (p)
         p.fps.position(10, 10);
         p.fps.style('color', 'white');
         p.frameRate(30);
+        p.angleMode(p.DEGREES); // Use degrees for angle calculations
 
     };
 
@@ -174,6 +177,10 @@ const sketch = function (p)
         write.begin();
         // Draw waveform1 in blue in the middle with RMS
         drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 2, 3, p.rmsOutput);
+
+        // Draw FFT as concentric circles
+        drawFFTCircles(p.fft0, p.color(255, 100, 100));
+
         write.end();
         p.image(write, 0, 0);
 
@@ -207,6 +214,83 @@ const sketch = function (p)
             p.endShape();
         }
         p.pop();
+    };
+
+
+    const drawFFTCircles = (fftData, baseColor) => {
+        if (fftData && fftData.length > 0) {
+            p.push();
+            p.translate(p.width / 2, p.height / 2);
+            p.noStroke();
+
+            const maxRadius = Math.min(p.width, p.height) * 0.75;
+            const fftSize = fftData.length / 2;
+            const sampleRate = 48000;
+            const nyquist = sampleRate / 2;
+
+            const minFreq = 82.41/2.0; // Frequency of the low E string (E2) on a standard guitar
+            const maxFreq = 2318.51; // Approximately the frequency of the highest E (E6) on a standard guitar
+            const minLog = Math.log2(minFreq);
+            const maxLog = Math.log2(maxFreq);
+
+            for (let bin = 0; bin < fftSize; bin++) {
+                const freq = (bin / fftSize) * nyquist;
+                if (freq >= minFreq && freq <= maxFreq) {
+                    const real = fftData[2 * bin];
+                    const imag = fftData[2 * bin + 1];
+                    
+                    let magnitude = Math.sqrt(real * real + imag * imag);
+                    
+                    // Calculate color based on magnitude 
+                    const intensityColor = p.lerpColor(
+                        p.color(0, 0, 0,0),  // Cool color (blue) for low intensity
+                        p.color(255, 255, 255,255),  // Warm color (red) for high intensity
+                        p.constrain(magnitude*.05, 0, 1)  // Map magnitude to 0-1 range
+                    );
+                    
+                    // Blend the intensity color with the base color
+                    let finalColor = p.lerpColor(baseColor, intensityColor, 1.0);
+                    finalColor = intensityColor;
+                    p.fill(finalColor);
+
+                    // Calculate octave and position within octave
+                    const logFreq = Math.log2(freq) - minLog;
+                    const octave = Math.floor(logFreq);
+                    const octaveFraction = logFreq - octave;
+
+                    // Calculate angle (0 degrees is at the top, moving clockwise)
+                    const angle = 270 + (octaveFraction * 360); // This is already in degrees
+
+                    // Calculate radius (inner octaves have smaller radius)
+                    // let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
+                    let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius );
+                    // Calculate circle size based on magnitude
+                    //magnitude = 1;
+                    const circleSize =(magnitude*.04 + 0) * (maxRadius / 40);
+                    
+                    // Use p.cos and p.sin directly with the angle in degrees
+                    const x = radius * p.cos(angle)- p.width/2.0;
+                    const y = radius * p.sin(angle) - p.height/2.0;
+                    
+                    p.ellipse(x, y, circleSize);
+
+                     // Calculate triangle points
+                     /*
+                    const x1 = radius * p.cos(angle);
+                    const y1 = radius * p.sin(angle);
+                    const x2 = (radius + circleSize) * p.cos(angle - 5);
+                    const y2 = (radius + circleSize) * p.sin(angle - 5);
+                    const x3 = (radius + circleSize) * p.cos(angle + 5);
+                    const y3 = (radius + circleSize) * p.sin(angle + 5);
+                    
+
+                    // Draw triangle pointing out from the center
+                    p.triangle(x1, y1, x2, y2, x3, y3);
+                    */
+                }
+            }
+            p.pop();
+        }
     };
 
     
