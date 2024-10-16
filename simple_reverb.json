@@ -2,7 +2,7 @@
   "name": "simple_reverb",
   "description": "a basic reverb effect with adjustable parameters",
   "audio": "audio/simple_reverb.sc",
-  "visual": "visual/waveform.js",
+  "visual": "visual/waveform_with_fft_simple.js",
   "params": [
     {
       "name": "decay",

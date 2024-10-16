@@ -2,7 +2,7 @@
   "name": "distortion_with_reverb",
   "description": "a distortion effect with reverb",
   "audio": "audio/distortion_with_reverb.sc",
-  "visual": "visual/waveform.js",
+  "visual": "visual/waveform_with_fft_simple.js",
   "params": [
     {
       "name": "drive",

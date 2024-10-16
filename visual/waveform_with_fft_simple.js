@@ -15,7 +15,7 @@ const sketch = function(p) {
     const fpsArraySize = 10;
 
     p.setup = () => {
-        p.createCanvas(p.windowWidth, p.windowHeight);
+        p.createCanvas(p.windowWidth, p.windowHeight, sketch.WEBGL);
         p.background(0);
         p.angleMode(p.DEGREES); // Use degrees for angle calculations
         // Initialize fps

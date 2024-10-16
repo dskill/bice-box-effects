@@ -2,7 +2,10 @@
     SynthDef(\overdrive, {
         |out = 0, in_bus = 0, drive = 100.5, tone = 0.5|
         // START USER EFFECT CODE
-        var sig, distorted, phase, trig, partition, kr_impulse;
+        var sig, distorted, phase, trig, partition;
+        var chain_in, chain_out, kr_impulse;
+        var fft_output, fft_input;
+        var rms_input, rms_output;
 
         sig = In.ar(in_bus);
         distorted = (sig * drive).tanh();
@@ -20,8 +23,21 @@
         BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(distorted, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
-        // send data as soon as it's available
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition);
+         // FFT
+        chain_out = FFT(~fft_buffer_out, distorted, wintype: 1);
+        chain_out.do(~fft_buffer_out);
+
+        
+
+        rms_input = RunningSum.rms(sig, 1024);
+        rms_output = RunningSum.rms(sig, 1024);
+
+        // Send RMS values to the control buses
+        Out.kr(~rms_bus_input, rms_input);
+        Out.kr(~rms_bus_output, rms_output);
+        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
+        SendReply.kr(kr_impulse, '/fft_data');
+        SendReply.kr(kr_impulse, '/rms'); 
 
         Out.ar(out, [distorted,distorted]);
     }).add;
