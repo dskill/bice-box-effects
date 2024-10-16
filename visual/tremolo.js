@@ -86,7 +86,7 @@ void main() {
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
     
     // Modify HSV values
-    hsvColor.x = mod(hsvColor.x + 0.5, 1.0); // Shift hue
+    hsvColor.x = mod(hsvColor.x + 0.1, 1.0); // Shift hue
     hsvColor.y =  min(hsvColor.y + .05, .99); // Increase saturation
     hsvColor.z *= 0.97; // Slightly decrease value for decay effect
     
@@ -176,7 +176,7 @@ const sketch = function (p)
 
         write.begin();
         // Draw waveform1 in blue in the middle with RMS
-        drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 2, 3, p.rmsOutput);
+       // drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 2, 3, p.rmsOutput);
 
         // Draw FFT as concentric circles
         drawFFTCircles(p.fft0, p.color(255, 100, 100));

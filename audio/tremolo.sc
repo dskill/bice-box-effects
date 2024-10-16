@@ -1,38 +1,15 @@
 (
     SynthDef(\tremolo, {
-        |out = 0, in_bus = 0, rate = 2, depth = 0.5, wetLevel = 0.5, reverbMix = 0.3, reverbRoom = 2.5, reverbDamp = 0.5|
+        |out = 0, in_bus = 0, rate = 2, depth = 0.5, wetLevel = 0.5|
         // START USER EFFECT CODE
-        var sig, trem, dry, wetTrem, reverbSig, finalSig;
+        var sig, trem, dry, finalSig;
         var phase, trig, partition, kr_impulse, chain_out, rms_input, rms_output;
 
         sig = In.ar(in_bus);
-        
-        // Spectral processing for ghostly effect
-        sig = FFT(LocalBuf(2048), sig);
-        sig = PV_MagSmear(sig, 3);
-        sig = PV_MagShift(sig, 1.5);
-        sig = IFFT(sig);
-        
-        // Modulated tremolo with slower, irregular rate
-        trem = sig * (depth * SinOsc.kr(LFNoise2.kr(0.2).range(rate * 0.5, rate * 1.5)) + (1 - depth));
-        
-        // Add pitch-shifting for eerie effect
-        // trem = PitchShift.ar(trem, 0.1, LFNoise2.kr(0.1).range(0.95, 1.05));
-        
+        trem = sig * (depth * SinOsc.kr(rate) + (1 - depth));
         dry = sig * (1 - wetLevel);
-        wetTrem = trem * wetLevel;
+        finalSig = dry + (trem * wetLevel);
         
-        // Apply reverb with longer decay
-        reverbSig = FreeVerb.ar(wetTrem, reverbMix, reverbRoom * 1.5, reverbDamp * 0.7);
-        
-        // Add subtle distortion and filtering
-        reverbSig = (reverbSig * 10).tanh * 0.5;
-        reverbSig = LPF.ar(reverbSig, LFNoise2.kr(0.1).range(200, 5000));
-        
-        finalSig = Mix([dry, reverbSig]);
-        
-        // Add subtle white noise for ghostly atmosphere
-        finalSig = finalSig + (PinkNoise.ar(0.01) * LFNoise2.kr(0.1).range(0, 1));
 
         // END USER EFFECT CODE
         rms_input = RunningSum.rms(sig, 1024);
