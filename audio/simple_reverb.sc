@@ -7,7 +7,6 @@
         var rms_input, rms_output;
         var chain_out, chain_in;
         var predelay, dampedSig;
-        // Add new variables for doubling
         var doubled, detune, modulation;
 
         sig = In.ar(in_bus);

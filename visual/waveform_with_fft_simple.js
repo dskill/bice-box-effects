@@ -137,13 +137,14 @@ const sketch = function(p) {
             p.translate(p.width / 2, p.height / 2);
             p.noStroke();
 
-            const maxRadius = Math.min(p.width, p.height) * 0.75;
+            const maxRadius = Math.min(p.width, p.height) * 0.85; // Increased size
             const fftSize = fftData.length / 2;
             const sampleRate = 48000;
             const nyquist = sampleRate / 2;
 
-            const minFreq = 82.41/2.0; // Frequency of the low E string (E2) on a standard guitar
-            const maxFreq = 2318.51; // Approximately the frequency of the highest E (E6) on a standard guitar
+            // Adjusted frequency range for vocal-focused visualization
+            const minFreq = 80;  // Lower range for warmth
+            const maxFreq = 2000; // Extended for air frequencies
             const minLog = Math.log2(minFreq);
             const maxLog = Math.log2(maxFreq);
 
@@ -155,51 +156,32 @@ const sketch = function(p) {
                     
                     let magnitude = Math.sqrt(real * real + imag * imag);
                     
-                    // Calculate color based on magnitude
+                    // Softer, more ethereal color palette
                     const intensityColor = p.lerpColor(
-                        p.color(0, 100, 10),  // Cool color (blue) for low intensity
-                        p.color(200, 80, 100),  // Warm color (red) for high intensity
-                        p.constrain(magnitude*.05, 0, 1)  // Map magnitude to 0-1 range
+                        p.color(200, 30, 40),  // Soft blue for low intensity
+                        p.color(280, 60, 100),  // Warm purple for high intensity
+                        p.constrain(magnitude * 0.08, 0, 1)
                     );
                     
-                    // Blend the intensity color with the base color
-                    const finalColor = p.lerpColor(baseColor, intensityColor, 1.0);
+                    const finalColor = p.lerpColor(baseColor, intensityColor, 0.8);
                     p.fill(finalColor);
 
-                    // Calculate octave and position within octave
                     const logFreq = Math.log2(freq) - minLog;
-                    const octave = Math.floor(logFreq);
-                    const octaveFraction = logFreq - octave;
+                    const angle = 270 + (logFreq * 320); // Slightly reduced spread
 
-                    // Calculate angle (0 degrees is at the top, moving clockwise)
-                    const angle = 270 + (octaveFraction * 360); // This is already in degrees
-
-                    // Calculate radius (inner octaves have smaller radius)
-                    // let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
-                    let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius );
-                    // Calculate circle size based on magnitude
-                    //magnitude = 1;
-                    const circleSize =(magnitude*.04 + 2) * (maxRadius / 40);
+                    let radius = p.map(logFreq, 0, maxLog - minLog, maxRadius * 0.1, maxRadius);
                     
-                    // Use p.cos and p.sin directly with the angle in degrees
+                    // Larger, softer circles
+                    const circleSize = (magnitude * 0.06 + 3) * (maxRadius / 35);
+                    
                     const x = radius * p.cos(angle);
                     const y = radius * p.sin(angle);
                     
+                    // Add subtle glow effect
+                    p.drawingContext.shadowBlur = 15;
+                    p.drawingContext.shadowColor = p.color(finalColor);
                     p.ellipse(x, y, circleSize);
-
-                     // Calculate triangle points
-                     /*
-                    const x1 = radius * p.cos(angle);
-                    const y1 = radius * p.sin(angle);
-                    const x2 = (radius + circleSize) * p.cos(angle - 5);
-                    const y2 = (radius + circleSize) * p.sin(angle - 5);
-                    const x3 = (radius + circleSize) * p.cos(angle + 5);
-                    const y3 = (radius + circleSize) * p.sin(angle + 5);
-                    
-
-                    // Draw triangle pointing out from the center
-                    p.triangle(x1, y1, x2, y2, x3, y3);
-                    */
+                    p.drawingContext.shadowBlur = 0;
                 }
             }
             p.pop();
