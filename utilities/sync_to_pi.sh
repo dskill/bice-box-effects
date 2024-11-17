@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# to configure your own sync on PI:
+# 1. Set the remote host IP address in REMOTE_HOST
+# 2. Make sure you run ssh-copy-id on your local machine to the PI user
+## ssh-keygen -t ed25519 -C "your@email.com"
+## test: ssh pi@192.168.50.252
+
 # Configuration
 LOCAL_DIR="$HOME/bice-box-effects"
 REMOTE_USER="patch"

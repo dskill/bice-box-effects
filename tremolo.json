@@ -1,7 +1,7 @@
 {
   "name": "tremolo",
   "description": "a classic tremolo effect with adjustable rate and depth",
-  "audio": "audio/tremolo.sc",
+  "audio": "audio/bypass.sc",
   "visual": "visual/tremolo.js",
   "params": [
     {
