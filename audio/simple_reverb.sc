@@ -6,11 +6,49 @@
         var phase, trig, partition, kr_impulse;
         var rms_input, rms_output;
         var chain_out, chain_in;
+        var predelay, dampedSig;
+        // Add new variables for doubling
+        var doubled, detune, modulation;
 
         sig = In.ar(in_bus);
-        verb = FreeVerb.ar(sig, mul: decay, room: roomSize);
+        
+        // Create voice doubling effect
+        detune = SinOsc.kr(0.5).range(0.99, 1.01);  // Subtle pitch variation
+        modulation = SinOsc.kr(0.2).range(0.005, 0.012);  // Time modulation
+        doubled = DelayC.ar(sig, 0.05, modulation) * detune;  // Delayed & modulated copy
+        doubled = PitchShift.ar(doubled, 0.2, detune, 0.01, 0.01);  // Slight pitch shifting
+        
+        // Mix original and doubled signal
+        sig = (sig + (doubled * 0.8)) * 0.7;  // Blend signals with some level adjustment
+        
+        // Longer predelay for that classic Garfunkel sound 
+        predelay = DelayN.ar(sig, 0.05, 0.04);
+        
+        // Gentle high shelf boost before reverb for air
+        dampedSig = BHiShelf.ar(predelay, 8000, 1, 2);
+        
+        // More complex reverb chain for that cathedral-like sound
+        verb = FreeVerb.ar(dampedSig, 
+            mul: decay * 1.5,  // Increased decay multiplier
+            room: roomSize * 1.4,  // Larger room size
+            damp: 0.2  // Less damping for brighter reverb tail
+        );
+        
+        // Additional reverb layer for depth
+        verb = verb + (FreeVerb.ar(DelayN.ar(dampedSig, 0.03, 0.02),
+            mul: decay * 0.8,
+            room: roomSize * 1.2,
+            damp: 0.3
+        ) * 0.4);
+        
+        // Smoother compression
+        verb = CompanderD.ar(verb, 0.4, 1, 1/2);
+        
         dry = sig * (1 - wetLevel);
         finalSig = (dry + (verb * wetLevel)) * gain;
+        
+        // Enhanced warmth with subtle harmonics
+        finalSig = finalSig + (LPF.ar(finalSig, 300) * 0.15) + (HPF.ar(finalSig, 8000) * 0.1);
 
         // END USER EFFECT CODE
 
