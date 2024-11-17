@@ -1,0 +1,13 @@
+{
+    "name": "Porch Vibes",
+    "description": "a porch vibes effect",
+    "audio": "audio/porch_vibes.sc",
+    "visual": "visual/waveform_with_fft_simple.js",
+    "params": [
+      {
+        "name": "test",
+        "value": 2,
+        "range": [0.5, 10]
+      }
+    ]
+  }
