@@ -9,10 +9,57 @@ const sketch = function(p) {
     p.fft0 = [];
     p.fft1 = [];
 
+    p.colors = {
+        cyan: '#00FFFF',
+        neonPink: '#FF71CE',
+        brightBlue: '#01CDFE',
+        hotMagenta: '#FF00FF',
+        neonGreen: '#05FFA1',
+        brightPurple: '#B967FF',
+        darkGray: '#444444',
+        darkCyan: '#008B8B',
+        darkNeonPink: '#FF1493'
+      };
+      
+
     // Add FPS variables
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
+
+    const hexToHSB = (hex) => {
+        // Remove # if present
+        hex = hex.replace(/^#/, '');
+        
+        // Convert to RGB
+        const r = parseInt(hex.slice(0, 2), 16) / 255;
+        const g = parseInt(hex.slice(2, 4), 16) / 255;
+        const b = parseInt(hex.slice(4, 6), 16) / 255;
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const delta = max - min;
+        
+        // Calculate HSB
+        let h = 0;
+        if (delta === 0) {
+            h = 0;
+        } else if (max === r) {
+            h = 60 * (((g - b) / delta) % 6);
+        } else if (max === g) {
+            h = 60 * ((b - r) / delta + 2);
+        } else {
+            h = 60 * ((r - g) / delta + 4);
+        }
+        
+        // Make sure hue is positive
+        h = (h + 360) % 360;
+        
+        const s = max === 0 ? 0 : (delta / max) * 100;
+        const v = max * 100;
+        
+        return { h, s, v };
+    };
 
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight, sketch.WEBGL);
@@ -20,11 +67,21 @@ const sketch = function(p) {
         p.angleMode(p.DEGREES); // Use degrees for angle calculations
         // Initialize fps
         fps = p.createP('');
-        fps.position(10, 10);
-        fps.style('color', 'white');
+        fps.style('color', p.colors.darkGray); 
+        fps.style('font-family', '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif');
+        fps.style('font-size', '10px');
+        fps.style('position', 'fixed');
+        fps.style('bottom', '3px');
+        fps.style('left', '3px');
+        fps.style('margin', '0');
         p.colorMode(p.HSB, 360, 100, 100, 100);
         p.frameRate(30);
-    };
+        
+        // Convert hex colors directly to p5.js color objects
+        for (const [key, value] of Object.entries(p.colors)) {
+            p.colors[key] = p.color(value);
+        }
+    }; 
 
     p.draw = () => {
         p.background(0,0,0,255); 
@@ -35,18 +92,18 @@ const sketch = function(p) {
         drawRMSIndicators();
 
         // Draw waveform0 in white at the top with RMS
-        drawWaveform(p.waveform0, p.color(255, 100, 100), -p.height / 4, 1, p.rmsInput);
+        drawWaveform(p.waveform0, p.colors['brightBlue'], -p.height / 4, 1, p.rmsInput);
  
         // Draw waveform1 in blue in the middle with RMS
-        drawWaveform(p.waveform1, p.color(0, 100, 100), p.height / 4, 1, p.rmsOutput);
+        drawWaveform(p.waveform1, p.colors['neonPink'], p.height / 4, 1, p.rmsOutput);
 
         // Draw FFT as concentric circles
-        drawFFTCircles(p.fft0, p.color(255, 100, 100));
+        drawFFTCircles(p.fft0);
 
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();
-        drawWaveform(decayingWaveform, p.color(200, 40, 40), p.height / 4, 1, p.rmsOutput);
-        drawWaveform(decayingWaveform, p.color(200, 40, 40), p.height / 4, -1, p.rmsOutput);
+        drawWaveform(decayingWaveform, p.colors['darkCyan'], p.height / 4, 1, p.rmsOutput);
+        drawWaveform(decayingWaveform,  p.colors['darkCyan'], p.height / 4, -1, p.rmsOutput);
 
         //drawFFT(p.fft0, p.color(255, 0, 200));
 
@@ -131,7 +188,7 @@ const sketch = function(p) {
         p.rect(0, p.height - rectHeight, outputRectWidth, rectHeight);
     };
 
-    const drawFFTCircles = (fftData, baseColor) => {
+    const drawFFTCircles = (fftData) => {
         if (fftData && fftData.length > 0) {
             p.push();
             p.translate(p.width / 2, p.height / 2);
@@ -156,14 +213,12 @@ const sketch = function(p) {
                     let magnitude = Math.sqrt(real * real + imag * imag);
                     
                     // Calculate color based on magnitude
-                    const intensityColor = p.lerpColor(
-                        p.color(0, 100, 10),  // Cool color (blue) for low intensity
-                        p.color(200, 80, 100),  // Warm color (red) for high intensity
+                    const finalColor = p.lerpColor(
+                        p.colors['darkCyan'],  // Cool color (blue) for low intensity
+                        p.colors['brightPurple'],  // Warm color (red) for high intensity
                         p.constrain(magnitude*.05, 0, 1)  // Map magnitude to 0-1 range
                     );
                     
-                    // Blend the intensity color with the base color
-                    const finalColor = p.lerpColor(baseColor, intensityColor, 1.0);
                     p.fill(finalColor);
 
                     // Calculate octave and position within octave
@@ -179,7 +234,7 @@ const sketch = function(p) {
                     let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius );
                     // Calculate circle size based on magnitude
                     //magnitude = 1;
-                    const circleSize =(magnitude*.04 + 2) * (maxRadius / 40);
+                    const circleSize =(magnitude*.04 + .1) * (maxRadius / 40);
                     
                     // Use p.cos and p.sin directly with the angle in degrees
                     const x = radius * p.cos(angle);
@@ -212,7 +267,7 @@ const sketch = function(p) {
             fpsArray.shift();
         }
         const averageFPS = fpsArray.reduce((sum, value) => sum + value, 0) / fpsArray.length;
-        fps.html('Avg FPS: ' + averageFPS.toFixed(2));
+        fps.html('FPS: ' + averageFPS.toFixed(2));
     };
 
     p.windowResized = () => {
