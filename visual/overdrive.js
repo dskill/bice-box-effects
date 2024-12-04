@@ -228,7 +228,7 @@ const sketch = function(p) {
 
                     // Calculate angle (0 degrees is at the top, moving clockwise)
                     const angle = 270 + (octaveFraction * 360); // This is already in degrees
-
+ 
                     // Calculate radius (inner octaves have smaller radius)
                     // let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
                     let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius );
