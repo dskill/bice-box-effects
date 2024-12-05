@@ -189,7 +189,7 @@ const sketch = function (p)
         drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 2, 3, p.rmsOutput);
 
         // Draw FFT as concentric circles
-        drawFFTCircles(p.fft0, p.color(255, 100, 100));
+       // drawFFTCircles(p.fft0, p.color(255, 100, 100));
 
         write.end();
         p.image(write, 0, 0);
