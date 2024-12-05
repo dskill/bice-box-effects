@@ -186,7 +186,7 @@ const sketch = function (p)
 
         write.begin();
         // Draw waveform1 in blue in the middle with RMS
-        drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 2, 3, p.rmsOutput);
+        drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 2, 1, p.rmsOutput);
 
         // Draw FFT as concentric circles
        // drawFFTCircles(p.fft0, p.color(255, 100, 100));
