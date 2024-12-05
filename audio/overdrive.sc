@@ -9,7 +9,7 @@
 
         sig = In.ar(in_bus);
         distorted = (sig * drive).tanh();
-        distorted = LPF.ar(distorted, 10*tone.linexp(0, 1, 100, 20000));
+        distorted = LPF.ar(distorted, tone.linexp(0, 1, 100, 20000));
 
         // END USER EFFECT CODE
 

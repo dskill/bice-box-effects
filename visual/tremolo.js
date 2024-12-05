@@ -1,5 +1,4 @@
 let feedback;
-let previous, next;
 
 
 const vertexShader = `

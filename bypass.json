@@ -3,6 +3,7 @@
   "description": "a passthrough bypass",
   "audio": "audio/bypass.sc",
   "visual": "visual/waveform_with_fft_simple.js",
+  "curated": true,
   "params": [
     {
       "name": "test",

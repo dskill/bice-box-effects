@@ -3,6 +3,7 @@
   "description": "a simple overdrive effect",
   "audio": "audio/overdrive.sc",
   "visual": "visual/overdrive.js",
+  "curated": true,
   "params": [
     {
       "name": "drive",
