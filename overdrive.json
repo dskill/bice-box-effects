@@ -7,12 +7,17 @@
   "params": [
     {
       "name": "drive",
-      "value": 50,
-      "range": [1.5, 100]
+      "value": 10,
+      "range": [1, 50]
     }, 
     {
       "name": "tone",
       "value": 0.5,
+      "range": [0, 1]
+    },
+    {
+      "name": "mix",
+      "value": 1.0,
       "range": [0, 1]
     }
   ]
