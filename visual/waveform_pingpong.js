@@ -86,9 +86,9 @@ void main() {
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
     
     // Modify HSV values
-    hsvColor.x = mod(hsvColor.x - 0.003, 1.0); // Shift hue
-    hsvColor.y =  min(hsvColor.y + 0.001, .99); // Increase saturation
-    hsvColor.z *= 0.98; // Slightly decrease value for decay effect
+    hsvColor.x = mod(hsvColor.x + 0.1, 1.0); // Shift hue
+    hsvColor.y =  min(hsvColor.y + .05, .99); // Increase saturation
+    hsvColor.z *= 0.97; // Slightly decrease value for decay effect
     
     // Convert back to RGB
     vec3 remappedColor = hsv2rgb(hsvColor);
@@ -186,7 +186,7 @@ const sketch = function (p)
 
         write.begin();
         // Draw waveform1 in blue in the middle with RMS
-        drawCircleWaveform(p.waveform1, p.color(250, 200.0, 100.0), p.height / 2, .5, p.rmsOutput);
+        drawWaveform(p.waveform1, p.color(200, 100, 255), p.height / 2, 1, p.rmsOutput);
 
         // Draw FFT as concentric circles
        // drawFFTCircles(p.fft0, p.color(255, 100, 100));
@@ -210,36 +210,22 @@ const sketch = function (p)
     };
 
 
-    const drawCircleWaveform = (waveform, color, yOffset, yMult, rms) => {
+    const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
         p.push();
         if (waveform && waveform.length > 0) {
+            //color.setRed(rms * 1000);
             p.stroke(color);
-            // Create a new color with 10% opacity of the stroke color
-            //let fillColor = p.color(p.red(color), p.green(color), p.blue(color), p.alpha(color) * 0.05);
-            //p.fill(fillColor);
-            p.strokeWeight(1.0);
+            p.strokeWeight(3.0);//+ Math.max(rms, 0.002) * 10.0); // Adjust stroke weight based on RMS
             p.noFill();
             p.beginShape();
 
-            const radius = p.min(p.width, p.height) * .1 + 100 * rms; // Adjust radius as needed
-            const centerX = 0;
-            const centerY = 0;
-
             for (let i = 0; i < waveform.length; i++) {
-                // Calculate angle for each point (0 to 360 degrees)
-                let angle = p.map(i, 0, waveform.length, 0, 360);
-                
-                // Calculate radius offset based on waveform data
-                let r = radius + (waveform[i] * p.height / 8 * yMult);
-                
-                // Convert polar coordinates to cartesian
-                let x = centerX + r * p.cos(angle);
-                let y = centerY + r * p.sin(angle);
-                
+                let x = p.map(i, 0, waveform.length, -p.width/2, p.width/2);
+                let y = p.height / 2 - yOffset + waveform[i] * p.height / 8 * yMult;
                 p.vertex(x, y);
             }
 
-            p.endShape(p.CLOSE); // Close the shape to complete the circle
+            p.endShape();
         }
         p.pop();
     };
