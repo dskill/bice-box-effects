@@ -12,7 +12,7 @@
         LocalOut.ar([leftDelay, rightDelay] * feedback);
         delaySig = [leftDelay, rightDelay];
         dry = sig;
-        delaySig = delaySig * gain;
+        delaySig = delaySig * gain + dry;
         finalSig = dry.blend(dry + delaySig, wetLevel);
 
         // END USER EFFECT CODE

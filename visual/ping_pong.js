@@ -1,99 +1,78 @@
 const sketch = function(p) {
-    p.waveform0 = [];
-    p.waveform1 = [];
-    let particles = [];
-    const numParticles = 10;
-    const maxSpeed = 2;
-    const trailLength = 20;
+  let snowflakes = [];
+  p.waveform0 = [];
+  p.waveform1 = [];
 
-    p.setup = () => {
-        p.createCanvas(p.windowWidth, p.windowHeight);
-        p.background(0);
-        for (let i = 0; i < numParticles; i++) {
-            particles.push(new Particle());
-        }
-    };
-
-    p.draw = () => {
-        p.background(0,0,0);
-
-        // Draw connection lines
-        p.stroke(255, 30);
-        p.strokeWeight(0.5);
-        for (let i = 0; i < particles.length; i++) {
-            for (let j = i + 1; j < particles.length; j++) {
-                let d = p.dist(particles[i].pos.x, particles[i].pos.y, particles[j].pos.x, particles[j].pos.y);
-                if (d < 100) {
-                    p.line(particles[i].pos.x, particles[i].pos.y, particles[j].pos.x, particles[j].pos.y);
-                }
-            }
-        }
-
-        // Update and display particles
-        particles.forEach(particle => {
-            particle.update();
-            particle.display();
-        });
-
-        // Draw waveforms with RMS values
-        drawWaveform(p.waveform0, p.color(255, 100, 0, 150), -p.height / 4, p.rmsInput);
-        drawWaveform(p.waveform1, p.color(0, 100, 255, 150), p.height / 4, p.rmsOutput);
-    };
-
-    class Particle {
-        constructor() {
-            this.pos = p.createVector(p.random(p.width), p.random(p.height));
-            this.vel = p.createVector(p.random(-1, 1), p.random(-1, 1)).mult(p.random(1, maxSpeed));
-            this.acc = p.createVector();
-            this.trail = [];
-        }
-
-        update() {
-            let waveIndex = Math.floor(p.map(this.pos.x, 0, p.width, 0, p.waveform1.length - 1));
-            let waveValue = p.waveform1[waveIndex] || 0;
-            
-            this.acc = p.createVector(p.random(-1, 1), p.random(-1, 1)).normalize().mult(waveValue * 10);
-            this.vel.add(this.acc);
-            this.vel.limit(maxSpeed);
-            this.pos.add(this.vel);
-
-            if (this.pos.x < 0 || this.pos.x > p.width) this.vel.x *= -1;
-            if (this.pos.y < 0 || this.pos.y > p.height) this.vel.y *= -1;
-
-            this.trail.unshift(this.pos.copy());
-            if (this.trail.length > trailLength) {
-                this.trail.pop();
-            }
-        }
-
-        display() {
-            p.noStroke();
-            for (let i = 0; i < this.trail.length; i++) {
-                let alpha = p.map(i, 0, this.trail.length, 255, 0);
-                p.fill(255, 100, 0, alpha);
-                p.ellipse(this.trail[i].x, this.trail[i].y, 4, 4);
-            }
-        }
+  p.setup = function() {
+    p.createCanvas(p.windowWidth, p.windowHeight);
+    
+    // Create initial snowflakes
+    for (let i = 0; i < 500; i++) {
+      snowflakes.push(new Snowflake());
     }
+  }
 
-    const drawWaveform = (waveform, color, yOffset, rms) => {
-        if (waveform && waveform.length > 0) {
-            p.stroke(color);
-            p.strokeWeight(1.0 + Math.max(rms, 0.002) * 100.0); // Ensure RMS is at least 0.05
-            p.noFill();
-            p.beginShape();
-            for (let i = 0; i < waveform.length; i++) {
-                let x = p.map(i, 0, waveform.length, 0, p.width);
-                let y = p.height / 2 + yOffset + waveform[i] * p.height / 4;
-                p.vertex(x, y);
-            }
-            p.endShape();
-        }
-    };
+  p.draw = function() {
+    p.background(0, 20, 40); // Dark blue night sky
+    
+    // Update and display snowflakes
+    for (let flake of snowflakes) {
+      flake.update(); // Amplify the effect
+      flake.display();
+    }
+  }
 
-    p.windowResized = () => {
-        p.resizeCanvas(p.windowWidth, p.windowHeight);
-    };
-};
+  class Snowflake {
+    constructor() {
+      this.reset();
+      this.y = p.random(-50, p.height);
+    }
+    
+    reset() {
+      this.x = p.random(p.width);
+      this.y = p.random(-50, -10);
+      this.size = p.random(3, 10);
+      this.speed = p.random(.2, .6);
+      this.wobble = p.random(0, p.PI * 2);
+    }
+    
+    update() {
+      let myAudioLevel = 0;
+      this.waveformIndex = Math.floor(p.map(this.x, 0, p.width, 0, p.waveform1.length));
+      
+      if (p.waveform1.length > 0) {
+        myAudioLevel = p.waveform1[this.waveformIndex];
+      }
+      
+      this.y += this.speed + (myAudioLevel * 10);
+      this.x += p.sin(this.wobble) * 0.5;
+      this.wobble += 0.05;
+      
+      if (this.y > p.height + 20) {
+        this.reset();
+      }
+    }
+    
+    display() {
+      p.fill(255, 250);
+      p.stroke(255, 250);
+      p.strokeWeight(1);
+      
+      p.push();
+      p.translate(this.x, this.y);
+      p.rotate(this.wobble);
+      for (let i = 0; i < 2; i++) {
+        p.rotate(p.PI/3);
+        p.line(0, 0, this.size, 0);
+        //p.ellipse(this.size * 0.7, 0, this.size * 0.3);
+      }
+      p.pop();
+    }
+  }
+
+  p.windowResized = function() {
+    p.resizeCanvas(p.windowWidth, p.windowHeight);
+  }
+}
 
 module.exports = sketch;
