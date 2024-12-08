@@ -7,7 +7,7 @@
         var rms_input, rms_output;
 
         sig = In.ar(in_bus);
-
+        
         // Apply soft clipping and add some even harmonics
         // Adjust drive scaling if needed for more subtle or aggressive distortion
         distorted = (sig * drive).clip2(0.8);  

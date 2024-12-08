@@ -187,6 +187,7 @@ const sketch = function (p)
         write.begin();
         // Draw waveform1 in blue in the middle with RMS
         drawCircleWaveform(p.waveform1, p.color(250, 200.0, 100.0), p.height / 2, .5, p.rmsOutput);
+        //drawWaveform(p.waveform1,p.color(250, 200.0, 100.0), 0, 1, p.rmsOutput);
 
         // Draw FFT as concentric circles
        // drawFFTCircles(p.fft0, p.color(255, 100, 100));
@@ -209,6 +210,28 @@ const sketch = function (p)
         fps.html('FPS: ' + averageFPS.toFixed(2));
     };
 
+    
+    const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
+        if (waveform && waveform.length > 0) {
+            p.push();
+            p.translate(-p.width/2, -p.height/2); // Adjust for WEBGL coordinate system
+            p.stroke(color);
+            //p.strokeWeight(1.0 + Math.max(rms, 0.002) * 10.0); // Adjust stroke weight based on RMS
+            p.noFill();
+            p.beginShape();
+            p.strokeWeight(1.0);
+
+            for (let i = 0; i < waveform.length; i++) {
+                let x = p.map(i, 0, waveform.length, p.width/4, p.width/4 * 3);
+                let y = p.height / 2 + yOffset + waveform[i] * p.height / 8 * yMult;
+                p.vertex(x, y);
+            }
+
+            p.endShape();
+            p.pop();
+        }
+    };
+    
 
     const drawCircleWaveform = (waveform, color, yOffset, yMult, rms) => {
         p.push();
@@ -222,6 +245,7 @@ const sketch = function (p)
             p.beginShape();
 
             const radius = p.min(p.width, p.height) * .1 + 100 * rms; // Adjust radius as needed
+            
             const centerX = 0;
             const centerY = 0;
 
