@@ -1,0 +1,24 @@
+{
+  "name": "bands",
+  "description": "a simple bands effect",
+  "audio": "audio/bands.sc",
+  "visual": "visual/bands.js",
+  "curated": true,
+  "params": [
+    {
+      "name": "drive",
+      "value": 10,
+      "range": [1, 50]
+    }, 
+    {
+      "name": "tone",
+      "value": 0.5,
+      "range": [0, 1]
+    },
+    {
+      "name": "mix",
+      "value": 1.0,
+      "range": [0, 1]
+    }
+  ]
+} 
