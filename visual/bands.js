@@ -150,6 +150,10 @@ const sketch = function (p) {
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
+    
+    // Add accumulation buffer
+    let accumulatedWaveform = [];
+    const decayFactor = 0.8; // Adjust this value to control decay speed (0-1)
 
     p.waveform1 = [];
     p.rmsOutput = 0;
@@ -178,20 +182,33 @@ const sketch = function (p) {
         
         p.frameRate(60);
         p.noStroke();
+        
+        // Initialize accumulation buffer
+        accumulatedWaveform = new Array(512).fill(0);
     };
 
     p.draw = () => {
         p.background(0);
 
         if (p.waveform1.length === 0) {
-            p.waveform1 = new Array(1024).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
+            p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
         }
 
-        // Update waveform texture
-        waveformTex.loadPixels();
+        // Update accumulated waveform
+        
         for (let i = 0; i < p.waveform1.length; i++) {
-            let clampedValue = Math.max(-1, Math.min(1, p.waveform1[i]));
-            let val = p.map(clampedValue, -1, 1, 0, 255);
+            accumulatedWaveform[i] = Math.max(
+                Math.abs(p.waveform1[i]),
+                accumulatedWaveform[i] * decayFactor
+            );
+        }
+        
+
+        // Update waveform texture using accumulated values
+        waveformTex.loadPixels();
+        for (let i = 0; i < accumulatedWaveform.length; i++) {
+            let clampedValue = Math.max(-1, Math.min(1, accumulatedWaveform[i]));
+            let val = p.map(clampedValue, 0, 1, -255, 255);
             waveformTex.pixels[i * 4] = val;
             waveformTex.pixels[i * 4 + 1] = val;
             waveformTex.pixels[i * 4 + 2] = val;
