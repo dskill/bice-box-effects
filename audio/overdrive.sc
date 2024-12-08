@@ -4,8 +4,6 @@
         var sig, distorted, phase, trig, partition;
         var chain_in, chain_out, kr_impulse;
         var fft_output, fft_input;
-
-        var kr_impulse;
         var rms_input, rms_output;
 
         sig = In.ar(in_bus);
@@ -40,8 +38,6 @@
          // FFT
         //chain_out = FFT(~fft_buffer_out, distorted, wintype: 1);
         //chain_out.do(~fft_buffer_out);
-
-        
 
         rms_input = RunningSum.rms(sig, 1024);
         rms_output = RunningSum.rms(distorted, 1024);
