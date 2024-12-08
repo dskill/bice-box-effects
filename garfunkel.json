@@ -1,8 +1,9 @@
 {
-  "name": "garfunkel_vocal",
+  "name": "Garfunkel",
   "description": "Art Garfunkel-inspired vocal doubling with cathedral reverb",
-  "audio": "audio/simple_reverb.sc",
-  "visual": "visual/waveform2.js",
+  "audio": "audio/garfunkel.sc",
+  "visual": "visual/garfunkel.js",
+  "curated": true,
   "params": [
     {
       "name": "doubleLevel",
