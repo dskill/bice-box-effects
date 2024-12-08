@@ -1,6 +1,8 @@
 let feedback;
 let previous, next;
 
+let waveformTex; // New: our 1D waveform texture
+let pingPong = [];
 
 const vertexShader = `
         attribute vec3 aPosition;
@@ -14,90 +16,74 @@ const vertexShader = `
         }
     `;
 
+
+// Updated fragment shader to include waveform visualization
+// We'll draw a horizontal line waveform across the center of the screen.
+// We'll use smoothstep() on the absolute difference between the vertical uv and the waveform amplitude line.
 const fragmentShader = `
-        #ifdef GL_ES
+#ifdef GL_ES
 precision highp float;
 #endif
 
 uniform sampler2D u_previous;
 uniform sampler2D u_next;
- 
+uniform sampler2D u_waveform;
+
 uniform vec2 u_resolution;
 uniform float u_framecount;
 
-uniform float u_diffusion_rate_a;
-uniform float u_diffusion_rate_b;
-uniform float u_reaction_speed;
-uniform float u_feed_rate;
-uniform float u_kill_rate;
-
 varying vec2 vTexCoord;
 
-// Function to convert RGB to HSV
+// Convert RGB to HSV
 vec3 rgb2hsv(vec3 c) {
-    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);
     vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
     vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
 
     float d = q.x - min(q.w, q.y);
     float e = 1.0e-10;
-    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+    return vec3(abs(q.z+(q.w-q.y)/(6.0*d+e)), d/(q.x+e), q.x);
 }
 
-// Function to convert HSV to RGB
+// Convert HSV to RGB
 vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    vec4 K = vec4(1.0,2.0/3.0,1.0/3.0,3.0);
+    vec3 p = abs(fract(c.xxx+K.xyz)*6.0-K.www);
+    return c.z*mix(K.xxx, clamp(p-K.xxx,0.0,1.0), c.y);
 }
 
 void main() {
     vec2 uv = vTexCoord;
-    
+
+    // Gaussian Background
     vec2 texel = 1.0 / u_resolution;
     vec4 center = texture2D(u_previous, uv);
-    texel *= 2.0;
-    //texel.y += .01;
-    // Simple diffusion
-
-    uv = (uv - .5) * .98 + .5;
+    uv = (uv - 0.5) * 0.98 + 0.5;
     vec4 left = texture2D(u_previous, uv - vec2(texel.x, 0.0));
     vec4 right = texture2D(u_previous, uv + vec2(texel.x, 0.0));
     vec4 up = texture2D(u_previous, uv - vec2(0.0, texel.y));
     vec4 down = texture2D(u_previous, uv + vec2(0.0, texel.y));
-    
-    vec4 diffusion = (left + right + up + down) * 0.25;// - center;
-    
-    /*
-    // Reaction-diffusion 
-    float a = center.r;
-    float b = center.g;
-    float reaction = a * b * b;
-    
-    float da = u_diffusion_rate_a * diffusion.r - reaction + u_feed_rate * (1.0 - a);
-    float db = u_diffusion_rate_b * diffusion.g + reaction - (u_kill_rate + u_feed_rate) * b;
-    
-    a += da * u_reaction_speed;
-    b += db * u_reaction_speed;
-    */
+    vec4 diffusion = (left + right + up + down) * 0.25;
 
-
-    // Convert diffusion to HSV
+    // Convert diffusion to HSV and modify
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
-    
-    // Modify HSV values
-    hsvColor.x = mod(hsvColor.x - 0.003, 1.0); // Shift hue
-    hsvColor.y =  min(hsvColor.y + 0.001, .99); // Increase saturation
-    hsvColor.z *= 0.98; // Slightly decrease value for decay effect
-    
-    // Convert back to RGB
+    hsvColor.x = mod(hsvColor.x - 0.001, 1.0);
+    hsvColor.y = min(hsvColor.y + 0.001, 0.99);
+    hsvColor.z *= 0.98;
     vec3 remappedColor = hsv2rgb(hsvColor);
 
-    
-    gl_FragColor = vec4(remappedColor, 1.0);// * vec4(.995,.992,.99,1.0); 
+    // Waveform visualization overlay
+    float waveformValue = texture2D(u_waveform, vec2(vTexCoord.x, 0.0)).r;
+    float linePos = .5 + (waveformValue * .25 - .125);
+    float thickness = 0.01;
+    float lineMask = smoothstep(0.1, 1.0, 1.0 - abs(vTexCoord.y - linePos) / thickness);
+    lineMask *= lineMask;
+
+    // Combine with background
+    vec3 finalColor = remappedColor + lineMask * vec3(1.0, 0.1, 0.2);
+    gl_FragColor = vec4(finalColor, 1.0);
 }
-    
-    `; 
+`;
 
 const sketch = function (p)
 {
@@ -105,17 +91,8 @@ const sketch = function (p)
     let fpsArray = [];
     const fpsArraySize = 10;
 
-    p.waveform0 = []; // Initialize waveform data for channel 0
-    p.waveform1 = []; // Initialize waveform data for channel 1
-    let decayingWaveform = []; // Local array for decaying waveform
-    const decayFactor = 0.95; // Decay factor for exponential decay
-    // Add RMS properties
-    p.rmsInput = 0;
+    p.waveform1 = []; // Waveform data array (populated externally)
     p.rmsOutput = 0;
-    p.fft0 = [];
-    p.fft1 = [];
-
-    let pingPong = [];
 
     p.preload = () =>
     {
@@ -125,24 +102,30 @@ const sketch = function (p)
     p.setup = () =>
     {
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
+        p.imageMode(p.CENTER);
+
+        // Create ping-pong framebuffers
         pingPong = [
             p.createFramebuffer({ width: p.width, height: p.height, depth: false, antialias: false }),
             p.createFramebuffer({ width: p.width, height: p.height, depth: false, antialias: false }),
         ];
         
-        p.imageMode(p.CENTER);
-
-        // Initialize the first buffer
         pingPong[0].begin();
-        p.background(0, 0, 0, 255);
+        p.background(0);
         pingPong[0].end();
 
-        // Initialize the second buffer
         pingPong[1].begin();
-        p.background(0, 0, 0, 255);
+        p.background(0);
         pingPong[1].end();
 
-        // FPS counter setup
+        // Create waveform texture
+        // We'll create a p5.Graphics as a buffer for the waveform.
+        // This will be a single row of pixels.
+        waveformTex = p.createGraphics(512, 1, p.WEBGL);
+        waveformTex.pixelDensity(1);
+        waveformTex.noSmooth();
+
+        // FPS display
         fps = p.createP('');
         fps.style('color', '#444444');
         fps.style('font-family', '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif');
@@ -153,51 +136,53 @@ const sketch = function (p)
         fps.style('margin', '0');
         
         p.frameRate(30);
-        p.angleMode(p.DEGREES); // Use degrees for angle calculations
-
+        p.noStroke();
     };
 
     p.draw = () =>
     {
-       p.background(0,0,0,255);
-        
+        p.background(0);
+
+        // Ensure waveform1 has some data
+        // (You need to populate waveform1 from your audio input or analysis each frame)
+        if (p.waveform1.length === 0) {
+            // Dummy data if no real data yet
+            p.waveform1 = new Array(1024).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
+        }
+
+        // Update waveform texture
+        waveformTex.loadPixels();
+        for (let i = 0; i < p.waveform1.length; i++) {
+            // Clamp the input value between -1 and 1 before mapping
+            let clampedValue = Math.max(-1, Math.min(1, p.waveform1[i]));
+            let val = p.map(clampedValue, -1, 1, 0, 255);
+            waveformTex.pixels[i * 4] = val;
+            waveformTex.pixels[i * 4 + 1] = val;
+            waveformTex.pixels[i * 4 + 2] = val;
+            waveformTex.pixels[i * 4 + 3] = 255;
+        }
+        waveformTex.updatePixels();
+
         let read = pingPong[p.frameCount % 2]; 
         let write = pingPong[(p.frameCount + 1) % 2];
 
-        
-
+        // Reaction-Diffusion update pass
         write.begin();
         feedback.setUniform('u_previous', read);
         feedback.setUniform('u_next', write);
-
         feedback.setUniform('u_resolution', [p.width * p.pixelDensity(), p.height * p.pixelDensity()]);
         feedback.setUniform('u_framecount', p.frameCount);
 
-        // You can adjust these values or make them interactive
-        feedback.setUniform('u_diffusion_rate_a', 0.95);
-        feedback.setUniform('u_diffusion_rate_b', 0.2);
-        feedback.setUniform('u_reaction_speed', 1.11);
-        feedback.setUniform('u_feed_rate', 0.031);
-        feedback.setUniform('u_kill_rate', 0.056);
+        // Pass waveform texture to the shader
+        feedback.setUniform('u_waveform', waveformTex);
 
         p.shader(feedback);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
         write.end();
 
-        write.begin();
-        // Draw waveform1 in blue in the middle with RMS
-        drawCircleWaveform(p.waveform1, p.color(250, 200.0, 100.0), p.height / 2, .5, p.rmsOutput);
-        //drawWaveform(p.waveform1,p.color(250, 200.0, 100.0), 0, 1, p.rmsOutput);
-
-        // Draw FFT as concentric circles
-       // drawFFTCircles(p.fft0, p.color(255, 100, 100));
-
-        write.end();
+        // Draw to screen
         p.image(write, 0, 0);
 
-        // copy the final buffer back to next, which will become previous in the next frame
-        
-        // Update FPS counter
         updateFPS();
     };
 
@@ -210,142 +195,6 @@ const sketch = function (p)
         fps.html('FPS: ' + averageFPS.toFixed(2));
     };
 
-    
-    const drawWaveform = (waveform, color, yOffset, yMult, rms) => {
-        if (waveform && waveform.length > 0) {
-            p.push();
-            p.translate(-p.width/2, -p.height/2); // Adjust for WEBGL coordinate system
-            p.stroke(color);
-            //p.strokeWeight(1.0 + Math.max(rms, 0.002) * 10.0); // Adjust stroke weight based on RMS
-            p.noFill();
-            p.beginShape();
-            p.strokeWeight(1.0);
-
-            for (let i = 0; i < waveform.length; i++) {
-                let x = p.map(i, 0, waveform.length, p.width/4, p.width/4 * 3);
-                let y = p.height / 2 + yOffset + waveform[i] * p.height / 8 * yMult;
-                p.vertex(x, y);
-            }
-
-            p.endShape();
-            p.pop();
-        }
-    };
-    
-
-    const drawCircleWaveform = (waveform, color, yOffset, yMult, rms) => {
-        p.push();
-        if (waveform && waveform.length > 0) {
-            p.stroke(color);
-            // Create a new color with 10% opacity of the stroke color
-            //let fillColor = p.color(p.red(color), p.green(color), p.blue(color), p.alpha(color) * 0.05);
-            //p.fill(fillColor);
-            p.strokeWeight(1.0);
-            p.noFill();
-            p.beginShape();
-
-            const radius = p.min(p.width, p.height) * .1 + 100 * rms; // Adjust radius as needed
-            
-            const centerX = 0;
-            const centerY = 0;
-
-            for (let i = 0; i < waveform.length; i++) {
-                // Calculate angle for each point (0 to 360 degrees)
-                let angle = p.map(i, 0, waveform.length, 0, 360);
-                
-                // Calculate radius offset based on waveform data
-                let r = radius + (waveform[i] * p.height / 8 * yMult);
-                
-                // Convert polar coordinates to cartesian
-                let x = centerX + r * p.cos(angle);
-                let y = centerY + r * p.sin(angle);
-                
-                p.vertex(x, y);
-            }
-
-            p.endShape(p.CLOSE); // Close the shape to complete the circle
-        }
-        p.pop();
-    };
-
-
-    const drawFFTCircles = (fftData, baseColor) => {
-        if (fftData && fftData.length > 0) {
-            p.push();
-            p.translate(p.width / 2, p.height / 2);
-            p.noStroke();
-
-            const maxRadius = Math.min(p.width, p.height) * 0.75;
-            const fftSize = fftData.length / 2;
-            const sampleRate = 48000;
-            const nyquist = sampleRate / 2;
-
-            const minFreq = 82.41/2.0; // Frequency of the low E string (E2) on a standard guitar
-            const maxFreq = 2318.51; // Approximately the frequency of the highest E (E6) on a standard guitar
-            const minLog = Math.log2(minFreq);
-            const maxLog = Math.log2(maxFreq);
-
-            for (let bin = 0; bin < fftSize; bin++) {
-                const freq = (bin / fftSize) * nyquist;
-                if (freq >= minFreq && freq <= maxFreq) {
-                    const real = fftData[2 * bin];
-                    const imag = fftData[2 * bin + 1];
-                    
-                    let magnitude = Math.sqrt(real * real + imag * imag);
-                    
-                    // Calculate color based on magnitude 
-                    const intensityColor = p.lerpColor(
-                        p.color(0, 0, 0,0),  // Cool color (blue) for low intensity
-                        p.color(255, 255, 255,255),  // Warm color (red) for high intensity
-                        p.constrain(magnitude*.05, 0, 1)  // Map magnitude to 0-1 range
-                    );
-                    
-                    // Blend the intensity color with the base color
-                    let finalColor = p.lerpColor(baseColor, intensityColor, 1.0);
-                    finalColor = intensityColor;
-                    p.fill(finalColor);
-
-                    // Calculate octave and position within octave
-                    const logFreq = Math.log2(freq) - minLog;
-                    const octave = Math.floor(logFreq);
-                    const octaveFraction = logFreq - octave;
-
-                    // Calculate angle (0 degrees is at the top, moving clockwise)
-                    const angle = 270 + (octaveFraction * 360); // This is already in degrees
-
-                    // Calculate radius (inner octaves have smaller radius)
-                    // let radius = p.map(octave, 0, totalOctaves, maxRadius * 0.2, maxRadius);
-                    let radius = p.map(logFreq, 0, maxLog, maxRadius * 0.0, maxRadius );
-                    // Calculate circle size based on magnitude
-                    //magnitude = 1;
-                    const circleSize =(magnitude*.01 + 0) * (maxRadius / 40);
-                    
-                    // Use p.cos and p.sin directly with the angle in degrees
-                    const x = radius * p.cos(angle)- p.width/2.0;
-                    const y = radius * p.sin(angle) - p.height/2.0;
-                    
-                    p.ellipse(x, y, circleSize);
-
-                     // Calculate triangle points
-                     /*
-                    const x1 = radius * p.cos(angle);
-                    const y1 = radius * p.sin(angle);
-                    const x2 = (radius + circleSize) * p.cos(angle - 5);
-                    const y2 = (radius + circleSize) * p.sin(angle - 5);
-                    const x3 = (radius + circleSize) * p.cos(angle + 5);
-                    const y3 = (radius + circleSize) * p.sin(angle + 5);
-                    
-
-                    // Draw triangle pointing out from the center
-                    p.triangle(x1, y1, x2, y2, x3, y3);
-                    */
-                }
-            }
-            p.pop();
-        }
-    };
-
-    
     p.windowResized = () =>
     {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
