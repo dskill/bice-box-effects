@@ -4,12 +4,13 @@
 # 1. Set the remote host IP address in REMOTE_HOST
 # 2. Make sure you run ssh-copy-id on your local machine to the PI user
 ## ssh-keygen -t ed25519 -C "your@email.com"
-## test: ssh pi@192.168.50.252
+## ssh-copy-id patch@192.168.50.30 
+## test: ssh patch@192.168.50.30
 
 # Configuration
 LOCAL_DIR="$HOME/bice-box-effects"
 REMOTE_USER="patch"
-REMOTE_HOST="192.168.50.31"
+REMOTE_HOST="192.168.50.30"
 REMOTE_DIR="bice-box-effects"
 
 # Ensure fswatch is installed
