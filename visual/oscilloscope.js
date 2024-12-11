@@ -15,132 +15,85 @@ const fragmentShader = `
 precision highp float;
 #endif
 
-#define time iTime
+#define SAMPLES 5.0
 #define PI 3.14159265359
-#define NUM_BANDS 40
 
 uniform sampler2D u_waveform;
 uniform vec2 u_resolution;
 uniform float u_time;
+uniform float u_rms;
 
 varying vec2 vTexCoord;
 
-float noise3D(vec3 p) {
-    return fract(sin(dot(p ,vec3(12.9898,78.233,12.7378))) * 43758.5453)*2.0-1.0;
+float sdSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 ba = b-a;
+    vec2 pa = p-a;
+    float h = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);
+    return length(pa - ba*h);
+}
+float sdBox( in vec2 p, in vec2 b )
+{
+    vec2 d = abs(p)-b;
+    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
 }
 
-vec3 mixc(vec3 col1, vec3 col2, float v) {
-    v = clamp(v,0.0,1.0);
-    return col1+v*(col2-col1);
+vec2 getWaveformPoint(float t) {
+    float sample = texture2D(u_waveform, vec2(t, 0.0)).r - .5;
+    float sample2 = texture2D(u_waveform, vec2(t + 1.0/512.0, 0.0)).r - .5;
+
+    sample *=  1.0 - abs(t - .5) *2.0;
+    return vec2(sample2, sample);
 }
 
-vec3 drawBands(vec2 uv) {
-    uv = 2.0*uv-1.0;
-    uv.x*=u_resolution.x/u_resolution.y;
-    uv = vec2(length(uv), atan(uv.y,uv.x));
+float sdSound(vec2 uv) {
+    float hits = 0.0;
+    float prevT = 0.0;
     
-    uv.y -= PI*0.5;
-    vec2 uv2 = vec2(uv.x, uv.y*-1.0);
-    uv.y = mod(uv.y,PI*2.0);
-    uv2.y = mod(uv2.y,PI*2.0);
+    vec2 prev = getWaveformPoint(0.0);
     
-    vec3 col = vec3(0.0);
-    vec3 col2 = vec3(0.0);
-    
-    float nBands = float(NUM_BANDS);
-    float i = floor(uv.x*nBands);
-    float f = fract(uv.x*nBands);
-    float band = i/nBands;
-    float s;
-    
-    band *= band*band; 
-    
-    band = band*0.1;
-    band += 0.01;
-    
-    s = texture2D(u_waveform, vec2(band,0.0)).x;
-    
-    if(band<0.0||band>=1.0) {
-        s = 0.0;
+    for(float i = 1.0; i < SAMPLES; i++) {
+        float t = i / SAMPLES;
+        vec2 curr = getWaveformPoint(t);
+        
+        hits += min(1.0, 1.0 / (sdSegment(uv, prev, curr) * 2500.0));
+
+        prev = curr;
     }
     
-    const int nColors = 6;
-    vec3 colors[6];  
-    colors[0] = vec3(0.522,0.502,0.502);
-    colors[1] = vec3(0.000,0.173,0.580);
-    colors[2] = vec3(0.192,0.180,1.000);
-    colors[3] = vec3(0.361,0.573,1.000);
-    colors[4] = vec3(0.361,0.573,1.000);
-    colors[5] = vec3(0.361,0.573,1.000);
- 
-    vec3 gradCol = colors[0];
-    float n = float(nColors)-0.0;
-    for(int i = 1; i < nColors; i++) {
-        gradCol = mixc(gradCol,colors[i],(s-float(i-1)/n)*n);
-    }
-    
-    float h = PI*3.5;
-    
-    col += vec3(1.0-smoothstep(-2.0,1.5,uv.y-s*h));
-    col *= gradCol;
-
-    col2 += vec3(1.0-smoothstep(-2.0,1.5,uv2.y-s*h));
-    col2 *= gradCol;
-    
-    col = mix(col,col2,step(0.0,uv.y-PI));
-
-    col *= smoothstep(0.05,0.5,f);
-    col *= smoothstep(1.0,0.8,f); 
-    
-    col = clamp(col,0.0,1.0);
-    
-    return col;
+    return ( u_rms * 10.0 + 1.0)*200.0 * hits/SAMPLES;
 }
+
+vec2 cube(vec2 uv) {
+    return mod((uv+.5)*8., vec2(1))-.5;
+}
+
 
 void main() {
-    vec2 uv = vTexCoord;
+    vec2 uv = vTexCoord * 2.0 - 1.0;
+    // rotate 90 cause it looks cooler
+    uv.xy = vec2(uv.y, uv.x);
+    uv.x *= u_resolution.x/u_resolution.y;
     
-    vec2 p = vec2(uv.x, uv.y+0.01);
     vec3 col = vec3(0.0);
-    col += drawBands(p);
     
-    vec3 ref = vec3(0.0);
-    vec2 eps = vec2(0.01,-0.01);
+    // Add oscilloscope effect
+    uv.y = abs(uv.y);
 
-    ref += drawBands(vec2(p.x,1.0-p.y)+eps.xx);
-    /*
-    ref += drawBands(vec2(p.x,1.0-p.y)+eps.xy);
+    float wave = sdSound(uv * 0.5);
+    col = mix(col, vec3(0.404,0.984,0.396), wave);
     
-    ref += drawBands(vec2(p.x,1.0-p.y)+eps.yy);
-    ref += drawBands(vec2(p.x,1.0-p.y)+eps.yx);
-    
-    ref += drawBands(vec2(p.x+eps.x,1.0-p.y));
-    ref += drawBands(vec2(p.x+eps.y,1.0-p.y));
-    ref += drawBands(vec2(p.x,1.0-p.y+eps.x));
-    ref += drawBands(vec2(p.x,1.0-p.y+eps.y));
-    */
+    //col = mix(col, vec3(0.000,0.000,0.000), 1.-length(uv));
+    //col = mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));
 
-    ref /= 3.0;
-     
-    float colStep = length(smoothstep(1.0,0.1,col));
-    
-    vec3 cs1 = drawBands(vec2(3.5,0.51));
-    vec3 cs2 = drawBands(vec2(0.5,0.93));
-        
-    vec3 plCol = mix(cs1,cs2,length(p*1.0-1.0))*0.5*smoothstep(1.75,-0.5,length(p*0.0-1.0));
-    vec3 plColBg = vec3(0.02)*smoothstep(1.0,0.0,length(p*8.0-1.0));
-    vec3 pl = (plCol+plColBg)*smoothstep(0.5,0.65,5.0-uv.y);
-    
-    col += clamp(pl*(1.0-colStep),0.0,1.0);
-    
-    col += ref*smoothstep(0.125,1.6125,p.y); 
-    
-    col = clamp(col, 0.0, 1.0);
 
-    float dither = noise3D(vec3(uv,u_time))*9.0/2226.0;
-    col += dither;
-     
-    gl_FragColor = vec4(col,1.0);
+    // Add vignette
+    vec2 puv = vTexCoord;
+    puv *= 1.0 - puv.yx;
+    col *= pow(puv.x*puv.y*30.0, 0.5);
+    
+    // Add glow
+    col *= vec3(0.0, 0.667, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }
 `;
 
@@ -219,6 +172,7 @@ const sketch = function (p) {
         shader.setUniform('u_waveform', waveformTex);
         shader.setUniform('u_resolution', [p.width, p.height]);
         shader.setUniform('u_time', p.millis() / 1000.0);
+        shader.setUniform('u_rms', p.rmsOutput);
 
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
