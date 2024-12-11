@@ -15,7 +15,7 @@ const fragmentShader = `
 precision highp float;
 #endif
 
-#define SAMPLES 5.0
+#define SAMPLES 15.0
 #define PI 3.14159265359
 
 uniform sampler2D u_waveform;
@@ -38,11 +38,10 @@ float sdBox( in vec2 p, in vec2 b )
 }
 
 vec2 getWaveformPoint(float t) {
-    float sample = texture2D(u_waveform, vec2(t, 0.0)).r - .5;
-    float sample2 = texture2D(u_waveform, vec2(t + 1.0/512.0, 0.0)).r - .5;
+    float sample = texture2D(u_waveform, vec2(t, 0.0)).r * 0.4;
 
-    sample *=  1.0 - abs(t - .5) *2.0;
-    return vec2(sample2, sample);
+    sample *=  1.0 - abs(t - .5) * 4.0;
+    return vec2(t * 2.0 - 1.0, sample);
 }
 
 float sdSound(vec2 uv) {
@@ -60,7 +59,7 @@ float sdSound(vec2 uv) {
         prev = curr;
     }
     
-    return ( u_rms * 10.0 + 1.0)*200.0 * hits/SAMPLES;
+    return ( u_rms * 20.0 + 1.0)*200.0 * hits/SAMPLES;
 }
 
 vec2 cube(vec2 uv) {
@@ -78,6 +77,7 @@ void main() {
     
     // Add oscilloscope effect
     uv.y = abs(uv.y);
+    uv.y += sin(uv.y * 10.0 + u_time * 10.0) * .1;
 
     float wave = sdSound(uv * 0.5);
     col = mix(col, vec3(0.404,0.984,0.396), wave);
