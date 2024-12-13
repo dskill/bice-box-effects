@@ -158,11 +158,6 @@ const sketch = function (p)
     {
         p.background(0);
 
-        if (p.oscMessage) {
-            console.log(p.oscMessage.address); // The OSC address
-            console.log(p.oscMessage.values);  // Array of values
-        }
-
         // Ensure waveform1 has some data
         // (You need to populate waveform1 from your audio input or analysis each frame)
         if (p.waveform1.length === 0) {
