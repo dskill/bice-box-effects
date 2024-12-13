@@ -59,31 +59,41 @@ void main() {
     // Gaussian Background
     vec2 texel = 1.0 / u_resolution;
     //uv = (uv - 0.5);// * 0.98 + 0.5;
-    //uv.y += 0.01;
-    vec4 left = texture2D(u_previous, uv - vec2(texel.x, 0.0));
-    vec4 right = texture2D(u_previous, uv + vec2(texel.x, 0.0));
+    uv.y -= .005;
+    uv.y = abs(uv.y - .5) + .5;
+    vec4 left = texture2D(u_previous, uv - 2.0*vec2(texel.x, 0.0));
+    vec4 right = texture2D(u_previous, uv + 2.0*vec2(texel.x, 0.0));
     vec4 up = texture2D(u_previous, uv - vec2(0.0, texel.y));
     vec4 down = texture2D(u_previous, uv + vec2(0.0, texel.y));
     vec4 diffusion = (left + right + up + down) * 0.25;
+
     
+    //vec4 diffusion = texture2D(u_previous, uv - vec2(0, .01));
 
     // Convert diffusion to HSV and modify
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
-    hsvColor.x = mod(hsvColor.x - 0.05, 1.0);
-    hsvColor.y = min(hsvColor.y + 0.001, 0.99);
-    hsvColor.z *= 0.92;
+    hsvColor.x = mod(hsvColor.x - u_rms*.1, 1.0);
+    hsvColor.y = min(hsvColor.y + u_rms*0.1, 0.99);
+    hsvColor.z *= 0.99;
     vec3 remappedColor = hsv2rgb(hsvColor);
 
     // Waveform visualization overlay
     float waveformValue = texture2D(u_waveform, vec2(vTexCoord.x, 0.0)).r;
     float linePos = .5 + (waveformValue * .5 - .25);
     float thickness = 0.05;
-    float lineMask = smoothstep(0.1, 1.0, 1.0 - abs(vTexCoord.y - linePos) / thickness);
-    lineMask *= lineMask * lineMask;
-    lineMask *= smoothstep(0.0, 0.05, u_rms);
+    float lineMask =.1* smoothstep(0.0, 1.0, 1.0 - abs(vTexCoord.y - linePos) / thickness);
+    lineMask += smoothstep(0.9, 1.0, 1.0 - abs(vTexCoord.y - linePos) / thickness);
+    //lineMask = lineMask * lineMask;
+    //lineMask *= smoothstep(0.1, 0.11, u_rms + .1);
 
     // Combine with background
-    vec3 finalColor = remappedColor + lineMask * vec3(1.0, 0.1, 0.7);
+    vec3 finalColor = remappedColor + lineMask * vec3(1.0, 0.4, 0.7);
+
+    // Add vignette
+    vec2 puv = vTexCoord;
+    puv *= 1.0 - puv.yx;
+    finalColor *= pow(puv.x*puv.y*15.0, 0.1);
+
     gl_FragColor = vec4(finalColor, 1.0);
 }
 `;
