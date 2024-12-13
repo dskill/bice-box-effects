@@ -1,0 +1,24 @@
+{
+  "name": "oscilloscope 2",
+  "description": "a classic oscilloscope visualization",
+  "audio": "audio/oscilloscope.sc",
+  "visual": "visual/oscilloscope2.js",
+  "curated": true,
+  "params": [
+    {
+      "name": "drive",
+      "value": 10,
+      "range": [1, 50]
+    }, 
+    {
+      "name": "tone",
+      "value": 0.5,
+      "range": [0, 1]
+    },
+    {
+      "name": "mix",
+      "value": 1.0,
+      "range": [0, 1]
+    }
+  ]
+} 
