@@ -29,7 +29,7 @@ uniform sampler2D u_previous;
 uniform sampler2D u_next;
 uniform sampler2D u_waveform;
 uniform float u_rms;
-
+uniform float u_pingPongData[2];
 uniform vec2 u_resolution;
 uniform float u_framecount;
 
@@ -59,7 +59,7 @@ void main() {
     // Gaussian Background
     vec2 texel = 1.0 / u_resolution;
     //uv = (uv - 0.5);// * 0.98 + 0.5;
-    uv.y -= .005;
+    uv.y -= .005 * u_pingPongData[0];
     uv.y = abs(uv.y - .5) + .5;
     vec4 left = texture2D(u_previous, uv - 2.0*vec2(texel.x, 0.0));
     vec4 right = texture2D(u_previous, uv + 2.0*vec2(texel.x, 0.0));
@@ -74,7 +74,7 @@ void main() {
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
     hsvColor.x = mod(hsvColor.x - u_rms*.1, 1.0);
     hsvColor.y = min(hsvColor.y + u_rms*0.1, 0.99);
-    hsvColor.z *= 0.99;
+    hsvColor.z *= 0.9 + .1*(u_pingPongData[1] + .1);
     vec3 remappedColor = hsv2rgb(hsvColor);
 
     // Waveform visualization overlay
@@ -93,6 +93,8 @@ void main() {
     vec2 puv = vTexCoord;
     puv *= 1.0 - puv.yx;
     finalColor *= pow(puv.x*puv.y*15.0, 0.1);
+
+  //  finalColor.r += u_pingPongData[1];
 
     gl_FragColor = vec4(finalColor, 1.0);
 }
@@ -156,6 +158,11 @@ const sketch = function (p)
     {
         p.background(0);
 
+        if (p.oscMessage) {
+            console.log(p.oscMessage.address); // The OSC address
+            console.log(p.oscMessage.values);  // Array of values
+        }
+
         // Ensure waveform1 has some data
         // (You need to populate waveform1 from your audio input or analysis each frame)
         if (p.waveform1.length === 0) {
@@ -186,6 +193,9 @@ const sketch = function (p)
         feedback.setUniform('u_resolution', [p.width * p.pixelDensity(), p.height * p.pixelDensity()]);
         feedback.setUniform('u_framecount', p.frameCount);
         feedback.setUniform('u_rms', p.rmsOutput);
+        if (p.oscMessage) {
+            feedback.setUniform('u_pingPongData', p.oscMessage.values);
+        }
         feedback.setUniform('u_waveform', waveformTex);
 
         p.shader(feedback);

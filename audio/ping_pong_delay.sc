@@ -41,9 +41,22 @@
         SendReply.kr(kr_impulse, '/buffer_refresh', partition);
         SendReply.kr(kr_impulse, '/rms');
 
+        // send 
+        SendReply.kr(Impulse.kr(30), '/pingPongData', [delayTime, feedback]);
+
         Out.ar(out, [delaySig,delaySig]);
     }).add;
     "Effect SynthDef added".postln;
+
+    // OSC responder to send tuner data to the client
+	OSCdef(\pingPongData).free;
+	OSCdef(\pingPongData, { |msg|
+		var a = msg[3];
+		var b = msg[4];
+		// Send the data to the client
+		~o.sendMsg(\pingPongData, 
+			a, b
+    );  	}, '/pingPongData', s.addr);
 
     fork {
         s.sync;
