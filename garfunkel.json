@@ -3,7 +3,7 @@
   "description": "Art Garfunkel-inspired vocal doubling with cathedral reverb",
   "audio": "audio/garfunkel.sc",
   "visual": "visual/garfunkel.js",
-  "curated": true,
+  "curated": false,
   "params": [
     {
       "name": "doubleLevel",

@@ -22,6 +22,7 @@ precision highp float;
 uniform sampler2D u_waveform;
 uniform vec2 u_resolution;
 uniform float u_time;
+uniform float u_rms;
 
 varying vec2 vTexCoord;
 
@@ -36,6 +37,7 @@ vec3 mixc(vec3 col1, vec3 col2, float v) {
 
 vec3 drawBands(vec2 uv) {
     uv = 2.0*uv-1.0;
+    uv /= u_rms * 10.0 + 1.0;
     uv.x*=u_resolution.x/u_resolution.y;
     uv = vec2(length(uv), atan(uv.y,uv.x));
     
@@ -56,7 +58,7 @@ vec3 drawBands(vec2 uv) {
     band *= band*band; 
     
     band = band*0.1;
-    band += 0.01;
+    band += 0.01 ;
     
     s = texture2D(u_waveform, vec2(band,0.0)).x;
     
@@ -153,7 +155,7 @@ const sketch = function (p) {
     
     // Add accumulation buffer
     let accumulatedWaveform = [];
-    const decayFactor = 0.8; // Adjust this value to control decay speed (0-1)
+    const decayFactor = 0.95; // Adjust this value to control decay speed (0-1)
 
     p.waveform1 = [];
     p.rmsOutput = 0;
@@ -219,6 +221,7 @@ const sketch = function (p) {
         shader.setUniform('u_waveform', waveformTex);
         shader.setUniform('u_resolution', [p.width, p.height]);
         shader.setUniform('u_time', p.millis() / 1000.0);
+        shader.setUniform('u_rms', p.rmsOutput);
 
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
