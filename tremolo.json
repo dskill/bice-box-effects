@@ -1,13 +1,14 @@
 {
   "name": "tremolo",
-  "description": "a classic tremolo effect with adjustable rate and depth",
-  "audio": "audio/bypass.sc",
-  "visual": "visual/tremolo.js",
+  "description": "oscilloscope visuals with tremolo effect",
+  "audio": "audio/tremolo.sc",
+  "visual": "visual/oscilloscope.js",
+  "curated": true,
   "params": [
     {
       "name": "rate",
       "value": 2,
-      "range": [0.5, 10]
+      "range": [0.1, 5]
     },
     {
       "name": "depth",
@@ -15,9 +16,9 @@
       "range": [0, 1]
     },
     {
-      "name": "wetLevel",
-      "value": 1,
+      "name": "mix",
+      "value": 0.5,
       "range": [0, 1]
     }
   ]
-}
+} 

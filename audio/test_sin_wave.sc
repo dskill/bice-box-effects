@@ -5,7 +5,7 @@
         var sig, final_sig;
         var phase, trig, partition, kr_impulse;
 
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); 
         final_sig = SinOsc.ar(freq) * 0.2;
         
         // END USER EFFECT CODE
@@ -23,7 +23,7 @@
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
 
-        Out.ar(out, [finalSig,finalSig]);
+        Out.ar(out, [final_sig,final_sig]);
     }).add;
     "Effect SynthDef added".postln;
 

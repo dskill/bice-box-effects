@@ -1,0 +1,23 @@
+{
+  "name": "tremolo_experiment",
+  "description": "a classic tremolo effect with adjustable rate and depth",
+  "audio": "audio/bypass.sc",
+  "visual": "visual/tremolo.js",
+  "params": [
+    {
+      "name": "rate",
+      "value": 2,
+      "range": [0.5, 10]
+    },
+    {
+      "name": "depth",
+      "value": 0.5,
+      "range": [0, 1]
+    },
+    {
+      "name": "wetLevel",
+      "value": 1,
+      "range": [0, 1]
+    }
+  ]
+}
