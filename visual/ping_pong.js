@@ -188,8 +188,8 @@ const sketch = function (p)
         feedback.setUniform('u_resolution', [p.width * p.pixelDensity(), p.height * p.pixelDensity()]);
         feedback.setUniform('u_framecount', p.frameCount);
         feedback.setUniform('u_rms', p.rmsOutput);
-        if (p.oscMessage) {
-            feedback.setUniform('u_pingPongData', p.oscMessage.values);
+        if (p.customMessage) {
+            feedback.setUniform('u_pingPongData', p.customMessage.values);
         }
         feedback.setUniform('u_waveform', waveformTex);
 
