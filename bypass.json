@@ -5,10 +5,5 @@
   "visual": "visual/waveform_with_fft_simple.js",
   "curated": true,
   "params": [
-    {
-      "name": "test",
-      "value": 2,
-      "range": [0.5, 10]
-    }
   ]
 }
