@@ -125,9 +125,9 @@ const sketch = function (p) {
         waveformTex.noSmooth();
 
         fps = p.createP('');
-        fps.style('color', '#FFFFFF');
+        fps.style('color', '#444444');
         fps.style('font-family', '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif');
-        fps.style('font-size', '14px');
+        fps.style('font-size', '10px');
         fps.style('position', 'fixed');
         fps.style('bottom', '3px');
         fps.style('left', '3px');
