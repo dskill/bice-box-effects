@@ -23,6 +23,9 @@ uniform sampler2D u_waveform;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_rms;
+uniform float u_tone;
+uniform float u_mix;
+uniform float u_drive;
 
 varying vec2 vTexCoord;
 
@@ -160,6 +163,7 @@ const sketch = function (p) {
     p.waveform1 = [];
     p.rmsOutput = 0;
 
+
     p.preload = () => {
         shader = p.createShader(vertexShader, fragmentShader);
     };
@@ -191,6 +195,7 @@ const sketch = function (p) {
 
     p.draw = () => {
         p.background(0);
+        //console.log(p.params);
 
         if (p.waveform1.length === 0) {
             p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
@@ -222,7 +227,9 @@ const sketch = function (p) {
         shader.setUniform('u_resolution', [p.width, p.height]);
         shader.setUniform('u_time', p.millis() / 1000.0);
         shader.setUniform('u_rms', p.rmsOutput);
-
+        shader.setUniform('u_tone', p.params.tone);
+        shader.setUniform('u_mix', p.params.mix);
+        shader.setUniform('u_drive', p.params.drive);
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
 
