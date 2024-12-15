@@ -22,7 +22,7 @@ uniform sampler2D u_waveform;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_rms;
-uniform float u_tremoloData[2];
+uniform float u_electremoloData[2];
 varying vec2 vTexCoord;
 
 float sdSegment(vec2 p, vec2 a, vec2 b) {
@@ -78,7 +78,7 @@ void main() {
     // Add oscilloscope effect
     uv.y = abs(uv.y);
     uv.y += sin(uv.y * 10.0 + u_time * 10.0) * .05;
-    uv.y += (u_tremoloData[0] * u_tremoloData[1])*.1;
+    uv.y += (u_electremoloData[0] * u_electremoloData[1])*.1;
     float wave = sdSound(uv * 0.5);
     col = mix(col, vec3(0.404,0.984,0.396), wave);
     
@@ -93,7 +93,7 @@ void main() {
     
     // Add glow
     col *= vec3(0.0, 0.667, 1.0);
-   // col.r = abs(u_tremoloData[0]);
+   // col.r = abs(u_electremoloData[0]);
     gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -175,7 +175,7 @@ const sketch = function (p) {
         shader.setUniform('u_time', p.millis() / 1000.0);
         shader.setUniform('u_rms', p.rmsOutput);
         if (p.customMessage) {
-            shader.setUniform('u_tremoloData', p.customMessage.values);
+            shader.setUniform('u_electremoloData', p.customMessage.values);
         }
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);

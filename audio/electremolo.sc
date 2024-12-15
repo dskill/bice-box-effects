@@ -37,7 +37,7 @@
         Out.kr(~rms_bus_input, rms_input);
         Out.kr(~rms_bus_output, rms_output);
         SendReply.kr(kr_impulse, '/rms'); //trig if you want audio rate
-        SendReply.kr(kr_impulse, '/tremoloData', [tremMult, depth]);
+        SendReply.kr(kr_impulse, '/electremoloData', [tremMult, depth]);
 
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
@@ -48,14 +48,14 @@
     "Effect SynthDef added".postln;
 
     // OSC responder to send tuner data to the client
-	OSCdef(\tremoloData).free;
-	OSCdef(\tremoloData, { |msg|
+	OSCdef(\electremoloData).free;
+	OSCdef(\electremoloData, { |msg|
 		var a = msg[3];
         var b = msg[4];
 		// Send the data to the client
-		~o.sendMsg(\tremoloData, 
+		~o.sendMsg(\electremoloData, 
 			a, b
-    );  	}, '/tremoloData', s.addr);
+    );  	}, '/electremoloData', s.addr);
 
     fork {
         s.sync;
