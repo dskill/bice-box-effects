@@ -77,8 +77,8 @@ void main() {
     float totalTremolo = u_electremoloData[0] * u_electremoloData[1] * u_electremoloData[2];
     // Add oscilloscope effect
     uv.y = abs(uv.y);
-   // uv.y += sin(uv.y * 10.0 + u_time * 10.0) * totalTremolo * 0.1;
-    //uv.y = uv.y - (totalTremolo)*0.1;
+    uv.y += sin(uv.y * 10.0)*.1;
+    uv.y = uv.y - (totalTremolo)*0.01;
     float wave = sdSound(uv*.75);
     col = mix(col, vec3(0.404,0.984,0.396), wave);
     
@@ -92,7 +92,7 @@ void main() {
     col *= pow(puv.x*puv.y*30.0, 0.5);
     
     // Add glow
-    col *= vec3(0.0, 0.667, 1.0) * (totalTremolo*0.1+0.2);
+    col *= vec3(0.0, 0.667, 1.0) * .5;//+ (totalTremolo*0.1);
   
     gl_FragColor = vec4(col, 1.0);
 }
