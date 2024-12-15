@@ -1,12 +1,28 @@
 (
     SynthDef(\electremolo, {
-        |out = 0, in_bus = 0, rate = 2, depth = 0.5, mix = 0.5|
+        |out = 0, in_bus = 0, rate = 2, depth = 0.5, mix = 1.0|
         // START USER EFFECT CODE
         var sig, trem, dry, wet, finalSig, tremMult;
         var phase, trig, partition, kr_impulse, chain_out, rms_input, rms_output;
-
+        var waveShapedSig;
         sig = In.ar(in_bus);
         tremMult = depth * SinOsc.kr(rate, 0, 1.0) + (1 - depth) + 0.5;
+        // waveShapedSig = (sig * 10.0).tanh;  // Using tanh as waveshaper
+        // low pass filter the wave shaped signal
+        //waveShapedSig = LPF.ar(waveShapedSig, 2000);
+        // Better phaser
+        /*
+        waveShapedSig = Mix.fill(6, {|i|
+            var delayTime = SinOsc.kr(
+                rate * 0.5, // modulation rate
+                i * (2pi/6), // phase offset for each stage
+                0.001, // modulation depth
+                0.002  // center delay time
+            );
+            AllpassC.ar(waveShapedSig, 0.02, delayTime, 0.1)
+        }) / 6 + waveShapedSig;
+        */
+        
         trem = sig * tremMult; 
 
         // note, don't put these in the same line, it's a bug
