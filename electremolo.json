@@ -1,8 +1,8 @@
 {
-  "name": "tremolo",
+  "name": "electremolo",
   "description": "oscilloscope visuals with tremolo effect",
-  "audio": "audio/tremolo.sc",
-  "visual": "visual/oscilloscope.js",
+  "audio": "audio/electremolo.sc",
+  "visual": "visual/electremolo.js",
   "curated": true,
   "params": [
     {
