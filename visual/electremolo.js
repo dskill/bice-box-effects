@@ -22,7 +22,7 @@ uniform sampler2D u_waveform;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_rms;
-uniform float u_electremoloData[2];
+uniform float u_electremoloData[3];
 varying vec2 vTexCoord;
 
 float sdSegment(vec2 p, vec2 a, vec2 b) {
@@ -38,9 +38,10 @@ float sdBox( in vec2 p, in vec2 b )
 }
 
 vec2 getWaveformPoint(float t) {
-    float sample = texture2D(u_waveform, vec2(t, 0.0)).r * 0.4;
+    float sample = texture2D(u_waveform, vec2(t, 0.0)).r * 0.5;
 
     sample *=  1.0 - abs(t - .5) * 4.0;
+    //sample -= 0.25;
     return vec2(t * 2.0 - 1.0, sample);
 }
 
@@ -71,15 +72,14 @@ void main() {
     vec2 uv = vTexCoord * 2.0 - 1.0;
     // rotate 90 cause it looks cooler
     uv.xy = vec2(uv.y, uv.x);
-    uv.x *= u_resolution.x/u_resolution.y;
     
     vec3 col = vec3(0.0);
-    
+    float totalTremolo = u_electremoloData[0] * u_electremoloData[1] * u_electremoloData[2];
     // Add oscilloscope effect
     uv.y = abs(uv.y);
-    uv.y += sin(uv.y * 10.0 + u_time * 10.0) * .05;
-    uv.y += (u_electremoloData[0] * u_electremoloData[1])*.1;
-    float wave = sdSound(uv * 0.5);
+   // uv.y += sin(uv.y * 10.0 + u_time * 10.0) * totalTremolo * 0.1;
+    //uv.y = uv.y - (totalTremolo)*0.1;
+    float wave = sdSound(uv*.75);
     col = mix(col, vec3(0.404,0.984,0.396), wave);
     
     //col = mix(col, vec3(0.000,0.000,0.000), 1.-length(uv));
@@ -92,8 +92,8 @@ void main() {
     col *= pow(puv.x*puv.y*30.0, 0.5);
     
     // Add glow
-    col *= vec3(0.0, 0.667, 1.0);
-   // col.r = abs(u_electremoloData[0]);
+    col *= vec3(0.0, 0.667, 1.0) * (totalTremolo*0.1+0.2);
+  
     gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -148,21 +148,12 @@ const sketch = function (p) {
             p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
         }
 
-        // Update accumulated waveform
-        
-        for (let i = 0; i < p.waveform1.length; i++) {
-            accumulatedWaveform[i] = Math.max(
-                Math.abs(p.waveform1[i]),
-                accumulatedWaveform[i] * decayFactor
-            );
-        }
-        
-
         // Update waveform texture using accumulated values
         waveformTex.loadPixels();
-        for (let i = 0; i < accumulatedWaveform.length; i++) {
-            let clampedValue = Math.max(-1, Math.min(1, accumulatedWaveform[i]));
-            let val = p.map(clampedValue, 0, 1, -255, 255);
+        for (let i = 0; i < p.waveform1.length; i++) {
+            //let clampedValue = Math.max(-1, Math.min(1, accumulatedWaveform[i]));
+           //let clampedValue = Math.max(-1, Math.min(1, p.waveform1[i]));
+            let val = (p.waveform1[i]*.5 +.5) * 255.0;// p.map( p.waveform1[i], -10, 10, -255, 255);
             waveformTex.pixels[i * 4] = val;
             waveformTex.pixels[i * 4 + 1] = val;
             waveformTex.pixels[i * 4 + 2] = val;

@@ -5,14 +5,15 @@
         var sig, trem, dry, wet, finalSig, tremMult;
         var phase, trig, partition, kr_impulse, chain_out, rms_input, rms_output;
 
-        sig = In.ar(in_bus);
-        tremMult = depth * SinOsc.kr(rate) + (1 - depth);
-        trem = sig * tremMult;
+       // sig = In.ar(in_bus);
+        sig = SinOsc.ar(800, 0, 0.2);
+        tremMult = depth * SinOsc.kr(rate, 0, 1.0) + (1 - depth) + 0.5;
+        trem = sig * tremMult; 
 
         // note, don't put these in the same line, it's a bug
         dry = sig * (1.0 - mix);
         wet = trem * mix;
-        finalSig = dry + wet;
+        finalSig =  dry + wet;
 
         // END USER EFFECT CODE
         rms_input = RunningSum.rms(sig, 1024);

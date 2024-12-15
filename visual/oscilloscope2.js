@@ -37,17 +37,6 @@ float sdBox( in vec2 p, in vec2 b )
     return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
 }
 
-vec2 getWaveformPoint(float t) {
-    float sample = texture2D(u_waveform, vec2(t, 0.0)).r * 0.5;
-    float sample2 = texture2D(u_waveform, vec2(t + 5.0/512.0, 0.0)).r * 0.5;
-
-    //sample *=  1.0 - abs(t - .5) * 4.0;
-    //sample2 *=  1.0 - abs(t - .5) * 4.0;
-    //sample += sin(t * 10.0) * 0.1;
-    //sample2 += sin(t * 12.0) * 0.1;
-    return vec2(sample2, sample);
-}
-
 float sdSound(vec2 uv) {
     float waveformValue = (texture2D(u_waveform, vec2(uv.x, 0.0) ).x - 0.5) * 2.0;
     waveformValue *= .2;
