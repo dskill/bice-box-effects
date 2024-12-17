@@ -61,8 +61,9 @@ void main() {
 
     // Gaussian Background
     vec2 texel = 1.0 / u_resolution;
+    texel *= u_drive;
     vec4 center = texture2D(u_previous, uv);
-    uv = (uv - 0.5) * 0.98 + 0.5;
+    uv = (uv - 0.5) * 0.95 + 0.5;
     vec4 left = texture2D(u_previous, uv - vec2(texel.x, 0.0));
     vec4 right = texture2D(u_previous, uv + vec2(texel.x, 0.0));
     vec4 up = texture2D(u_previous, uv - vec2(0.0, texel.y));
@@ -71,8 +72,8 @@ void main() {
 
     // Convert diffusion to HSV and modify
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
-    hsvColor.x = mod(hsvColor.x - 0.001 * u_drive, 1.0);
-    hsvColor.y = min(hsvColor.y + 0.001, 0.99);
+    hsvColor.x = u_drive*.01-.5;//mod(hsvColor.x - 0.001 * u_drive, 1.0);
+    hsvColor.y = min(hsvColor.y + 0.01, 0.99);
     hsvColor.z *= 0.98;
     vec3 remappedColor = hsv2rgb(hsvColor);
 
@@ -139,7 +140,7 @@ const sketch = function (p)
         fps.style('left', '3px');
         fps.style('margin', '0');
         
-        p.frameRate(30);
+        p.frameRate(60);
         p.noStroke();
     };
 

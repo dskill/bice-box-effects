@@ -1,5 +1,5 @@
 {
-  "name": "ping_pong_delay",
+  "name": "mega_delay",
   "description": "a stereo delay effect that alternates between left and right channels",
   "audio": "audio/ping_pong_delay.sc",
   "visual": "visual/ping_pong.js",

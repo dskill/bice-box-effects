@@ -3,7 +3,7 @@
   "description": "a simple bands effect",
   "audio": "audio/bands.sc",
   "visual": "visual/bands.js",
-  "curated": true,
+  "curated": false,
   "params": [
     {
       "name": "drive",
