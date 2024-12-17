@@ -38,10 +38,10 @@ float sdBox( in vec2 p, in vec2 b )
 }
 
 vec2 getWaveformPoint(float t) {
-    float sample = texture2D(u_waveform, vec2(t, 0.0)).r * 0.5;
+    float sample = texture2D(u_waveform, vec2(t, 0.0)).r * 2.0;
 
-    sample *=  1.0 - abs(t - .5) * 4.0;
-    //sample -= 0.25;
+    sample *=  1.0 - abs(t - .5) * 8.0 * (u_electremoloData[1] * u_electremoloData[2]) ;
+    sample -= 0.65;
     return vec2(t * 2.0 - 1.0, sample);
 }
 
@@ -78,7 +78,7 @@ void main() {
     // Add oscilloscope effect
     uv.y = abs(uv.y);
     uv.y += sin(uv.y * 10.0)*.1;
-    uv.y = uv.y - (totalTremolo)*0.01;
+    uv.y = uv.y - (totalTremolo)*0.1;
     float wave = sdSound(uv*.75);
     col = mix(col, vec3(0.404,0.984,0.396), wave);
     
