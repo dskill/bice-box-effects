@@ -1,6 +1,6 @@
 (
     SynthDef(\overdrive, {
-        |out = 0, in_bus = 0, amp = 10, smooth = 0.5, tone = 0.5, mix = 1.0|
+        |out = 0, in_bus = 0, drive = 10, tone = 0.5, mix = 1.0|
         var sig, distorted, phase, trig, partition;
         var chain_in, chain_out, kr_impulse;
         var fft_output, fft_input;
@@ -10,18 +10,14 @@
         
         // Apply soft clipping and add some even harmonics
         // Adjust drive scaling if needed for more subtle or aggressive distortion
-        //distorted = (sig * drive).clip2(0.8);  
-        //distorted = (distorted * 0.8) + (distorted.squared * 0.2);
-        distorted = CrossoverDistortion.ar(sig, amp, smooth, 1.0);
+        distorted = (sig * drive).clip2(0.8);  
+        distorted = (distorted * 0.8) + (distorted.squared * 0.2);
 
         // Add tone shaping: low shelf, mid peak, and high shelf adjustments
         // These ranges and amounts can be tweaked to taste.
         distorted = BLowShelf.ar(distorted, 400, 1.0, tone * -24);   // Bass attenuation/boost
         distorted = BPeakEQ.ar(distorted, 1200, 0.5, tone * 12);     // Mid presence
         distorted = BHiShelf.ar(distorted, 3200, 1.0, tone * -6);    // High attenuation/boost
-
-        // add a low pass filter
-        distorted = LPF.ar(distorted, 2000);
 
         // Blend original and distorted signals
         distorted = (distorted * mix) + (sig * (1 - mix));
