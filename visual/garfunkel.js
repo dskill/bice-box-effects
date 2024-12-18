@@ -164,7 +164,7 @@ const sketch = function (p)
         fps.style('left', '3px');
         fps.style('margin', '0');
         
-        p.frameRate(30);
+        p.frameRate(60);
         p.noStroke();
     };
 

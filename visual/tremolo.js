@@ -141,7 +141,7 @@ const sketch = function (p)
         p.fps = p.createP('');
         p.fps.position(10, 10);
         p.fps.style('color', 'white');
-        p.frameRate(30);
+        p.frameRate(60);
         p.angleMode(p.DEGREES); // Use degrees for angle calculations
 
     };

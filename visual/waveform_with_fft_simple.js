@@ -75,7 +75,7 @@ const sketch = function(p) {
         fps.style('left', '3px');
         fps.style('margin', '0');
         p.colorMode(p.HSB, 360, 100, 100, 100);
-        p.frameRate(30);
+        p.frameRate(60);
         
         // Convert hex colors directly to p5.js color objects
         for (const [key, value] of Object.entries(p.colors)) {

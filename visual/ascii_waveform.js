@@ -23,7 +23,7 @@ const sketch = function(p) {
         fps.position(10, 10);
         fps.style('color', 'white');
         p.colorMode(p.HSB, 360, 100, 100, 100);
-        p.frameRate(30);
+        p.frameRate(60);
     };
 
     p.draw = () => {
