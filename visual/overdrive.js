@@ -61,7 +61,7 @@ void main() {
 
     // Gaussian Background
     vec2 texel = 1.0 / u_resolution;
-    texel *= u_drive;
+    texel *= u_drive * 10.0;
     vec4 center = texture2D(u_previous, uv);
     uv = (uv - 0.5) * 0.95 + 0.5;
     vec4 left = texture2D(u_previous, uv - vec2(texel.x, 0.0));
@@ -72,7 +72,7 @@ void main() {
 
     // Convert diffusion to HSV and modify
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
-    hsvColor.x = u_drive*.01-.5;//mod(hsvColor.x - 0.001 * u_drive, 1.0);
+    hsvColor.x = u_drive * .5 -.5;//mod(hsvColor.x - 0.001 * u_drive, 1.0);
     hsvColor.y = min(hsvColor.y + 0.01, 0.99);
     hsvColor.z *= 0.98;
     vec3 remappedColor = hsv2rgb(hsvColor);
@@ -179,7 +179,7 @@ const sketch = function (p)
         feedback.setUniform('u_framecount', p.frameCount);
         feedback.setUniform('u_tone', p.params.tone);
         feedback.setUniform('u_mix', p.params.mix);
-        feedback.setUniform('u_drive', p.params.drive);
+        feedback.setUniform('u_drive', p.params.amp);
 
         // Pass waveform texture to the shader
         feedback.setUniform('u_waveform', waveformTex);
