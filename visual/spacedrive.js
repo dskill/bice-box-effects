@@ -32,7 +32,8 @@ uniform sampler2D u_waveform;
 uniform float u_tone;
 uniform float u_mix;
 uniform float u_drive;
-
+uniform float u_hyperdrive;
+uniform float u_rmsOutput;
 uniform vec2 u_resolution;
 uniform float u_framecount;
 
@@ -64,6 +65,7 @@ void main() {
     texel *= u_drive;
     vec4 center = texture2D(u_previous, uv);
     uv = (uv - 0.5) * 0.95 + 0.5;
+    texel *= sin(uv.x * 3.14159) * u_hyperdrive * 10.0;
     vec4 left = texture2D(u_previous, uv - vec2(texel.x, 0.0));
     vec4 right = texture2D(u_previous, uv + vec2(texel.x, 0.0));
     vec4 up = texture2D(u_previous, uv - vec2(0.0, texel.y));
@@ -72,7 +74,8 @@ void main() {
 
     // Convert diffusion to HSV and modify
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
-    hsvColor.x = u_drive*.01-.5;//mod(hsvColor.x - 0.001 * u_drive, 1.0);
+    hsvColor.x = u_drive*.01-.5;
+    hsvColor.x +=  u_hyperdrive * (pow(sin(length(uv.xy - vec2(0.5))*1.0 + u_rmsOutput * 100.0 ), 2.0));
     hsvColor.y = min(hsvColor.y + 0.01, 0.99);
     hsvColor.z *= 0.98;
     vec3 remappedColor = hsv2rgb(hsvColor);
@@ -180,7 +183,8 @@ const sketch = function (p)
         feedback.setUniform('u_tone', p.params.tone);
         feedback.setUniform('u_mix', p.params.mix);
         feedback.setUniform('u_drive', p.params.drive);
-
+        feedback.setUniform('u_hyperdrive', p.params.hyperdrive);
+        feedback.setUniform('u_rmsOutput', p.rmsOutput);
         // Pass waveform texture to the shader
         feedback.setUniform('u_waveform', waveformTex);
 
