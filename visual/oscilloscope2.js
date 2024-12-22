@@ -19,6 +19,7 @@ precision highp float;
 #define PI 3.14159265359
 
 uniform sampler2D u_waveform;
+uniform sampler2D u_fft;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_rms;
@@ -31,8 +32,8 @@ float sdSegment(vec2 p, vec2 a, vec2 b) {
     float h = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);
     return length(pa - ba*h);
 }
-float sdBox( in vec2 p, in vec2 b )
-{
+
+float sdBox( in vec2 p, in vec2 b ) {
     vec2 d = abs(p)-b;
     return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
 }
@@ -40,15 +41,34 @@ float sdBox( in vec2 p, in vec2 b )
 float sdSound(vec2 uv) {
     float waveformValue = (texture2D(u_waveform, vec2(uv.x, 0.0) ).x - 0.5) * 2.0;
     waveformValue *= .2;
-    waveformValue *=1.0- abs( pow( abs(uv.x - .5)*2.0, 2.5));
+    waveformValue *= 1.0 - abs(pow(abs(uv.x - .5)*2.0, 2.5));
 
-    float lineOffset = uv.y - waveformValue; // Offset the line by the waveform value
-    float line = 1.0 - abs(lineOffset) * 2.0; // Make line thinner with larger multiplier
+    float lineOffset = uv.y - waveformValue;
+    lineOffset += .15;
+    float line = 1.0 - abs(lineOffset) * 1.0;
+    line = abs(line);
+    float milkyLine = pow(line, .2)*.2;
+    milkyLine += pow(line, 10.0)*.3;
+    milkyLine += pow(line, 2000.0)*30.0;
+
+    return milkyLine;
+}
+
+float sdFFT(vec2 uv) {
+    // Sample FFT data - already processed with sqrt(real^2 + imag^2) and log scaling
+    float fftValue = texture2D(u_fft, vec2(uv.x, 0.0)).x;
+    fftValue *= .2;
+    
+    // Scale and position the FFT visualization
+    float lineOffset = (uv.y) + (fftValue); // Adjust scaling and position
+    lineOffset -= .15;
+    float line = 1.0 - abs(lineOffset) * 1.0;
+    line = abs(line);
+    // Create a similar "milky" glow effect as the waveform
     float milkyLine = pow(line, .2)*.2;
     milkyLine += pow(line, 10.0)*.6;
     milkyLine += pow(line, 2000.0)*30.0;
 
-    //return (u_rms * 3.0 + 1.0) * 2.0 * milkyLine;
     return milkyLine;
 }
 
@@ -56,27 +76,21 @@ vec2 cube(vec2 uv) {
     return mod((uv+.5)*8., vec2(1))-.5;
 }
 
-
 void main() {
-    //vec2 uv.y = vTexCoord * 2.0 - 1.0;
     vec2 uv = vTexCoord;
-    //uv.xy = vec2(uv.y, uv.x);
     uv.y -= 0.5;
-    //uv.y += sin(uv.x * 3.0 + u_time * 1.0) * .03;
-    // rotate 90 cause it looks cooler
-   // uv.x *= u_resolution.x/u_resolution.y;
     
     vec3 col = vec3(0.0);
     
-    // Add oscilloscope effect
-    //uv.y += sin(uv.y * 10.0 + u_time * 10.0) * .1;
-
+    // Add waveform effect
     float wave = sdSound(uv);
-    col = mix(col, vec3(0.404,0.984,0.396), wave);
+    col += mix(col, vec3(0.404,0.984,0.396), wave);
     
-    //col = mix(col, vec3(0.000,0.000,0.000), 1.-length(uv));
+    // Add FFT effect
+    float fft = sdFFT(uv);
+    col += mix(col, vec3(0.984,0.404,0.796), fft);
+    
     col += .1*mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));
-
 
     // Add vignette
     vec2 puv = vTexCoord;
@@ -91,15 +105,13 @@ void main() {
 const sketch = function (p) {
     let shader;
     let waveformTex;
+    let fftTex;
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
     
-    // Add accumulation buffer
-    let accumulatedWaveform = [];
-    const decayFactor = 0.8; // Adjust this value to control decay speed (0-1)
-
     p.waveform1 = [];
+    p.fft0 = [];
     p.rmsOutput = 0;
 
     p.preload = () => {
@@ -110,10 +122,14 @@ const sketch = function (p) {
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
         p.imageMode(p.CENTER);
 
-        // Create waveform texture
+        // Create textures
         waveformTex = p.createGraphics(512, 1, p.WEBGL);
+        // actual OSC transmisison is 4096 samples, but we downsample to 512 for visualisation
+        fftTex = p.createGraphics(512, 1, p.WEBGL);
         waveformTex.pixelDensity(1);
+        fftTex.pixelDensity(1);
         waveformTex.noSmooth();
+        fftTex.noSmooth();
 
         fps = p.createP('');
         fps.style('color', '#FFFFFF');
@@ -126,9 +142,6 @@ const sketch = function (p) {
         
         p.frameRate(60);
         p.noStroke();
-        
-        // Initialize accumulation buffer
-        accumulatedWaveform = new Array(512).fill(0);
     };
 
     p.draw = () => {
@@ -138,22 +151,14 @@ const sketch = function (p) {
             p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
         }
 
-        // Update accumulated waveform
-        
-        for (let i = 0; i < p.waveform1.length; i++) {
-            accumulatedWaveform[i] = Math.max(
-                Math.abs(p.waveform1[i]),
-                accumulatedWaveform[i] * decayFactor
-            );
+        if (p.fft0.length === 0) {
+            p.fft0 = new Array(512).fill(0);
         }
-        
 
-        // Update waveform texture using accumulated values
+        // Update waveform texture
         waveformTex.loadPixels();
         for (let i = 0; i < p.waveform1.length; i++) {
-            //let clampedValue = Math.max(-1, Math.min(1, accumulatedWaveform[i]));
-           //let clampedValue = Math.max(-1, Math.min(1, p.waveform1[i]));
-            let val = (p.waveform1[i]*.5 +.5) * 255.0;// p.map( p.waveform1[i], -10, 10, -255, 255);
+            let val = (p.waveform1[i]*.5 +.5) * 255.0;
             waveformTex.pixels[i * 4] = val;
             waveformTex.pixels[i * 4 + 1] = val;
             waveformTex.pixels[i * 4 + 2] = val;
@@ -161,7 +166,26 @@ const sketch = function (p) {
         }
         waveformTex.updatePixels();
 
+        // Update FFT texture with proper complex FFT handling
+        fftTex.loadPixels();
+        const fftSize = p.fft0.length / 2; // Each FFT bin has real and imaginary parts
+        for (let i = 0; i < fftSize; i++) {
+            const real = p.fft0[2 * i];
+            const imag = p.fft0[2 * i + 1];
+            let magnitude = Math.sqrt(real * real + imag * imag);
+            // Apply logarithmic scaling like in waveform_with_fft_simple.js
+            magnitude = Math.log(magnitude + 1) / Math.log(10);
+            // Scale to 0-255 range for texture
+            let val = magnitude * 100.0;
+            fftTex.pixels[i * 4] = val;
+            fftTex.pixels[i * 4 + 1] = val;
+            fftTex.pixels[i * 4 + 2] = val;
+            fftTex.pixels[i * 4 + 3] = 255;
+        }
+        fftTex.updatePixels();
+
         shader.setUniform('u_waveform', waveformTex);
+        shader.setUniform('u_fft', fftTex);
         shader.setUniform('u_resolution', [p.width, p.height]);
         shader.setUniform('u_time', p.millis() / 1000.0);
         shader.setUniform('u_rms', p.rmsOutput);
