@@ -31,8 +31,7 @@ float sdSound(vec2 uv) {
     
     float lineOffset = uv.y - waveformValue;
     float line = 1.0 - abs(lineOffset) * 2.0;
-    float milkyLine = pow(line, 0.2) * 0.2;
-    milkyLine += pow(line, 10.0) * 0.6;
+    float milkyLine = pow(line, 10.0) * 0.06;
     milkyLine += pow(line, 2000.0) * 30.0;
     
     return milkyLine;
@@ -41,7 +40,7 @@ float sdSound(vec2 uv) {
 void main() {
     vec2 uv = vTexCoord;
     vec2 texel = 1.0 / u_resolution;
-    
+    texel *= 5.0;
     // Sample previous frame with slight offset for lightning spread effect
     vec4 prev = texture2D(u_previous, uv);
     vec4 prevUp = texture2D(u_previous, uv - vec2(0.0, texel.y));
@@ -50,7 +49,7 @@ void main() {
     vec4 prevRight = texture2D(u_previous, uv + vec2(texel.x, 0.0));
     
     // Create diffusion effect
-    vec4 diffusion = (prevUp + prevDown + prevLeft + prevRight) * .3 + prev * .6;
+    vec4 diffusion = (prevUp + prevDown + prevLeft + prevRight) * .2 + prev * .18;
     //diffusion *= 0.999; // Decay factor
     
     // Add new waveform
@@ -66,12 +65,12 @@ void main() {
     // Add electric crackle effect
     float crackle = fract(sin(uv.x * 100.0 + u_time * 5.0) * 
                          cos(uv.y * 120.0 - u_time * 3.0) * 43758.5453123);
-    col += crackle * wave * 2.1 * vec3(0.8, 0.6, 1.0);
+   // col += crackle * wave * 2.1 * vec3(0.8, 0.6, 1.0);
     
     // Add vignette
     vec2 puv = vTexCoord;
-    puv *= 1.0 - puv.yx;
-    col.xyz = col.xyz * pow(puv.x * puv.y * 5.0, 1.4 - u_lightning * .008);
+    puv *= 1.0 - puv.xy;
+    col.xyz = .93*col.xyz * pow(puv.x * puv.y * 35.0, .05+ 0.0005 * u_lightning);
     
     gl_FragColor = vec4(col, 1.0);
 }

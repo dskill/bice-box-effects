@@ -1,7 +1,7 @@
 (
     SynthDef(\palpatine, {
         |out = 0, in_bus = 0, drive = 50, tone = 2000, mix = 1.0, 
-        reverb = 0.3, delay = 0.25, delay_mix = 0.2|
+        reverb = 0.3, delay = 0.25, delay_mix = 0.2, feedback = 0.5|
         var sig, distorted, filtered, wet, delayed, phase, trig, partition;
         var chain_in, chain_out, kr_impulse;
         var fft_output, fft_input;
@@ -25,10 +25,14 @@
         // Tone control with resonant filter
         filtered = RLPF.ar(distorted, tone, 0.7);
         
-        // Delay with modulated time for "sparking" effect
-        delayed = DelayL.ar(filtered, 1.0, 
-            delay + (LFNoise2.kr(0.2) * 0.01) // Slightly modulate delay time
+        // Delay with modulated time and feedback for "sparking" effect
+        delayed = LocalIn.ar(1) * feedback;  // Add feedback from previous delay
+        delayed = delayed + filtered;  // Mix with input signal
+        delayed = DelayL.ar(delayed, 1.0, 
+            (LFNoise2.kr(10.2)*0.001 + delay)  // Slightly modulate delay time
         );
+        LocalOut.ar(delayed);  // Send delayed signal back for feedback
+        
         filtered = (filtered * (1 - delay_mix)) + (delayed * delay_mix);
         
         // Reverb with pre-delay for "chamber" effect

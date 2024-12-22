@@ -1,5 +1,5 @@
 {
-  "name": "Green Machine",
+  "name": "Oscilloscope",
   "description": "a classic oscilloscope visualization",
   "audio": "audio/oscilloscope.sc",
   "visual": "visual/oscilloscope2.js",
