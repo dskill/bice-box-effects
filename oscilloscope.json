@@ -2,7 +2,7 @@
   "name": "Oscilloscope",
   "description": "a classic oscilloscope visualization with waveform and FFT display",
   "audio": "audio/oscilloscope.sc",
-  "visual": "visual/oscilloscope2.js",
+  "visual": "visual/oscilloscope.js",
   "curated": true,
   "params": []
 }
