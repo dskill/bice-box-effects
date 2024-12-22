@@ -1,0 +1,39 @@
+{
+  "name": "Green Machine",
+  "description": "a classic oscilloscope visualization",
+  "audio": "audio/green_machine.sc",
+  "visual": "visual/green_machine.js",
+  "curated": true,
+  "params": [
+    {
+      "name": "bits",
+      "value": 10, 
+      "range": [1, 16] 
+    },
+    {
+      "name": "rate",
+      "value": 0.5, 
+      "range": [0.1, 1.0] 
+    },
+    {
+      "name": "cutoff",
+      "value": 2000,
+      "range": [20, 20000]
+    },
+    {
+      "name": "reverb",
+      "value": 0.3,
+      "range": [0, 1]
+    },
+    {
+      "name": "delay",
+      "value": 0.1,
+      "range": [0, 0.5]
+    },
+    {
+      "name": "mix",
+      "value": 1.0,
+      "range": [0, 1]
+    }
+  ]
+}
