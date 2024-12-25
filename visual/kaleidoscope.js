@@ -22,6 +22,7 @@ uniform sampler2D u_waveform;
 uniform sampler2D u_previous;
 uniform vec2 u_resolution;
 uniform float u_time;
+uniform float u_amplitudeTime;
 uniform float u_rms;
 uniform float u_sparkle;
 uniform float u_shimmer;
@@ -35,7 +36,7 @@ vec2 kaleidoscope(vec2 uv, float segments, float rotation) {
     float radius = length(uv);
     
     // Divide into segments
-    angle = mod(angle + rotation, TWO_PI / segments) - (PI / segments);
+    angle = mod(angle + rotation * radius * .1, TWO_PI / segments) - (PI / segments);
     
     // Mirror
     angle = abs(angle);
@@ -57,34 +58,35 @@ void main() {
     uv.x *= u_resolution.x / u_resolution.y;
     
     // Get parameters from uniforms and modulate with RMS
-    float timeWithRMS = u_time + u_rms * 5.0;
+    float time = u_time;
+    float amplitudeTime = u_amplitudeTime;
     float rotationSpeed = u_rotation * 0.5;
-    float segments =  floor(10.0 * (u_sparkle + 1.0));
+    float segments =  max(1.0,floor(10.0 * (u_sparkle)));
     
     // Apply kaleidoscope effect with RMS-modulated rotation
-    vec2 kUV = kaleidoscope(uv, segments, u_time * rotationSpeed);
+    vec2 kUV = kaleidoscope(uv, segments, u_time * rotationSpeed * 2.0);
     
     // Sample waveform with proper scaling
     float waveVal = texture2D(u_waveform, vec2(abs(kUV.x*.5), 0.0)).r * 2.0 - 1.0;
     
     // Create base color using polar coordinates
     kUV.x *=1.0* u_delay + 1.0;
-    float angle = atan(kUV.y + waveVal*.1, kUV.x);
+    float angle = atan(kUV.y + waveVal*1.1, kUV.x);
     float radius = length(kUV);
     
     // Create rainbow pattern modulated by RMS
-    vec3 color = 0.5 + 0.5 * cos(vec3(0.0, 2.0, 4.0) + sin(angle * 10.0) + timeWithRMS + radius * 3.0);
+    vec3 color = 0.5 + 0.5 * cos(vec3(0.0, 2.0, 4.0) + sin(angle * 10.0)+ time + radius * 3.0);
     
     // Add sparkles modulated by parameter and RMS
-    float sparkleIntensity = sparkle(kUV, timeWithRMS, u_sparkle * (1.0 + u_rms * 2.0));
+    float sparkleIntensity = sparkle(kUV, time, u_sparkle * (1.0 * 2.0));
     
     // Add wave distortion
-    //float wave = sin(radius * 10.0 + 10.0 + u_time * 10.0);
-    //color += wave * 0.1;
+    float wave = sin(radius * 10.0 + 1000.0 * u_shimmer + u_time * 10.0);
+    color += wave * .1;
     
     // Add shimmer effect modulated by parameter
-    float shimmerEffect = sin(radius * 20.0 - timeWithRMS * 2.0) * 0.5 + 0.5;
-    color += shimmerEffect * vec3(0.2, 0.1, 0.3) * u_shimmer * u_rms;
+    float shimmerEffect = sin(radius * amplitudeTime * 20.0) * 0.5 + 0.5;
+    color += shimmerEffect * vec3(0.2, 0.1, 0.3) * u_shimmer;
     
     // Add sparkles with color variation
     vec3 sparkleColor = vec3(1.0, 0.8, 0.9);
@@ -92,7 +94,7 @@ void main() {
     
     // Fade edges
     float fade = 1.0 - smoothstep(0.8, 1.0, radius);
-   // color *= fade;
+    //color *= fade;
     
     // Output
     gl_FragColor = vec4(color, 1.0);
@@ -184,7 +186,8 @@ const sketch = function(p) {
         shader.setUniform('u_previous', read);
         shader.setUniform('u_waveform', waveformTex);
         shader.setUniform('u_resolution', [p.width, p.height]);
-        shader.setUniform('u_time', amplitudeTime);
+        shader.setUniform('u_amplitudeTime', amplitudeTime);
+        shader.setUniform('u_time', p.millis()/1000.0);
         shader.setUniform('u_rms', p.rmsOutput);
 
         // Pass effect parameters to shader
