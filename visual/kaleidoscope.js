@@ -4,7 +4,8 @@ const vertexShader = `
     varying vec2 vTexCoord;
     void main() {
         vec4 positionVec4 = vec4(aPosition, 1.0);
-        vTexCoord = aTexCoord;
+        positionVec4.xy = positionVec4.xy * 2.0 - 1.0;
+        vTexCoord = positionVec4.xy * .5 + .5;
         gl_Position = positionVec4;
     }
 `;
@@ -22,7 +23,10 @@ uniform sampler2D u_previous;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_rms;
-
+uniform float u_sparkle;
+uniform float u_shimmer;
+uniform float u_rotation;
+uniform float u_delay;
 varying vec2 vTexCoord;
 
 // Function to create a kaleidoscope effect
@@ -41,51 +45,54 @@ vec2 kaleidoscope(vec2 uv, float segments, float rotation) {
 
 // Function to generate sparkles
 float sparkle(vec2 uv, float time, float intensity) {
-    float sparklePattern = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+    float sparklePattern = fract(sin(dot(uv, vec2(12.9898, 78.233))) * .4);
     float t = time * 2.0;
     float flicker = sin(t) * sin(t * 1.234) * sin(t * 2.345);
     return pow(sparklePattern, 10.0) * intensity * (0.8 + 0.2 * flicker);
 }
 
 void main() {
-    vec2 uv = (vTexCoord - 0.5) * 2.0;
+    vec2 uv = vTexCoord;
+    uv = (uv - 0.5) * 2.0;
     uv.x *= u_resolution.x / u_resolution.y;
     
-    // Get parameters from uniforms
-    float rotation = u_time * 0.2;
-    float segments = 12.0;
+    // Get parameters from uniforms and modulate with RMS
+    float timeWithRMS = u_time + u_rms * 5.0;
+    float rotationSpeed = u_rotation * 0.5;
+    float segments =  floor(10.0 * (u_sparkle + 1.0));
     
-    // Apply kaleidoscope effect
-    vec2 kUV = kaleidoscope(uv, segments, rotation);
+    // Apply kaleidoscope effect with RMS-modulated rotation
+    vec2 kUV = kaleidoscope(uv, segments, u_time * rotationSpeed);
     
-    // Sample waveform
-    float waveVal = texture2D(u_waveform, vec2(abs(kUV.x), 0.0)).r * 2.0 - 1.0;
+    // Sample waveform with proper scaling
+    float waveVal = texture2D(u_waveform, vec2(abs(kUV.x*.5), 0.0)).r * 2.0 - 1.0;
     
     // Create base color using polar coordinates
-    float angle = atan(kUV.y, kUV.x);
+    kUV.x *=1.0* u_delay + 1.0;
+    float angle = atan(kUV.y + waveVal*.1, kUV.x);
     float radius = length(kUV);
     
-    // Create rainbow pattern
-    vec3 color = 0.5 + 0.5 * cos(vec3(0.0, 2.0, 4.0) + angle + u_time + radius * 3.0);
+    // Create rainbow pattern modulated by RMS
+    vec3 color = 0.5 + 0.5 * cos(vec3(0.0, 2.0, 4.0) + sin(angle * 10.0) + timeWithRMS + radius * 3.0);
     
-    // Add sparkles
-    float sparkleIntensity = sparkle(kUV, u_time, 1.0 + u_rms * 2.0);
+    // Add sparkles modulated by parameter and RMS
+    float sparkleIntensity = sparkle(kUV, timeWithRMS, u_sparkle * (1.0 + u_rms * 2.0));
     
     // Add wave distortion
-    float wave = sin(radius * 10.0 + waveVal * 2.0 + u_time);
-    color += wave * 0.1;
+    //float wave = sin(radius * 10.0 + 10.0 + u_time * 10.0);
+    //color += wave * 0.1;
     
-    // Add shimmer effect
-    float shimmer = sin(radius * 20.0 - u_time * 2.0) * 0.5 + 0.5;
-    color += shimmer * vec3(0.2, 0.1, 0.3) * u_rms;
+    // Add shimmer effect modulated by parameter
+    float shimmerEffect = sin(radius * 20.0 - timeWithRMS * 2.0) * 0.5 + 0.5;
+    color += shimmerEffect * vec3(0.2, 0.1, 0.3) * u_shimmer * u_rms;
     
     // Add sparkles with color variation
     vec3 sparkleColor = vec3(1.0, 0.8, 0.9);
     color += sparkleColor * sparkleIntensity;
     
     // Fade edges
-    float fade = 1.0 - smoothstep(0.0, 1.0, radius);
-    color *= fade;
+    float fade = 1.0 - smoothstep(0.8, 1.0, radius);
+   // color *= fade;
     
     // Output
     gl_FragColor = vec4(color, 1.0);
@@ -99,6 +106,7 @@ const sketch = function(p) {
     let fpsArray = [];
     const fpsArraySize = 10;
     let pingPong = [];
+    let amplitudeTime = 0;
     
     p.waveform1 = [];
     p.fft1 = [];
@@ -149,6 +157,9 @@ const sketch = function(p) {
     p.draw = () => {
         if (!p.params) return;
 
+        // Update amplitude-driven time
+        amplitudeTime += p.rmsOutput;
+
         // Create dummy waveform if none exists
         if (p.waveform1.length === 0) {
             p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i * 0.1) * 0.5);
@@ -173,13 +184,14 @@ const sketch = function(p) {
         shader.setUniform('u_previous', read);
         shader.setUniform('u_waveform', waveformTex);
         shader.setUniform('u_resolution', [p.width, p.height]);
-        shader.setUniform('u_time', p.millis() / 1000.0);
+        shader.setUniform('u_time', amplitudeTime);
         shader.setUniform('u_rms', p.rmsOutput);
 
         // Pass effect parameters to shader
         shader.setUniform('u_sparkle', p.params.sparkle || 0.5);
         shader.setUniform('u_shimmer', p.params.shimmer || 0.4);
         shader.setUniform('u_rotation', p.params.rotation || 0.5);
+        shader.setUniform('u_delay', p.params.delayTime || 1.0);
 
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
