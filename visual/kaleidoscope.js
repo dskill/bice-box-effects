@@ -52,6 +52,13 @@ float sparkle(vec2 uv, float time, float intensity) {
     return pow(sparklePattern, 10.0) * intensity * (0.8 + 0.2 * flicker);
 }
 
+// Add HSV to RGB conversion function
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
 void main() {
     vec2 uv = vTexCoord;
     uv = (uv - 0.5) * 2.0;
@@ -70,33 +77,40 @@ void main() {
     float waveVal = texture2D(u_waveform, vec2(abs(kUV.x*.5), 0.0)).r * 2.0 - 1.0;
     
     // Create base color using polar coordinates
-    kUV.x *=1.0* u_delay + 1.0;
+    kUV.x *= (1.0 / (u_delay + 1.0));
     float angle = atan(kUV.y + waveVal*1.1, kUV.x);
     float radius = length(kUV);
     
-    // Create rainbow pattern modulated by RMS
-    vec3 color = 0.5 + 0.5 * cos(vec3(0.0, 2.0, 4.0) + sin(angle * 10.0)+ time + radius * 3.0);
+    // Create base color using polar coordinates in HSV space
+    float hue = (angle * 10.0 + time + radius * 3.0) / TWO_PI;
+    float saturation = 0.8 + 0.2 * sin(radius * 5.0);
+    float value = 1.0;
+    vec3 hsv = vec3(hue, saturation, value);
     
-    // Add sparkles modulated by parameter and RMS
-    float sparkleIntensity = sparkle(kUV, time, u_sparkle * (1.0 * 2.0));
+    // Add wave distortion (affecting value)
+    //float wave = sin(radius * 10.0 - 100.0 * u_shimmer + u_time * 10.0);
+   // hsv.y += wave * 1.1;
     
-    // Add wave distortion
-    float wave = sin(radius * 10.0 + 1000.0 * u_shimmer + u_time * 10.0);
-    color += wave * .1;
+    // Add shimmer effect in HSV space
+   // float shimmerEffect = sin(radius * amplitudeTime * 20.0) * 0.5 + 0.5;
+   // hsv.z += shimmerEffect * u_shimmer * 0.3;
     
-    // Add shimmer effect modulated by parameter
-    float shimmerEffect = sin(radius * amplitudeTime * 20.0) * 0.5 + 0.5;
-    color += shimmerEffect * vec3(0.2, 0.1, 0.3) * u_shimmer;
+    // Calculate sparkle effect
+    float sparkleIntensity = sparkle(kUV, time, u_sparkle);
     
-    // Add sparkles with color variation
-    vec3 sparkleColor = vec3(1.0, 0.8, 0.9);
-    color += sparkleColor * sparkleIntensity;
-    
+    // Add sparkles (keeping them in RGB space for brightness)
+    hsv.z -= sparkleIntensity;
+
+    // quantize hsv.x
+    hsv.x = floor(hsv.x * 4.0) / 4.0;
     // Fade edges
-    float fade = 1.0 - smoothstep(0.8, 1.0, radius);
-    //color *= fade;
+    float fade = smoothstep(1.0, .2, length(uv * .3));
+    hsv.x *= fade;
+    //hsv.y *= fade;
+    hsv.z *= fade;
     
     // Output
+    vec3 color = hsv2rgb(hsv);
     gl_FragColor = vec4(color, 1.0);
 }
 `;
