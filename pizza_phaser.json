@@ -1,7 +1,7 @@
 {
     "name": "Pizza Phaser",
     "description": "A tasty phaser effect that combines circular waveforms with pizza-inspired visuals",
-    "curated": true,
+    "curated": false,
     "audio": "audio/pizza_phaser.sc",
     "visual": "visual/pizza_phaser.js",
     "params": [
