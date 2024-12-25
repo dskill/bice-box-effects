@@ -1,9 +1,9 @@
 {
-    "name": "Pizza Phaser",
+    "name": "Zeek's Pizza",
     "description": "A tasty phaser effect that combines circular waveforms with pizza-inspired visuals",
     "curated": false,
-    "audio": "audio/pizza_phaser.sc",
-    "visual": "visual/pizza_phaser.js",
+    "audio": "audio/zeeks_pizza.sc",
+    "visual": "visual/zeeks_pizza.js",
     "params": [
         {
             "name": "rate",

@@ -1,7 +1,7 @@
 // Pizza Phaser Effect
 // Combines phaser with amplitude modulation for a "hungry to full" cycle effect
 (
-SynthDef(\pizza_phaser, {
+SynthDef(\zeeks_pizza, {
     arg out=0, in_bus=0,
     // Phaser parameters
     rate=0.5, // Speed of phaser oscillation
@@ -81,6 +81,6 @@ SynthDef(\pizza_phaser, {
             ~effect.free;
         };
 
-        ~effect = Synth(\pizza_phaser, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\zeeks_pizza, [\in_bus, ~input_bus], ~effectGroup);
     };
 ) 

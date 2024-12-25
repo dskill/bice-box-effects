@@ -49,7 +49,7 @@ float sdSound(vec2 uv) {
     line = abs(line);
     float milkyLine = pow(line, .2)*.2;
     milkyLine += pow(line, 10.0)*.3;
-    milkyLine += pow(line, 2000.0)*30.0;
+    milkyLine += pow(line, 5000.0)*30.0;
 
     return milkyLine;
 }
@@ -67,7 +67,7 @@ float sdFFT(vec2 uv) {
     // Create a similar "milky" glow effect as the waveform
     float milkyLine = pow(line, .2)*.2;
     milkyLine += pow(line, 10.0)*.6;
-    milkyLine += pow(line, 2000.0)*30.0;
+    milkyLine += pow(line, 5000.0)*30.0;
 
     return milkyLine;
 }
@@ -84,11 +84,11 @@ void main() {
     
     // Add waveform effect
     float wave = sdSound(uv);
-    col += mix(col, vec3(0.404,0.984,0.396), wave);
+    col += mix(col, vec3(0.504,0.184,0.196), wave);
     
     // Add FFT effect
     float fft = sdFFT(uv);
-    col += mix(col, vec3(0.984,0.404,0.796), fft);
+    col += mix(col, vec3(0.384,0.804,0.196), fft);
     
     col += .1*mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));
 
@@ -97,7 +97,7 @@ void main() {
     puv *= 1.0 - puv.yx;
     col *= pow(puv.x*puv.y*30.0, 0.5);
     
-    col *= vec3(0.0, 0.667, 1.0);
+    col *= vec3(1.0, 0.667, 1.0);
     gl_FragColor = vec4(col, 1.0);
 }
 `;
