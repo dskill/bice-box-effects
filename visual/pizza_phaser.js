@@ -15,6 +15,7 @@ const fragmentShader = `
 precision highp float;
 #endif
 
+#define SAMPLES 15.0
 #define PI 3.14159265359
 
 uniform sampler2D u_waveform;
@@ -25,65 +26,89 @@ uniform float u_rms;
 
 varying vec2 vTexCoord;
 
-// Function to create a spiral pattern
-float spiral(vec2 st, float t) {
-    vec2 pos = st - vec2(0.5);
-    float r = length(pos) * 2.0;
-    float a = atan(pos.y, pos.x);
-    float n = fract((r + t) * 1.0 - a / PI / 2.0);
-    return smoothstep(0.4, 0.5, n);
+float sdSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 ba = b-a;
+    vec2 pa = p-a;
+    float h = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);
+    return length(pa - ba*h);
 }
 
-// Function to create a pizza slice shape
-float pizzaSlice(vec2 st, float angle) {
-    vec2 pos = st - vec2(0.5);
-    float r = length(pos);
-    float a = atan(pos.y, pos.x) + PI;
-    float slice = step(0.0, cos(a * 8.0 + u_time)) * step(r, 0.5);
-    return slice * (1.0 - step(0.48, r));
+float sdBox( in vec2 p, in vec2 b ) {
+    vec2 d = abs(p)-b;
+    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+}
+
+float sdSound(vec2 uv) {
+    float waveformValue = (texture2D(u_waveform, vec2(uv.x, 0.0) ).x - 0.5) * 2.0;
+    waveformValue *= .2;
+    waveformValue *= 1.0 - abs(pow(abs(uv.x - .5)*2.0, 2.5));
+
+    float lineOffset = uv.y - waveformValue;
+    lineOffset += .15;
+    float line = 1.0 - abs(lineOffset) * 1.0;
+    line = abs(line);
+    float milkyLine = pow(line, .2)*.2;
+    milkyLine += pow(line, 10.0)*.3;
+    milkyLine += pow(line, 2000.0)*30.0;
+
+    return milkyLine;
+}
+
+float sdFFT(vec2 uv) {
+    // Sample FFT data - already processed with sqrt(real^2 + imag^2) and log scaling
+    float fftValue = texture2D(u_fft, vec2(uv.x, 0.0)).x;
+    fftValue *= .2;
+    
+    // Scale and position the FFT visualization
+    float lineOffset = (uv.y) + (fftValue); // Adjust scaling and position
+    lineOffset -= .15;
+    float line = 1.0 - abs(lineOffset) * 1.0;
+    line = abs(line);
+    // Create a similar "milky" glow effect as the waveform
+    float milkyLine = pow(line, .2)*.2;
+    milkyLine += pow(line, 10.0)*.6;
+    milkyLine += pow(line, 2000.0)*30.0;
+
+    return milkyLine;
+}
+
+vec2 cube(vec2 uv) {
+    return mod((uv+.5)*8., vec2(1))-.5;
 }
 
 void main() {
-    vec2 st = vTexCoord;
-    vec3 color = vec3(0.0);
+    vec2 uv = vTexCoord;
+    uv.y -= 0.5;
     
-    // Sample waveform data
-    float wave = texture2D(u_waveform, vec2(st.x, 0.0)).r;
+    vec3 col = vec3(0.0);
     
-    // Create spiral effect
-    float spiralPattern = spiral(st, u_time * 0.5);
+    // Add waveform effect
+    float wave = sdSound(uv);
+    col += mix(col, vec3(0.404,0.984,0.396), wave);
     
-    // Create pizza slice pattern
-    float pizza = pizzaSlice(st, u_time);
+    // Add FFT effect
+    float fft = sdFFT(uv);
+    col += mix(col, vec3(0.984,0.404,0.796), fft);
     
-    // Create circular waveform
-    vec2 pos = st - vec2(0.5);
-    float angle = atan(pos.y, pos.x);
-    float radius = length(pos);
-    float waveCircle = texture2D(u_waveform, vec2(angle / (2.0 * PI), 0.0)).r;
-    float circle = smoothstep(0.3 + waveCircle * 0.1, 0.31 + waveCircle * 0.1, radius);
+    col += .1*mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));
+
+    // Add vignette
+    vec2 puv = vTexCoord;
+    puv *= 1.0 - puv.yx;
+    col *= pow(puv.x*puv.y*30.0, 0.5);
     
-    // Combine effects
-    vec3 finalColor = vec3(0.0);
-    finalColor += vec3(1.0, 0.3, 0.1) * spiralPattern; // Red spiral
-    finalColor += vec3(1.0, 0.6, 0.2) * pizza; // Orange pizza
-    finalColor += vec3(0.2, 0.8, 1.0) * (1.0 - circle); // Blue circle
-    
-    // Add some movement based on RMS
-    finalColor *= 1.0 + u_rms * 0.5;
-    
-    // Add glow
-    float glow = pow(u_rms, 2.0) * 0.5;
-    finalColor += vec3(1.0, 0.8, 0.4) * glow;
-    
-    gl_FragColor = vec4(finalColor, 1.0);
+    col *= vec3(0.0, 0.667, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }
 `;
 
-const sketch = function(p) {
+const sketch = function (p) {
     let shader;
     let waveformTex;
     let fftTex;
+    let fps;
+    let fpsArray = [];
+    const fpsArraySize = 10;
     
     p.waveform1 = [];
     p.fft0 = [];
@@ -99,18 +124,31 @@ const sketch = function(p) {
 
         // Create textures
         waveformTex = p.createGraphics(512, 1, p.WEBGL);
+        // actual OSC transmisison is 4096 samples, but we downsample to 512 for visualisation
         fftTex = p.createGraphics(512, 1, p.WEBGL);
         waveformTex.pixelDensity(1);
         fftTex.pixelDensity(1);
         waveformTex.noSmooth();
         fftTex.noSmooth();
+
+        fps = p.createP('');
+        fps.style('color', '#FFFFFF');
+        fps.style('font-family', '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif');
+        fps.style('font-size', '10px');
+        fps.style('position', 'fixed');
+        fps.style('bottom', '3px');
+        fps.style('left', '3px');
+        fps.style('margin', '0');
+        
+        p.frameRate(60);
+        p.noStroke();
     };
 
     p.draw = () => {
         p.background(0);
 
         if (p.waveform1.length === 0) {
-            p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i * 0.1) * 0.5);
+            p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
         }
 
         if (p.fft0.length === 0) {
@@ -120,7 +158,7 @@ const sketch = function(p) {
         // Update waveform texture
         waveformTex.loadPixels();
         for (let i = 0; i < p.waveform1.length; i++) {
-            let val = (p.waveform1[i] * 0.5 + 0.5) * 255.0;
+            let val = (p.waveform1[i]*.5 +.5) * 255.0;
             waveformTex.pixels[i * 4] = val;
             waveformTex.pixels[i * 4 + 1] = val;
             waveformTex.pixels[i * 4 + 2] = val;
@@ -128,13 +166,16 @@ const sketch = function(p) {
         }
         waveformTex.updatePixels();
 
-        // Update FFT texture
+        // Update FFT texture with proper complex FFT handling
         fftTex.loadPixels();
-        for (let i = 0; i < p.fft0.length / 2; i++) {
+        const fftSize = p.fft0.length / 2; // Each FFT bin has real and imaginary parts
+        for (let i = 0; i < fftSize; i++) {
             const real = p.fft0[2 * i];
             const imag = p.fft0[2 * i + 1];
             let magnitude = Math.sqrt(real * real + imag * imag);
+            // Apply logarithmic scaling like in waveform_with_fft_simple.js
             magnitude = Math.log(magnitude + 1) / Math.log(10);
+            // Scale to 0-255 range for texture
             let val = magnitude * 100.0;
             fftTex.pixels[i * 4] = val;
             fftTex.pixels[i * 4 + 1] = val;
@@ -151,6 +192,17 @@ const sketch = function(p) {
 
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
+
+        updateFPS();
+    };
+
+    const updateFPS = () => {
+        fpsArray.push(p.frameRate());
+        if (fpsArray.length > fpsArraySize) {
+            fpsArray.shift();
+        }
+        const averageFPS = fpsArray.reduce((sum, value) => sum + value, 0) / fpsArray.length;
+        fps.html('FPS: ' + averageFPS.toFixed(2));
     };
 
     p.windowResized = () => {
@@ -158,4 +210,4 @@ const sketch = function(p) {
     };
 };
 
-module.exports = sketch; 
+module.exports = sketch;
