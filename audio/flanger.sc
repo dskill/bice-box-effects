@@ -35,11 +35,7 @@
 
         // FFT Analysis
         kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
-        chain_in = FFT(~fft_buffer_in, sig);
         chain_out = FFT(~fft_buffer_out, sig);  // In bypass, input = output
-
-        // Store FFT data in buffers
-        chain_in.do(~fft_buffer_in);
         chain_out.do(~fft_buffer_out);
 
         // Send RMS values to the control buses

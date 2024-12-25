@@ -111,7 +111,7 @@ const sketch = function (p) {
     const fpsArraySize = 10;
     
     p.waveform1 = [];
-    p.fft0 = [];
+    p.fft1 = [];
     p.rmsOutput = 0;
 
     p.preload = () => {
@@ -151,8 +151,8 @@ const sketch = function (p) {
             p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
         }
 
-        if (p.fft0.length === 0) {
-            p.fft0 = new Array(512).fill(0);
+        if (p.fft1.length === 0) {
+            p.fft1 = new Array(512).fill(0);
         }
 
         // Update waveform texture
@@ -168,10 +168,10 @@ const sketch = function (p) {
 
         // Update FFT texture with proper complex FFT handling
         fftTex.loadPixels();
-        const fftSize = p.fft0.length / 2; // Each FFT bin has real and imaginary parts
+        const fftSize = p.fft1.length / 2; // Each FFT bin has real and imaginary parts
         for (let i = 0; i < fftSize; i++) {
-            const real = p.fft0[2 * i];
-            const imag = p.fft0[2 * i + 1];
+            const real = p.fft1[2 * i];
+            const imag = p.fft1[2 * i + 1];
             let magnitude = Math.sqrt(real * real + imag * imag);
             // Apply logarithmic scaling like in waveform_with_fft_simple.js
             magnitude = Math.log(magnitude + 1) / Math.log(10);

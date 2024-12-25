@@ -6,7 +6,6 @@ const sketch = function(p) {
     // Add RMS properties
     p.rmsInput = 0;
     p.rmsOutput = 0;
-    p.fft0 = [];
     p.fft1 = [];
 
     p.setup = () => {

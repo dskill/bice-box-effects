@@ -28,7 +28,6 @@ s.waitForBoot{
 	"New relay buffers allocated".postln;
 
 	~fft_size = 4096;  // Set the FFT size
-	~fft_buffer_in = Buffer.alloc(s, ~fft_size);
 	~fft_buffer_out = Buffer.alloc(s, ~fft_size);
 	"FFT buffers allocated".postln;
 
@@ -109,17 +108,19 @@ s.waitForBoot{
 	
 
 	// Add new OSCdef for FFT data
+	// we only output to fft_data1 for now, because it's processing
+	// intensive to send the input buffer to the client
+	// and we only really care about the output buffer
+	// we use the 1 suffix to match the waveform1 message
 	OSCdef(\fftData).free;
 	OSCdef(\fftData, { |msg|
-		[ ~fft_buffer_out].do { |buf, i|
-			if(buf.notNil, {
-				buf.getn(0, ~fft_size, { |data|
-					~o.sendMsg(("fft_data" ++ i).asSymbol, *data);
-				});
-			}, {
-				"Warning: FFT buffer % is nil".format(i).postln;
+		if(~fft_buffer_out.notNil, {
+			~fft_buffer_out.getn(0, ~fft_size, { |data|
+				~o.sendMsg(\fft_data1, *data);
 			});
-		};
+		}, {
+			"Warning: FFT buffer is nil".postln;
+		});
 	}, '/fft_data');
 
 	"FFT OSCdef created".postln;

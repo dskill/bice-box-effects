@@ -6,7 +6,6 @@ const sketch = function(p) {
     // Add RMS properties
     p.rmsInput = 0;
     p.rmsOutput = 0;
-    p.fft0 = [];
     p.fft1 = [];
 
     // Add FPS variables
@@ -41,16 +40,15 @@ const sketch = function(p) {
         drawWaveform(p.waveform1, p.color(0, 100, 100), p.height / 4, 1, p.rmsOutput);
 
         // Draw FFT as concentric circles
-        drawFFTCircles(p.fft0, p.color(255, 100, 100));
+        drawFFTCircles(p.fft1, p.color(255, 100, 100));
 
         // Update and draw decaying waveform in red at the bottom
         updateDecayingWaveform();
         drawWaveform(decayingWaveform, p.color(200, 40, 40), p.height / 4, 1, p.rmsOutput);
         drawWaveform(decayingWaveform, p.color(200, 40, 40), p.height / 4, -1, p.rmsOutput);
 
-        //drawFFT(p.fft0, p.color(255, 0, 200));
+        //drawFFT(p.fft1, p.color(255, 0, 200));
 
-        //drawFFT(p.fft1, p.color(0, 255, 0));
 
         // remove additive blend mode
         p.pop();

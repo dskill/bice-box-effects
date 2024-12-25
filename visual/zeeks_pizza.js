@@ -82,7 +82,7 @@ const sketch = function (p) {
     let amplitudeTime = 0;
     
     p.waveform1 = [];
-    p.fft0 = [];
+    p.fft1 = [];
     p.rmsOutput = 0;
 
     p.preload = () => {
@@ -124,8 +124,8 @@ const sketch = function (p) {
             p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i * 0.1) * 0.5);
         }
         // If no FFT data is provided externally yet, create some dummy data:
-        if (p.fft0.length === 0) {
-            p.fft0 = new Array(512).fill(0);
+        if (p.fft1.length === 0) {
+            p.fft1 = new Array(512).fill(0);
         }
 
         amplitudeTime += p.rmsOutput;
@@ -143,10 +143,10 @@ const sketch = function (p) {
 
         // Populate the FFT texture (if you wish to use it further in the shader or expansions):
         fftTex.loadPixels();
-        const fftSize = p.fft0.length / 2; // Each FFT bin has real & imaginary parts
+        const fftSize = p.fft1.length / 2; // Each FFT bin has real & imaginary parts
         for (let i = 0; i < fftSize; i++) {
-            const real = p.fft0[2 * i];
-            const imag = p.fft0[2 * i + 1];
+            const real = p.fft1[2 * i];
+            const imag = p.fft1[2 * i + 1];
             let magnitude = Math.sqrt(real * real + imag * imag);
             magnitude = Math.log(magnitude + 1.0) / Math.log(10.0); 
             let val = magnitude * 100.0;
