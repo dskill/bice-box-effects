@@ -10,7 +10,7 @@
 # Configuration
 LOCAL_DIR="$HOME/bice-box-effects"
 REMOTE_USER="patch"
-REMOTE_HOST="192.168.50.241"
+REMOTE_HOST="192.168.50.106"
 REMOTE_DIR="bice-box-effects"
 
 # Ensure fswatch is installed

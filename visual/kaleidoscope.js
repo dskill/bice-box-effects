@@ -28,6 +28,7 @@ uniform float u_sparkle;
 uniform float u_shimmer;
 uniform float u_rotation;
 uniform float u_delay;
+uniform float u_feedback;
 varying vec2 vTexCoord;
 
 // Function to create a kaleidoscope effect
@@ -36,7 +37,7 @@ vec2 kaleidoscope(vec2 uv, float segments, float rotation) {
     float radius = length(uv);
     
     // Divide into segments
-    angle = mod(angle + rotation * radius * .1, TWO_PI / segments) - (PI / segments);
+    angle = mod(angle + rotation * radius * .02, TWO_PI / segments) - (PI / segments);
     
     // Mirror
     angle = abs(angle);
@@ -71,7 +72,7 @@ void main() {
     float segments =  max(1.0,floor(10.0 * (u_sparkle)));
     
     // Apply kaleidoscope effect with RMS-modulated rotation
-    vec2 kUV = kaleidoscope(uv, segments, u_time * rotationSpeed * 2.0);
+    vec2 kUV = kaleidoscope(uv, segments, rotationSpeed * 50.0);
     
     // Sample waveform with proper scaling
     float waveVal = texture2D(u_waveform, vec2(abs(kUV.x*.5), 0.0)).r * 2.0 - 1.0;
@@ -82,8 +83,8 @@ void main() {
     float radius = length(kUV);
     
     // Create base color using polar coordinates in HSV space
-    float hue = (angle * 10.0 + time + radius * 3.0) / TWO_PI;
-    float saturation = 0.8 + 0.2 * sin(radius * 5.0);
+    float hue = time + (angle * 10.0 + radius * 30.0) / TWO_PI;
+    float saturation = hue;//0.8 + 0.2 * sin(radius * 15.0);
     float value = 1.0;
     vec3 hsv = vec3(hue, saturation, value);
     
@@ -92,7 +93,7 @@ void main() {
    // hsv.y += wave * 1.1;
     
     // Add shimmer effect in HSV space
-   // float shimmerEffect = sin(radius * amplitudeTime * 20.0) * 0.5 + 0.5;
+   // float shimmerEffect = sin(radius * 20.0 + amplitudeTime) * 0.5 + 0.5;
    // hsv.z += shimmerEffect * u_shimmer * 0.3;
     
     // Calculate sparkle effect
@@ -105,12 +106,15 @@ void main() {
     hsv.x = floor(hsv.x * 4.0) / 4.0;
     // Fade edges
     float fade = smoothstep(1.0, .2, length(uv * .3));
-    hsv.x *= fade;
+    //hsv.x *= fade;
     //hsv.y *= fade;
-    hsv.z *= fade;
+    //hsv.z *= fade;
+
+    
     
     // Output
-    vec3 color = hsv2rgb(hsv);
+    vec3 color = hsv2rgb(hsv)  * (1.0 - u_feedback);
+    color += texture2D(u_previous, vTexCoord - length(uv) * uv*.002).xyz * u_feedback;
     gl_FragColor = vec4(color, 1.0);
 }
 `;
@@ -125,7 +129,6 @@ const sketch = function(p) {
     let amplitudeTime = 0;
     
     p.waveform1 = [];
-    p.fft1 = [];
     p.rmsOutput = 0;
 
     p.preload = () => {
@@ -205,10 +208,11 @@ const sketch = function(p) {
         shader.setUniform('u_rms', p.rmsOutput);
 
         // Pass effect parameters to shader
-        shader.setUniform('u_sparkle', p.params.sparkle || 0.5);
-        shader.setUniform('u_shimmer', p.params.shimmer || 0.4);
-        shader.setUniform('u_rotation', p.params.rotation || 0.5);
-        shader.setUniform('u_delay', p.params.delayTime || 1.0);
+        shader.setUniform('u_sparkle', p.params.sparkle);
+        shader.setUniform('u_shimmer', p.params.shimmer);
+        shader.setUniform('u_rotation', p.params.rotation);
+        shader.setUniform('u_delay', p.params.delayTime);
+        shader.setUniform('u_feedback', p.params.feedback);
 
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
