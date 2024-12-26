@@ -52,8 +52,8 @@ SynthDef(\zeeks_pizza, {
     BufWr.ar(output, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
     // FFT Analysis
-    chain_out = FFT(~fft_buffer_out, input, wintype: 1);
-    chain_out.do(~fft_buffer_out);
+    //chain_out = FFT(~fft_buffer_out, input, wintype: 1);
+    //chain_out.do(~fft_buffer_out);
 
     rms_input = RunningSum.rms(input, 1024);
     rms_output = RunningSum.rms(output, 1024);
@@ -62,7 +62,7 @@ SynthDef(\zeeks_pizza, {
     Out.kr(~rms_bus_input, rms_input);
     Out.kr(~rms_bus_output, rms_output);
     SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-    SendReply.kr(kr_impulse, '/fft_data');
+    //SendReply.kr(kr_impulse, '/fft_data');
     SendReply.kr(kr_impulse, '/rms'); 
 
     Out.ar(out, [output, output]);

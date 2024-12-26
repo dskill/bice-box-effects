@@ -19,13 +19,17 @@ precision highp float;
 uniform sampler2D u_waveform;
 uniform vec2 u_resolution;
 uniform float u_time;
+uniform float u_amplitudeTime;
 uniform float u_rms;
 
 varying vec2 vTexCoord;
 
 float getColor(vec2 fragCoord) {
     // Normalized pixel coordinates (from 0 to 1)
-    vec2 uv = (fragCoord - 0.5 * u_resolution.xy)/u_resolution.y;
+    vec2 uv = fragCoord; //(fragCoord - u_resolution.xy)/u_resolution.y;
+    uv = fragCoord * 2.0;
+    uv.x *= 800.0/480.0;
+    uv.x += 0.5;
     
     // Incorporate waveform
     float waveVal = texture2D(u_waveform, vec2(vTexCoord.x, 0.0)).r * 2.0 - 1.0;
@@ -40,7 +44,7 @@ float getColor(vec2 fragCoord) {
     vec2 id = floor(uv);
     
     float sharpFactor = 0.;
-    float t = -u_time * 1. + 13.;
+    float t = -u_amplitudeTime * 1. + 13.;
     
     
     
@@ -57,8 +61,9 @@ float getColor(vec2 fragCoord) {
 }
 
 void main() {
-    vec2 fragCoord = vTexCoord * u_resolution;
-    vec3 col = vec3(getColor(fragCoord));
+    vec2 fragCoord = vTexCoord;
+    vec2 uv = fragCoord * (u_resolution.y/u_resolution.x);
+    vec3 col = vec3(getColor(uv));
 
     // Add vignette
     vec2 puv = vTexCoord;
@@ -75,7 +80,7 @@ void main() {
 const sketch = function (p) {
     let shaderProgram;
     let waveformTex;
-    let fftTex;
+    //let fftTex;
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
@@ -141,6 +146,7 @@ const sketch = function (p) {
         }
         waveformTex.updatePixels();
 
+            /*
         // Populate the FFT texture (if you wish to use it further in the shader or expansions):
         fftTex.loadPixels();
         const fftSize = p.fft1.length / 2; // Each FFT bin has real & imaginary parts
@@ -156,11 +162,14 @@ const sketch = function (p) {
             fftTex.pixels[i * 4 + 3] = 255;
         }
         fftTex.updatePixels();
+        */
 
         // Send uniforms to our new shader:
         shaderProgram.setUniform('u_waveform', waveformTex);
         shaderProgram.setUniform('u_resolution', [p.width, p.height]);
-        shaderProgram.setUniform('u_time', amplitudeTime); //p.millis() / 1000.0);
+        shaderProgram.setUniform('u_amplitudeTime', amplitudeTime); //p.millis() / 1000.0);
+        shaderProgram.setUniform('u_time', p.millis() / 1000.0);
+        
         shaderProgram.setUniform('u_rms', p.rmsOutput);
 
         p.shader(shaderProgram);
