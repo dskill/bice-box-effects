@@ -25,12 +25,10 @@ uniform float u_rms;
 varying vec2 vTexCoord;
 
 float getColor(vec2 fragCoord) {
-    // Normalized pixel coordinates (from 0 to 1)
-    vec2 uv = fragCoord; //(fragCoord - u_resolution.xy)/u_resolution.y;
-    uv = fragCoord * 2.0;
-    uv.x *= 800.0/480.0;
-    uv.x += 0.5;
-    
+    vec2 uv = fragCoord - 0.5;
+    uv.y -= 0.025; // why is this needed?
+    uv.x *= u_resolution.x/u_resolution.y;
+        
     // Incorporate waveform
     float waveVal = texture2D(u_waveform, vec2(vTexCoord.x, 0.0)).r * 2.0 - 1.0;
     //t += waveVal * 5.0;
@@ -63,7 +61,7 @@ float getColor(vec2 fragCoord) {
 void main() {
     vec2 fragCoord = vTexCoord;
     vec2 uv = fragCoord * (u_resolution.y/u_resolution.x);
-    vec3 col = vec3(getColor(uv));
+    vec3 col = vec3(getColor(fragCoord));
 
     // Add vignette
     vec2 puv = vTexCoord;

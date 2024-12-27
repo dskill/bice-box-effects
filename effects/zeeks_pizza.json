@@ -12,8 +12,8 @@
         },
         {
             "name": "depth",
-            "value": 0.5,
-            "range": [0.0, 1.0]
+            "value": 0.1,
+            "range": [0.0, 0.1]
         },
         {
             "name": "modRate",
