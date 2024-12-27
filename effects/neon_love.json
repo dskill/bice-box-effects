@@ -1,0 +1,39 @@
+{
+  "name": "Neon Love",
+  "description": "A dreamy reverb with a neon heart visualization",
+  "audio": "audio/neon_love.sc",
+  "visual": "visual/neon_love.js",
+  "curated": true,
+  "params": [
+    {
+      "name": "decay",
+      "value": 1.0,
+      "range": [0.1, 5.0]
+    },
+    {
+      "name": "roomSize",
+      "value": 0.7,
+      "range": [0.1, 0.99]
+    },
+    {
+      "name": "predelay",
+      "value": 0.03,
+      "range": [0.0, 0.1]
+    },
+    {
+      "name": "intensity",
+      "value": 0.5,
+      "range": [0.0, 1.0]
+    },
+    {
+      "name": "speed",
+      "value": 0.1,
+      "range": [0.0, 1.0]
+    },
+    {
+      "name": "mix",
+      "value": 0.5,
+      "range": [0.0, 1.0]
+    }
+  ]
+} 
