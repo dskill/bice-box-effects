@@ -107,7 +107,7 @@ float getSegment(float t, vec2 pos, float offset) {
     float len = 0.25;
     float scale = 0.012;
     scale = u_roomSize * .01;
-    len *= u_predelay*5.0 + .2;
+    len *= u_predelay*15.0 + 0.5;
     
     for(int i = 0; i < POINT_COUNT; i++) {
         points[i] = getHeartPosition(offset + float(i)*len + fract(u_speed * t) * 6.28);
