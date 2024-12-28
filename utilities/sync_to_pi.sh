@@ -30,7 +30,7 @@ check_remote_dir() {
 
 # Function to sync changes
 sync_changes() {
-    rsync -avz --delete "$LOCAL_DIR/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR"
+    rsync -avz --delete --exclude='.git/' "$LOCAL_DIR/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR"
 }
 
 # Check if LOCAL_DIR exists
