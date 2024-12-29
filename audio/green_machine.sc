@@ -1,7 +1,7 @@
 (
     SynthDef(\oscilloscope, {
         |out = 0, in_bus = 0, bits = 8, rate = 0.5, mix = 1.0, 
-        cutoff = 2000, reverb = 0.3, delay = 0.25, delay_mix = 0.2|
+        machine = 2000, reverb = 0.3, delay = 0.25, delay_mix = 0.2|
         var sig, crushed, filtered, wet, delayed, phase, trig, partition;
         var chain_in, chain_out, kr_impulse;
         var fft_output, fft_input;
@@ -15,7 +15,7 @@
         crushed = Latch.ar(crushed, Impulse.ar(rate * SampleRate.ir * 0.5));
 
         // Low pass filter
-        filtered = LPF.ar(crushed, cutoff);
+        filtered = LPF.ar(crushed, machine);
         
         // Delay
         delayed = DelayL.ar(filtered, 1.0, delay);

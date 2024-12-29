@@ -1,0 +1,24 @@
+{
+  "name": "Vocorotator",
+  "description": "rotates the frequency spectrum of the input signal",
+  "audio": "audio/vocorotator.sc",
+  "visual": "visual/oscilloscope.js",
+  "curated": true,
+  "params": [
+    {
+      "name": "shift",
+      "value": 1.0,
+      "range": [-10.0, 10.0]
+    },
+    {
+      "name": "feedback",
+      "value": 0.3,
+      "range": [0.0, 1.0]
+    },
+    {
+      "name": "mix",
+      "value": 0.0,
+      "range": [-1.0, 1.0]
+    }
+  ]
+}

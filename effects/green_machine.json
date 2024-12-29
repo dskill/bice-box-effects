@@ -16,7 +16,7 @@
       "range": [0.1, 1.0] 
     },
     {
-      "name": "cutoff",
+      "name": "machine",
       "value": 2000,
       "range": [20, 20000]
     },
