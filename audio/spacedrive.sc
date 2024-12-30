@@ -12,7 +12,7 @@
         
         // Apply soft clipping and add some even harmonics
         // Adjust drive scaling if needed for more subtle or aggressive distortion
-        distorted = (sig * drive * 4).tanh;  // Basic tanh shaping
+        distorted = (sig * (drive + 1.0));//.tanh;  // Basic tanh shaping
         distorted = (distorted * (hyperdrive + 1.0)).fold2(0.9);  // Wavefolder effect
         distorted = (distorted * (hyperdrive + 1.0) * 20).clip2(0.8);  // Hard clipping for that fuzzy edge
         distorted = (distorted * (hyperdrive + 1.0)).softclip * 0.7;  // Additional saturation scaled by hyperdrive
@@ -25,10 +25,8 @@
         distorted = BHiShelf.ar(distorted, 3200, 1.0, tone * -6);    // High attenuation/boost
         
         // Blend original and distorted signals
-        distorted = (distorted * mix) + (sig * (1 - mix));
-
-        // Remove DC offset that might be introduced
-        distorted = LeakDC.ar(distorted);
+        //distorted = (distorted * mix) + (sig * (1 - mix));
+        distorted = XFade2.ar(sig, distorted, mix);
 
         // MACHINERY FOR SAMPLING THE SIGNAL
         phase = Phasor.ar(0, 1, 0, ~chunkSize);

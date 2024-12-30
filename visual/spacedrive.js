@@ -62,33 +62,44 @@ void main() {
 
     // Gaussian Background
     vec2 texel = 1.0 / u_resolution;
-    texel *= u_drive;
-    vec4 center = texture2D(u_previous, uv);
-    uv = (uv - 0.5) * 0.95 + 0.5;
-    texel *= sin(uv.x * 3.14159) * u_hyperdrive * 10.0;
+    vec2 uv_centered = uv - 0.5;
+    float zoom = -u_drive * .01;
+    uv_centered += uv_centered * zoom * vec2(pow(uv_centered.x,2.0));
+    uv_centered.y = abs(uv_centered.y);
+    uv_centered.x = abs(uv_centered.x);
+    uv_centered.y -= .01 * u_hyperdrive;
+    uv_centered.x *= 1.0 - u_hyperdrive * .01;
+    uv_centered.y *= 1.0 - u_hyperdrive * .01;
+
+    uv = uv_centered + 0.5;
+    
+
+    texel *= sin(uv.x * 3.14159) * u_hyperdrive * 3.0;
     vec4 left = texture2D(u_previous, uv - vec2(texel.x, 0.0));
     vec4 right = texture2D(u_previous, uv + vec2(texel.x, 0.0));
     vec4 up = texture2D(u_previous, uv - vec2(0.0, texel.y));
     vec4 down = texture2D(u_previous, uv + vec2(0.0, texel.y));
+    vec4 center = texture2D(u_previous, uv);
+
     vec4 diffusion = (left + right + up + down) * 0.25;
 
     // Convert diffusion to HSV and modify
     vec3 hsvColor = rgb2hsv(diffusion.rgb);
     hsvColor.x = u_drive*.01-.5;
-    hsvColor.x +=  u_hyperdrive * (pow(sin(length(uv.xy - vec2(0.5))*1.0 + u_rmsOutput * 100.0 ), 2.0));
+    hsvColor.x +=  0.2 * u_hyperdrive * (pow(sin(length(uv.xy - vec2(0.5))*1.0 + u_rmsOutput * 100.0 ), 2.0));
     hsvColor.y = min(hsvColor.y + 0.01, 0.99);
     hsvColor.z *= 0.98;
     vec3 remappedColor = hsv2rgb(hsvColor);
 
     // Waveform visualization overlay
-    float waveformValue = texture2D(u_waveform, vec2(vTexCoord.x, 0.0)).r;
-    float linePos = .5 + (waveformValue * .25 - .125);
-    float thickness = 0.01;
+    float waveformValue = texture2D(u_waveform, vec2(uv.x*1.0, 0.0)).r;
+    float linePos =  (waveformValue * .25 - .125) + .5;
+    float thickness = 0.005;
     float lineMask = smoothstep(0.1, 1.0, 1.0 - abs(vTexCoord.y - linePos) / thickness);
     lineMask *= lineMask;
 
     // Combine with background
-    vec3 finalColor = remappedColor + lineMask * vec3(1.0, 0.1, 0.2);
+    vec3 finalColor = remappedColor + lineMask * vec3(1.0, 0.2, 0.1);
     gl_FragColor = vec4(finalColor, 1.0);
 }
 `;
@@ -163,7 +174,7 @@ const sketch = function (p)
         for (let i = 0; i < p.waveform1.length; i++) {
             // Clamp the input value between -1 and 1 before mapping
             let clampedValue = Math.max(-1, Math.min(1, p.waveform1[i]));
-            let val = p.map(clampedValue, -1, 1, 0, 255);
+            let val = p.map(clampedValue, 0, 1, 0, 255);
             waveformTex.pixels[i * 4] = val;
             waveformTex.pixels[i * 4 + 1] = val;
             waveformTex.pixels[i * 4 + 2] = val;
@@ -181,9 +192,9 @@ const sketch = function (p)
         feedback.setUniform('u_resolution', [p.width * p.pixelDensity(), p.height * p.pixelDensity()]);
         feedback.setUniform('u_framecount', p.frameCount);
         feedback.setUniform('u_tone', p.params.tone);
-        feedback.setUniform('u_mix', p.params.mix);
-        feedback.setUniform('u_drive', p.params.drive);
-        feedback.setUniform('u_hyperdrive', p.params.hyperdrive);
+        feedback.setUniform('u_mix', p.params.mix * .5 + 0.5);
+        feedback.setUniform('u_drive', p.params.drive * (p.params.mix * 0.5 + 0.5));
+        feedback.setUniform('u_hyperdrive', p.params.hyperdrive * (p.params.mix * 0.5 + 0.5));
         feedback.setUniform('u_rmsOutput', p.rmsOutput);
         // Pass waveform texture to the shader
         feedback.setUniform('u_waveform', waveformTex);

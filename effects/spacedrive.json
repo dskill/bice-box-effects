@@ -7,8 +7,8 @@
   "params": [
     {
       "name": "drive",
-      "value": 10,
-      "range": [1, 50]
+      "value": 1,
+      "range": [0, 10]
     }, 
     {
       "name": "hyperdrive",
@@ -22,8 +22,8 @@
     },
     {
       "name": "mix",
-      "value": 1.0,
-      "range": [0, 1]
+      "value": 0.0,
+      "range": [-1.0, 1.0]
     }
   ]
 }
