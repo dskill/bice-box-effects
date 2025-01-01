@@ -1,0 +1,29 @@
+{
+  "name": "fluid",
+  "description": "a stereo delay effect that alternates between left and right channels",
+  "audio": "audio/fluid.sc",
+  "visual": "visual/fluid.js",
+  "curated": true,
+  "params": [
+    {
+      "name": "delayTime",
+      "value": 0.4,
+      "range": [0.1, 1]
+    },
+    {
+      "name": "feedback",
+      "value": 0.5,
+      "range": [0, 0.9]
+    },
+    {
+      "name": "wetLevel",
+      "value": 0.8,
+      "range": [0, 1]
+    },
+    {
+      "name": "gain",
+      "value": 1,
+      "range": [0, 2]
+    }
+  ]
+} 
