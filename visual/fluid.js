@@ -123,12 +123,24 @@ const displayShader = `
     varying vec2 vUv;
     uniform sampler2D uTexture;
     uniform float u_rms;
+    uniform sampler2D waveformTex;
 
     void main () {
-        vec3 color = texture2D(uTexture, vUv).rgb;
+        float waveform = texture2D(waveformTex, vUv).x * 2.0 - 1.0;
+        vec2 uv = vUv;
+        //uv.y = abs(uv.y - 0.5)*2.0;
+        //uv.y += pow(uv.y*2.0-1.0,2.0);
+        //uv.y = pow(abs(uv.y-0.5)*2.0,0.2);
+        //uv.y = smoothstep(0.0,0.1,uv.y);
+        uv.y += .05 * waveform * pow(1.0 - abs(vUv.y - 0.5)*2.0,8.0) * (1.0 - abs(vUv.x-0.5)*2.0);
+        uv.x += .05 * waveform * pow(1.0 - abs(vUv.y - 0.5)*2.0,8.0) * (1.0 - abs(vUv.x-0.5)*2.0);
+        
+        //uv.y += .1* pow( abs(uv.x - 0.5)*2.0, 0.1);
+        vec3 color = texture2D(uTexture, uv).rgb;
         //float brightness = max(color.r, max(color.g, color.b));
         //color = mix(color, vec3(1.0), brightness);// * u_rms);
         color = pow(color, vec3(.7));
+        //color.rgb = vec3(uv.x,uv.y,0.0);
         gl_FragColor = vec4(color, 1.0);
     }
 `;
@@ -369,6 +381,7 @@ const sketch = (p) => {
         p.shader(displayProgram);
         displayProgram.setUniform('uTexture', dye[0]); // Changed from velocity[0] to dye[0]
         displayProgram.setUniform('u_rms', p.rmsOutput || 0.5);
+        displayProgram.setUniform('waveformTex', waveformTex);
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
 
         updateFPS();
