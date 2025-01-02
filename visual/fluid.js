@@ -34,13 +34,18 @@ const splatShader = `
     void main () {
         // Only consider the vertical UV coordinate
         float waveform = texture2D(waveformTex, vec2(vUv.x,0.5)).x * 2.0 - 1.0;
-        waveform *= 2.0;
+        //waveform *= 200.0;
         float dist =  abs(waveform - vUv.y);
-        dist *= 2.0;
-        vec3 base = texture2D(uTarget, vUv).xyz;
-        vec3 color = vec3(0.0,waveform, 0.0);
-        vec3 splat = exp(-dist / radius) * color ;
-        gl_FragColor = vec4(base + splat, 1.0);
+        dist *= 10.0;
+        vec2 splatForce;
+        splatForce.y =  waveform * 100.0 * abs(exp(-dist / 0.5));// * waveform;
+        splatForce.x = 0.0;
+
+        //vec3 base = texture2D(uTarget, vUv).xyz;
+        vec2 baseVel = texture2D(uTarget, vUv).xy * 2.0 - 1.0; // decode from [0..1] → [−1..1]
+        baseVel += splatForce; // add your force
+        baseVel = clamp(baseVel, -1.0, 1.0); // optional clamp
+        gl_FragColor = vec4(0.5 + 0.5 * baseVel, 0.0, 1.0); // encode again
     }
 `;
 
@@ -56,9 +61,14 @@ const advectionShader = `
     uniform float dissipation;
 
     void main () {
-        vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
-        gl_FragColor = dissipation * texture2D(uSource, coord);
-        gl_FragColor.a = 1.0;
+        // Decode velocity from [0,1] to [-1,1]
+        vec2 coord = vUv - dt * (texture2D(uVelocity, vUv).xy * 2.0 - 1.0) * texelSize;
+        
+        // Get source value and decode from [0,1] to [-1,1]
+        vec2 result = texture2D(uSource, coord).xy * 2.0 - 1.0;
+        
+        // Apply dissipation in [-1,1] space, then encode back to [0,1]
+        gl_FragColor = vec4(0.5 + 0.5 * (dissipation * result), 0.0, 1.0);
     }
 `;
 
@@ -74,12 +84,12 @@ const divergenceShader = `
     uniform sampler2D uVelocity;
 
     void main () {
-        float L = texture2D(uVelocity, vL).x;
-        float R = texture2D(uVelocity, vR).x;
-        float T = texture2D(uVelocity, vT).y;
-        float B = texture2D(uVelocity, vB).y;
+        float L = texture2D(uVelocity, vL).x * 2.0 - 1.0;
+        float R = texture2D(uVelocity, vR).x * 2.0 - 1.0;
+        float T = texture2D(uVelocity, vT).y * 2.0 - 1.0;
+        float B = texture2D(uVelocity, vB).y * 2.0 - 1.0;
         float div = 0.5 * (R - L + T - B);
-        gl_FragColor = vec4(div, 0.0, 0.0, 1.0);
+        gl_FragColor = vec4(0.5 + div, 0.5, 0.5, 1.0);
     }
 `;
 
@@ -96,14 +106,14 @@ const pressureShader = `
     uniform sampler2D uDivergence;
 
     void main () {
-        float L = texture2D(uPressure, vL).x;
-        float R = texture2D(uPressure, vR).x;
-        float T = texture2D(uPressure, vT).x;
-        float B = texture2D(uPressure, vB).x;
-        float C = texture2D(uPressure, vUv).x;
-        float divergence = texture2D(uDivergence, vUv).x;
+        float L = texture2D(uPressure, vL).x * 2.0 - 1.0;
+        float R = texture2D(uPressure, vR).x * 2.0 - 1.0;
+        float T = texture2D(uPressure, vT).x * 2.0 - 1.0;
+        float B = texture2D(uPressure, vB).x * 2.0 - 1.0;
+        float C = texture2D(uPressure, vUv).x * 2.0 - 1.0;
+        float divergence = texture2D(uDivergence, vUv).x * 2.0 - 1.0;
         float pressure = (L + R + T + B - divergence) * 0.25;
-        gl_FragColor = vec4(pressure, 0.0, 0.0, 1.0);
+        gl_FragColor = vec4(0.5 + pressure * 0.5, 0.5, 0.5, 1.0);
     }
 `;
 
@@ -117,8 +127,9 @@ const displayShader = `
 
     void main () {
         vec3 color = texture2D(uTexture, vUv).rgb;
-        float brightness = max(color.r, max(color.g, color.b));
-        color = mix(color, vec3(1.0), brightness);// * u_rms);
+        //float brightness = max(color.r, max(color.g, color.b));
+        //color = mix(color, vec3(1.0), brightness);// * u_rms);
+        color = pow(color, vec3(.7));
         gl_FragColor = vec4(color, 1.0);
     }
 `;
@@ -136,13 +147,13 @@ const gradientSubtractShader = `
     uniform sampler2D uVelocity;
 
     void main () {
-        float L = texture2D(uPressure, vL).x;
-        float R = texture2D(uPressure, vR).x;
-        float T = texture2D(uPressure, vT).x;
-        float B = texture2D(uPressure, vB).x;
-        vec2 velocity = texture2D(uVelocity, vUv).xy;
+        float L = texture2D(uPressure, vL).x * 2.0 - 1.0;
+        float R = texture2D(uPressure, vR).x * 2.0 - 1.0;
+        float T = texture2D(uPressure, vT).x * 2.0 - 1.0;
+        float B = texture2D(uPressure, vB).x * 2.0 - 1.0;
+        vec2 velocity = texture2D(uVelocity, vUv).xy * 2.0 - 1.0;
         velocity.xy -= vec2(R - L, T - B);
-        gl_FragColor = vec4(velocity, 0.0, 1.0);
+        gl_FragColor = vec4(0.5 + velocity * 0.5, 0.0, 1.0);
     }
 `;
 
@@ -158,7 +169,10 @@ const dyeShader = `
     uniform float dissipation;
 
     void main () {
-        vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
+        // Decode velocity from [0,1] to [-1,1] when sampling
+        vec2 coord = vUv - dt * (texture2D(uVelocity, vUv).xy * 2.0 - 1.0) * texelSize;
+        
+        // Color/dye values stay in [0,1] range since they represent actual colors
         vec3 result = dissipation * texture2D(uSource, coord).rgb;
         gl_FragColor = vec4(result, 1.0);
     }
@@ -172,18 +186,37 @@ const colorSplatShader = `
     varying vec2 vUv;
     uniform sampler2D uTarget;
     uniform float aspectRatio;
-    //uniform vec3 color;
-    uniform vec2 point;
     uniform float radius;
+    uniform float u_rms;
     uniform sampler2D waveformTex;
 
+    // HSV to RGB conversion
+    vec3 hsv2rgb(vec3 c) {
+        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    }
+
     void main () {
-        // Only consider the vertical UV coordinate
+        // Sample waveform and convert to [-1,1] range
         float waveform = texture2D(waveformTex, vUv).x * 2.0 - 1.0;
-        float dist =  abs(vUv.y - 0.5); //abs(waveform - vUv.y + 0.5);
+        float dist = abs(vUv.y - 0.5);
+        dist *= 10.0;
+
         vec3 base = texture2D(uTarget, vUv).rgb;
-        vec3 color = vec3(abs(waveform)*1.0, 0.3, 0.3);
-        vec3 splat = exp(-dist / radius) * color ;
+        
+        // Convert waveform intensity to color
+        // Hue: map absolute waveform value to [0,1]
+        // Saturation: keep high
+        // Value: keep high for visibility
+        vec3 hsv = vec3(
+            u_rms*2.0 - .5, // hue
+            u_rms * 2.0 + 0.5,           // saturation
+            u_rms * 2.0 + .025   // value
+        );
+        vec3 color = hsv2rgb(hsv);
+        
+        vec3 splat = exp(-dist / radius) * color;
         gl_FragColor = vec4(base + splat, 1.0);
     }
 `;
@@ -193,8 +226,8 @@ const sketch = (p) => {
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
-    const dt = 10.0;
-    const radius = 0.005;
+    const dt = 6.0;
+    const radius = 0.15;
 
     let waveformTex;
     p.waveform1 = [];
@@ -285,7 +318,7 @@ const sketch = (p) => {
         advectionProgram.setUniform('uSource', velocity[0]);
         advectionProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
         advectionProgram.setUniform('dt', dt); // Slightly reduced timestep
-        advectionProgram.setUniform('dissipation', 0.95); // Less dissipation
+        advectionProgram.setUniform('dissipation', 0.92); // Less dissipation
         velocity[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         velocity[1].end();
@@ -300,7 +333,7 @@ const sketch = (p) => {
         divergence.end();
 
         // Pressure step - more iterations for better accuracy
-        for (let i = 0; i < 1; i++) { // Increased from 20 to 40
+        for (let i = 0; i < 4; i++) { // Increased from 20 to 40
             p.shader(pressureProgram);
             pressureProgram.setUniform('uPressure', pressure[0]);
             pressureProgram.setUniform('uDivergence', divergence);
@@ -327,7 +360,7 @@ const sketch = (p) => {
         dyeProgram.setUniform('uSource', dye[0]);
         dyeProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
         dyeProgram.setUniform('dt', dt);
-        dyeProgram.setUniform('dissipation', 0.99); // Slightly stronger dissipation for dye
+        dyeProgram.setUniform('dissipation', 0.998); // Slightly stronger dissipation for dye
         dye[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         dye[1].end();
@@ -350,17 +383,15 @@ const sketch = (p) => {
             addColor(x, y, [1.0, 0.5, 0.0]); // Add orange dye
         }
         */
-        addForce(0.5, 0.5, 1.0, 1.0);
-        addColor(0.5, 0.5, [1.0, 0.5, 0.0]); // Add orange dye
+        addForce();
+        addColor(); // Add orange dye
 
     };
 
-    const addForce = (x, y, dx, dy) => {
+    const addForce = () => {
         p.shader(splatProgram);
         splatProgram.setUniform('uTarget', velocity[0]);
         splatProgram.setUniform('aspectRatio', simWidth/simHeight);
-        splatProgram.setUniform('color', [dx, dy, 0.0]);
-        splatProgram.setUniform('point', [x, y]);
         splatProgram.setUniform('radius', radius);    
         splatProgram.setUniform('waveformTex', waveformTex);
         
@@ -370,15 +401,13 @@ const sketch = (p) => {
         [velocity[0], velocity[1]] = [velocity[1], velocity[0]];
     };
 
-    const addColor = (x, y, color) => {
+    const addColor = () => {
         p.shader(colorSplatProgram);
         colorSplatProgram.setUniform('uTarget', dye[0]);
         colorSplatProgram.setUniform('aspectRatio', simWidth/simHeight);
-        colorSplatProgram.setUniform('color', color);
-        colorSplatProgram.setUniform('point', [x, y]);
         colorSplatProgram.setUniform('radius', radius);
         colorSplatProgram.setUniform('waveformTex', waveformTex);
-        
+        colorSplatProgram.setUniform('u_rms', p.rmsOutput);
         dye[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         dye[1].end();
