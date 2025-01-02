@@ -34,12 +34,11 @@ const splatShader = `
     void main () {
         // Only consider the vertical UV coordinate
         float waveform = texture2D(waveformTex, vec2(vUv.x,0.5)).x * 2.0 - 1.0;
-        //waveform *= 200.0;
-        float dist =  abs(waveform - vUv.y);
-        dist *= 10.0;
+        float distance_from_center = abs(pow(1.0-vUv.y, 10.0));//2.0 - abs(vUv.y - 0.5) * 4.0;
+        //distance_from_center = pow(distance_from_center, 200.0);
         vec2 splatForce;
-        splatForce.y =  waveform * 100.0 * abs(exp(-dist / 0.5));// * waveform;
-        splatForce.x = 0.0;
+        splatForce.y =   100.0 * abs(waveform) * distance_from_center;//pow(100.0 * abs(exp(-distance_from_center / 0.5)), 2.0);
+        splatForce.x = 100.0 * waveform * distance_from_center;
 
         //vec3 base = texture2D(uTarget, vUv).xyz;
         vec2 baseVel = texture2D(uTarget, vUv).xy * 2.0 - 1.0; // decode from [0..1] → [−1..1]
@@ -226,8 +225,8 @@ const sketch = (p) => {
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
-    const dt = 6.0;
-    const radius = 0.15;
+    const dt = 10.0;
+    const radius = .35;
 
     let waveformTex;
     p.waveform1 = [];
