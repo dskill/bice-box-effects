@@ -26,15 +26,20 @@ const splatShader = `
     varying vec2 vUv;
     uniform sampler2D uTarget;
     uniform float aspectRatio;
-    uniform vec3 color;
+    //uniform vec3 color;
     uniform vec2 point;
     uniform float radius;
+    uniform sampler2D waveformTex;
 
     void main () {
-        vec2 p = vUv - point.xy;
-        p.x *= aspectRatio;
-        vec3 splat = exp(-dot(p, p) / radius) * color;
+        // Only consider the vertical UV coordinate
+        float waveform = texture2D(waveformTex, vec2(vUv.x,0.5)).x * 2.0 - 1.0;
+        waveform *= 2.0;
+        float dist =  abs(waveform - vUv.y);
+        dist *= 2.0;
         vec3 base = texture2D(uTarget, vUv).xyz;
+        vec3 color = vec3(0.0,waveform, 0.0);
+        vec3 splat = exp(-dist / radius) * color ;
         gl_FragColor = vec4(base + splat, 1.0);
     }
 `;
@@ -113,7 +118,7 @@ const displayShader = `
     void main () {
         vec3 color = texture2D(uTexture, vUv).rgb;
         float brightness = max(color.r, max(color.g, color.b));
-        color = mix(color, vec3(1.0), brightness * u_rms);
+        color = mix(color, vec3(1.0), brightness);// * u_rms);
         gl_FragColor = vec4(color, 1.0);
     }
 `;
@@ -167,17 +172,18 @@ const colorSplatShader = `
     varying vec2 vUv;
     uniform sampler2D uTarget;
     uniform float aspectRatio;
-    uniform vec3 color;
+    //uniform vec3 color;
     uniform vec2 point;
     uniform float radius;
+    uniform sampler2D waveformTex;
 
     void main () {
-        vec2 p = vUv - point.xy;
-        p.x *= aspectRatio;
-        float rsq = dot(p, p);
-        float splatFactor = exp(-rsq / (radius * radius));
-        vec3 splat = splatFactor * color;
+        // Only consider the vertical UV coordinate
+        float waveform = texture2D(waveformTex, vUv).x * 2.0 - 1.0;
+        float dist =  abs(vUv.y - 0.5); //abs(waveform - vUv.y + 0.5);
         vec3 base = texture2D(uTarget, vUv).rgb;
+        vec3 color = vec3(abs(waveform)*1.0, 0.3, 0.3);
+        vec3 splat = exp(-dist / radius) * color ;
         gl_FragColor = vec4(base + splat, 1.0);
     }
 `;
@@ -187,8 +193,11 @@ const sketch = (p) => {
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
-    const DOWNSAMPLE = 1; // No downsampling for higher resolution
-    const dt = 1.0;
+    const dt = 10.0;
+    const radius = 0.005;
+
+    let waveformTex;
+    p.waveform1 = [];
 
     // Simulation programs
     let advectionProgram;
@@ -211,8 +220,13 @@ const sketch = (p) => {
         p.pixelDensity(1);
 
         // Use full resolution for simulation
-        simWidth = 512;//p.width / DOWNSAMPLE;
-        simHeight = 512;// p.height / DOWNSAMPLE;
+        simWidth = 256;//p.width / DOWNSAMPLE;
+        simHeight = 256;// p.height / DOWNSAMPLE;
+
+        waveformTex = p.createGraphics(512, 1, p.WEBGL);
+        waveformTex.pixelDensity(1);
+        //waveformTex.noSmooth();
+
 
         // Initialize shaders
         advectionProgram = p.createShader(baseVertexShader, advectionShader);
@@ -224,14 +238,14 @@ const sketch = (p) => {
 
         // Create simulation framebuffers with floating point textures
         velocity = [
-            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.FLOAT }),
-            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.FLOAT })
+            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB }),
+            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB })
         ];
         pressure = [
-            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.FLOAT }),
-            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.FLOAT })
+            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB }),
+            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB })
         ];
-        divergence = p.createFramebuffer({ width: simWidth, height: simHeight, format: p.FLOAT });
+        divergence = p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB });
 
         // Initialize FPS counter
         fps = p.createP('');
@@ -247,19 +261,31 @@ const sketch = (p) => {
 
         // Create dye framebuffers
         dye = [
-            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.FLOAT }),
-            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.FLOAT })
+            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB }),
+            p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB })
         ];
     };
 
     p.draw = () => {
+
+        // Update waveform texture
+        waveformTex.loadPixels();
+        for (let i = 0; i < p.waveform1.length; i++) {
+            let val = (p.waveform1[i]*.5 +.5) * 255.0;
+            waveformTex.pixels[i * 4] = val;
+            waveformTex.pixels[i * 4 + 1] = val;
+            waveformTex.pixels[i * 4 + 2] = val;
+            waveformTex.pixels[i * 4 + 3] = 255;
+        }
+        waveformTex.updatePixels();
+
         // Advection step
         p.shader(advectionProgram);
         advectionProgram.setUniform('uVelocity', velocity[0]);
         advectionProgram.setUniform('uSource', velocity[0]);
         advectionProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
         advectionProgram.setUniform('dt', dt); // Slightly reduced timestep
-        advectionProgram.setUniform('dissipation', 0.995); // Less dissipation
+        advectionProgram.setUniform('dissipation', 0.95); // Less dissipation
         velocity[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         velocity[1].end();
@@ -274,7 +300,7 @@ const sketch = (p) => {
         divergence.end();
 
         // Pressure step - more iterations for better accuracy
-        for (let i = 0; i < 10; i++) { // Increased from 20 to 40
+        for (let i = 0; i < 1; i++) { // Increased from 20 to 40
             p.shader(pressureProgram);
             pressureProgram.setUniform('uPressure', pressure[0]);
             pressureProgram.setUniform('uDivergence', divergence);
@@ -316,12 +342,17 @@ const sketch = (p) => {
         updateFPS();
 
         // Add forces and color based on audio input
+        /*
         if (p.rmsOutput) {
             const x = p.mouseX/p.width;
             const y = 1.0 - p.mouseY/p.height;
-            addForce(x, y, p.rmsOutput * 2.0, p.rmsOutput * 2.0);
+            addForce(x, y, p.rmsOutput * 0.0, p.rmsOutput * 2.0);
             addColor(x, y, [1.0, 0.5, 0.0]); // Add orange dye
         }
+        */
+        addForce(0.5, 0.5, 1.0, 1.0);
+        addColor(0.5, 0.5, [1.0, 0.5, 0.0]); // Add orange dye
+
     };
 
     const addForce = (x, y, dx, dy) => {
@@ -330,7 +361,8 @@ const sketch = (p) => {
         splatProgram.setUniform('aspectRatio', simWidth/simHeight);
         splatProgram.setUniform('color', [dx, dy, 0.0]);
         splatProgram.setUniform('point', [x, y]);
-        splatProgram.setUniform('radius', 0.015);
+        splatProgram.setUniform('radius', radius);    
+        splatProgram.setUniform('waveformTex', waveformTex);
         
         velocity[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
@@ -344,7 +376,8 @@ const sketch = (p) => {
         colorSplatProgram.setUniform('aspectRatio', simWidth/simHeight);
         colorSplatProgram.setUniform('color', color);
         colorSplatProgram.setUniform('point', [x, y]);
-        colorSplatProgram.setUniform('radius', 0.015);
+        colorSplatProgram.setUniform('radius', radius);
+        colorSplatProgram.setUniform('waveformTex', waveformTex);
         
         dye[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
@@ -361,8 +394,8 @@ const sketch = (p) => {
 
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
-        simWidth = p.width / DOWNSAMPLE;
-        simHeight = p.height / DOWNSAMPLE;
+        //simWidth = 256;//p.width / DOWNSAMPLE;
+        //simHeight = 512;// p.height / DOWNSAMPLE;
 
         // Recreate framebuffers at new size
         velocity = [
