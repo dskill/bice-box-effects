@@ -3,7 +3,7 @@
   "description": "a stereo delay effect that alternates between left and right channels",
   "audio": "audio/fluid.sc",
   "visual": "visual/fluid.js",
-  "curated": false,
+  "curated": true,
   "params": [
     {
       "name": "delayTime",
