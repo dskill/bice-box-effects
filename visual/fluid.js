@@ -34,11 +34,10 @@ const splatShader = `
     void main () {
         // Only consider the vertical UV coordinate
         float waveform = texture2D(waveformTex, vec2(vUv.x,0.5)).x * 2.0 - 1.0;
-        float distance_from_center = abs(pow(1.0-vUv.y, 10.0));//2.0 - abs(vUv.y - 0.5) * 4.0;
-        //distance_from_center = pow(distance_from_center, 200.0);
+        float distance_from_center = abs(pow(1.0-vUv.y, 30.0));
         vec2 splatForce;
-        splatForce.y =   100.0 * abs(waveform) * distance_from_center;//pow(100.0 * abs(exp(-distance_from_center / 0.5)), 2.0);
-        splatForce.x = 100.0 * waveform * distance_from_center;
+        splatForce.y =   50.0 * abs(waveform) * distance_from_center;
+        splatForce.x = 50.0 * waveform * distance_from_center;
 
         //vec3 base = texture2D(uTarget, vUv).xyz;
         vec2 baseVel = texture2D(uTarget, vUv).xy * 2.0 - 1.0; // decode from [0..1] → [−1..1]
@@ -132,8 +131,8 @@ const displayShader = `
         //uv.y += pow(uv.y*2.0-1.0,2.0);
         //uv.y = pow(abs(uv.y-0.5)*2.0,0.2);
         //uv.y = smoothstep(0.0,0.1,uv.y);
-        uv.y += .05 * waveform * pow(1.0 - abs(vUv.y - 0.5)*2.0,8.0) * (1.0 - abs(vUv.x-0.5)*2.0);
-        uv.x += .05 * waveform * pow(1.0 - abs(vUv.y - 0.5)*2.0,8.0) * (1.0 - abs(vUv.x-0.5)*2.0);
+        //uv.y += .05 * waveform * pow(1.0 - abs(vUv.y - .9)*2.0,8.0) * (1.0 - abs(vUv.x-.9)*2.0);
+        //uv.x += .05 * waveform * pow(1.0 - abs(vUv.y - .9)*2.0,8.0) * (1.0 - abs(vUv.x-.9)*2.0);
         
         //uv.y += .1* pow( abs(uv.x - 0.5)*2.0, 0.1);
         vec3 color = texture2D(uTexture, uv).rgb;
@@ -211,8 +210,8 @@ const colorSplatShader = `
     void main () {
         // Sample waveform and convert to [-1,1] range
         float waveform = texture2D(waveformTex, vUv).x * 2.0 - 1.0;
-        float dist = abs(vUv.y - 0.5);
-        dist *= 10.0;
+        float dist = abs(vUv.y - 0.15);
+        dist *= 15.0;
 
         vec3 base = texture2D(uTarget, vUv).rgb;
         
@@ -221,10 +220,11 @@ const colorSplatShader = `
         // Saturation: keep high
         // Value: keep high for visibility
         vec3 hsv = vec3(
-            u_rms*2.0 - .5, // hue
-            u_rms * 2.0 + 0.5,           // saturation
-            u_rms * 2.0 + .025   // value
+            u_rms* 2.0 - .5, // hue
+            -u_rms * 1.0 + 1.0,           // saturation
+            u_rms * 4.0 + .025   // value
         );
+        hsv.x = min(hsv.x, 0.05);
         vec3 color = hsv2rgb(hsv);
         
         vec3 splat = exp(-dist / radius) * color;
@@ -237,8 +237,8 @@ const sketch = (p) => {
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
-    const dt = 10.0;
-    const radius = .35;
+    const dt = 5.0;
+    const radius = 0.15;
 
     let waveformTex;
     p.waveform1 = [];
@@ -329,7 +329,7 @@ const sketch = (p) => {
         advectionProgram.setUniform('uSource', velocity[0]);
         advectionProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
         advectionProgram.setUniform('dt', dt); // Slightly reduced timestep
-        advectionProgram.setUniform('dissipation', 0.92); // Less dissipation
+        advectionProgram.setUniform('dissipation', 0.97); // Less dissipation
         velocity[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         velocity[1].end();
