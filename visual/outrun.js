@@ -13,14 +13,14 @@
 function outrunShaderSketch(p) {
     let passShader;
     let waveformTex;
-  
+    let waveformShiftShader;  // New shader for shifting pixels
+    let waveformFBO1, waveformFBO2;  // Two FBOs for ping-pong buffering
+    let currentFBO = 0;  // Track which FBO is current
+    
     const vertexShader = `
       attribute vec3 aPosition;
-      attribute vec2 aTexCoord;
-      varying vec2 vTexCoord;
       
       void main() {
-        vTexCoord = aTexCoord;
         gl_Position = vec4(aPosition, 1.0);
       }
     `;
@@ -156,7 +156,7 @@ function outrunShaderSketch(p) {
   
       float sunVal = sun(sunUV, battery);
       // color ramp
-      vec3 sunBg = mix(vec3(0.125,0.0,0.2), vec3(0.125,0.439,0.408), sunUV.y * 1.0 + 0.4);
+      vec3 sunBg = mix(vec3(0.625,0.4,0.2), vec3(1.125,0.439,0.208), sunUV.y * 1.0 + 0.4);
   
       // fade in the sun
       backgroundColor = mix(vec3(0.0), sunBg, sunVal);
@@ -167,23 +167,66 @@ function outrunShaderSketch(p) {
   
     // optional final dryness/wetness from "u_mix"
     // todo: implement this
-
+    backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
+    //backgroundColor.rg = gl_FragCoord.xy/u_resolution.xy;
     gl_FragColor = vec4(backgroundColor, 1.0);
   }
   `;
   
+    // Add new vertex shader for the waveform processing
+    const waveformShiftVertexShader = `
+      attribute vec3 aPosition;
+      
+      void main() {
+        gl_Position = vec4(aPosition, 1.0);
+      }
+    `;
+
+    const waveformShiftFragmentShader = `
+      #ifdef GL_ES
+      precision highp float;
+      #endif
+
+      uniform sampler2D u_texture;        // Previous frame's texture
+      uniform sampler2D u_newWaveform;    // New waveform as a texture
+      uniform float u_texelSize;
+      uniform float u_time;
+      uniform vec2 u_resolution;
+
+      void main() {
+        vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+        
+        // Shift everything up by one pixel
+        if (uv.y > u_texelSize) {
+          gl_FragColor = texture2D(u_texture, vec2(uv.x, uv.y - u_texelSize));
+          //gl_FragColor.r = sin(uv.x * 100.0);
+        } else {
+          // Bottom row: write new waveform data
+          float waveformValue = texture2D(u_newWaveform, vec2(uv.x, 0.0)).r;
+          gl_FragColor = vec4(vec3(waveformValue), 1.0);
+          //gl_FragColor.r = sin(uv.x * 41.0 + u_time * 10.0);
+        }
+
+        //gl_FragColor.rg =uv;// gl_FragCoord.xy;//0.3; abs(sin(vTexCoord.y * 1.0));//.45 + .55 * sin(uv.y * 100.0);
+        //gl_FragColor.b = 0.5;
+      }
+    `;
+
     p.preload = () => {
       passShader = p.createShader(vertexShader, fragmentShader);
+      waveformShiftShader = p.createShader(waveformShiftVertexShader, waveformShiftFragmentShader);
     };
   
     p.setup = () => {
       p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
       p.noStroke();
-  
-      // Create a texture the same way as in oscilloscope.js
-      waveformTex = p.createGraphics(512, 1, p.WEBGL);
-      waveformTex.pixelDensity(1);
-      waveformTex.noSmooth();
+
+      // Create two FBOs for ping-pong buffering
+      waveformFBO1 = p.createFramebuffer({ width: 512, height: 512, colorFormat: p.RGB });
+      waveformFBO2 = p.createFramebuffer({ width: 512, height: 512, colorFormat: p.RGB });
+      
+      // Initialize texture
+      waveformTex = p.createFramebuffer({ width: 512, height: 512, colorFormat: p.RGB });
     };
   
     p.draw = () => {
@@ -193,18 +236,45 @@ function outrunShaderSketch(p) {
       if (!p.waveform1 || p.waveform1.length === 0) {
         p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i * 0.1) * 0.5);
       }
-  
+
+      // Create texture from waveform data if we haven't already
+      if (!waveformTex) {
+        waveformTex = p.createFramebuffer({ width: 512, height: 1 });
+      }
+
       // Update waveform texture
       waveformTex.loadPixels();
       for (let i = 0; i < p.waveform1.length; i++) {
           let val = (p.waveform1[i]*.5 +.5) * 255.0;
+          //val = 255.0;
+          //val = Math.abs(Math.sin(p.millis() * 0.001) * 255.0); 
           waveformTex.pixels[i * 4] = val;
           waveformTex.pixels[i * 4 + 1] = val;
           waveformTex.pixels[i * 4 + 2] = val;
           waveformTex.pixels[i * 4 + 3] = 255;
       }
       waveformTex.updatePixels();
-  
+
+      // Update waveform history texture using shader
+      const currentTarget = currentFBO ? waveformFBO1 : waveformFBO2;
+      const currentSource = currentFBO ? waveformFBO2 : waveformFBO1;
+      
+      currentTarget.begin();
+      p.shader(waveformShiftShader);
+      waveformShiftShader.setUniform('u_texture', currentSource);
+      waveformShiftShader.setUniform('u_newWaveform', waveformTex);
+      waveformShiftShader.setUniform('u_texelSize', 1.0/512.0);
+      waveformShiftShader.setUniform('u_time', p.millis() * 0.01);
+      waveformShiftShader.setUniform("u_resolution", [512, 512]);
+
+      p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
+      currentTarget.end();
+      
+      currentFBO = !currentFBO;  // Swap FBOs
+
+      // Use the updated texture for the main shader
+      passShader.setUniform("u_waveform", currentTarget);
+
       // Pass uniforms
       passShader.setUniform("u_time", p.millis() * 0.001);
       passShader.setUniform("u_resolution", [p.width, p.height]);
@@ -226,9 +296,6 @@ function outrunShaderSketch(p) {
       passShader.setUniform("u_synthDepth", synthDepth);
       passShader.setUniform("u_mix", mixVal);
       passShader.setUniform("u_rms", rmsOutput);
-  
-      // Waveform texture
-      passShader.setUniform("u_waveform", waveformTex);
   
       p.shader(passShader);
       p.quad(-1, 1, 1, 1, 1, -1, -1, -1);

@@ -9,15 +9,28 @@
         
         sig = In.ar(in_bus);
         dry = sig;
-                
-        wet = sig * (drive * 2);
-        wet = (2/pi) * atan(wet);
+        wet = sig;        
+        //wet = sig * (drive * 2);
+        //wet = (2/pi) * atan(wet);
         
+
+
         // Multi-voice chorus for that 80s width
         chorus = Mix.fill(3, {|i|
             var rate = gridSpeed * (i + 1) * 0.5;
             DelayC.ar(wet, 0.05, SinOsc.kr(rate, 0, 0.002 * synthDepth, 0.003))
         }) / 3;
+
+        LocalOut.ar(chorus); // Send reverb output back as feedback
+
+        // Big fat reverb with feedback loop
+        chorus = XFade2.ar(chorus, LocalIn.ar(1) * 0.8 + chorus * 0.2, mix * 2 - 1);
+
+        chorus = FreeVerb.ar(chorus,
+            mix: 0.8,        // reverb mix
+            room: 0.8,       // room size (0-1)
+            damp: 0.2        // high frequency damping
+        );
         
         // Frequency shaping
         filtered = BLowShelf.ar(chorus, 400, 1.0, 4.0);
