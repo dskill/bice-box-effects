@@ -1,0 +1,39 @@
+{
+  "name": "Outrun",
+  "description": "A retrofuturistic effect with neon-colored grid visualization and 80s-inspired audio processing",
+  "audio": "audio/outrun.sc",
+  "visual": "visual/outrun.js",
+  "curated": true,
+  "params": [
+    {
+      "name": "drive",
+      "value": 1.0,
+      "range": [0.0, 4.0]
+    },
+    {
+      "name": "gridSpeed",
+      "value": 0.5,
+      "range": [0.1, 2.0]
+    },
+    {
+      "name": "sunSize",
+      "value": 0.5,
+      "range": [0.1, 1.0]
+    },
+    {
+      "name": "glow",
+      "value": 0.7,
+      "range": [0.0, 1.0]
+    },
+    {
+      "name": "synthDepth",
+      "value": 0.5,
+      "range": [0.0, 1.0]
+    },
+    {
+      "name": "mix",
+      "value": 0.0,
+      "range": [0.0, 1.0]
+    }
+  ]
+} 
