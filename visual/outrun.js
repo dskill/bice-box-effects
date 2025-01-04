@@ -97,15 +97,17 @@ function outrunShaderSketch(p) {
     // uv.x is in [-someValue..someValue], so let's clamp
     float xCoord   = clamp((uv.x * 0.5 + 0.5), 0.0, 1.0);
     // sample channel from waveform
-    float waveVal  = texture2D(u_waveform, vec2((uv.x + 2.0)*0.25, 0.0)).r;  
+    vec2 sampleCoord = vec2(1.0, 0.5) * fragCoord/u_resolution.xy + vec2(0.0, 0.5);
+    sampleCoord.y = pow(sampleCoord.y, 4.0) + .6;
+    float waveVal  = texture2D(u_waveform, sampleCoord).r;  
     // waveVal is in [0..1], shift to [-1..1]
     float waveNorm = (waveVal - 0.5) * 2.0;
   
     // Use waveNorm to distort Y, combined with the user param (drive, synthDepth, etc)
-    //uv.y += waveNorm * 0.1 * u_synthDepth * u_drive;
+    uv.y += waveNorm * .25;// * 0.1 * u_synthDepth * u_drive;
   
     // A basic "fog" effect
-    float pointOfInflection = 0.0;
+    float pointOfInflection = 0.0;//+ abs(waveNorm * .2);
     float fogSize = 0.15;
     float fogIntensity = -0.025;
     float fog = smoothstep(fogSize, fogIntensity, abs(uv.y + pointOfInflection));
@@ -130,12 +132,17 @@ function outrunShaderSketch(p) {
   
     // We'll feed in "gridSpeed" for speed, "u_glow" for glow, etc
     float gridRoaming = 0.25; // fixed
+   // uv.y += waveNorm * .2;
     if (uv.y < pointOfInflection) {
+      // uv.y += abs(waveNorm * .5);
       float distance = length(uv);
       // transform Y for "3D" segmenting
-      float spaceBetweenGridSegments = sin(uv.y + u_time) + 2.0 / (abs(uv.y - pointOfInflection) + 0.05);
+      //uv.y += waveNorm * .2;
+      //pointOfInflection -= abs(waveNorm * .2);
+
+      float time = u_time ;// + 10.0 * abs(waveNorm);
+      float spaceBetweenGridSegments = sin(uv.y + time) + 2.0 / (abs(uv.y - pointOfInflection) + 0.05);
       uv.y = spaceBetweenGridSegments;
-  
       // transform X
       float gridSegmentWidthMultiplier = abs(uv.y);
       uv.x *= -1.0 * gridSegmentWidthMultiplier - sin(distance * 0.5);
@@ -167,7 +174,8 @@ function outrunShaderSketch(p) {
   
     // optional final dryness/wetness from "u_mix"
     // todo: implement this
-    backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
+    //backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
+    //backgroundColor.rgb = vec3(waveNorm);
     //backgroundColor.rg = gl_FragCoord.xy/u_resolution.xy;
     gl_FragColor = vec4(backgroundColor, 1.0);
   }
@@ -196,19 +204,19 @@ function outrunShaderSketch(p) {
       void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution.xy;
         
+        float shiftMultiplier = 5.0;
         // Shift everything up by one pixel
-        if (uv.y > u_texelSize) {
-          gl_FragColor = texture2D(u_texture, vec2(uv.x, uv.y - u_texelSize));
+        if (uv.y < 1.0 -  u_texelSize) {
+          gl_FragColor = texture2D(u_texture, vec2(uv.x, uv.y + shiftMultiplier*u_texelSize));
           //gl_FragColor.r = sin(uv.x * 100.0);
         } else {
           // Bottom row: write new waveform data
           float waveformValue = texture2D(u_newWaveform, vec2(uv.x, 0.0)).r;
           gl_FragColor = vec4(vec3(waveformValue), 1.0);
-          //gl_FragColor.r = sin(uv.x * 41.0 + u_time * 10.0);
+         // gl_FragColor.r = sin(uv.x * 41.0 + u_time * 10.0);
         }
 
-        //gl_FragColor.rg =uv;// gl_FragCoord.xy;//0.3; abs(sin(vTexCoord.y * 1.0));//.45 + .55 * sin(uv.y * 100.0);
-        //gl_FragColor.b = 0.5;
+        //gl_FragColor.rg =uv;
       }
     `;
 
@@ -267,7 +275,7 @@ function outrunShaderSketch(p) {
       waveformShiftShader.setUniform('u_time', p.millis() * 0.01);
       waveformShiftShader.setUniform("u_resolution", [512, 512]);
 
-      p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
+      p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
       currentTarget.end();
       
       currentFBO = !currentFBO;  // Swap FBOs
