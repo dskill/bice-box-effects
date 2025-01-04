@@ -102,7 +102,7 @@ function outrunShaderSketch(p) {
     float waveNorm = (waveVal - 0.5) * 2.0;
   
     // Use waveNorm to distort Y, combined with the user param (drive, synthDepth, etc)
-    uv.y += waveNorm * 0.1 * u_synthDepth * u_drive;
+    //uv.y += waveNorm * 0.1 * u_synthDepth * u_drive;
   
     // A basic "fog" effect
     float pointOfInflection = 0.0;
@@ -116,7 +116,7 @@ function outrunShaderSketch(p) {
   
     // We'll do a waveFactor to modulate the interpolation
     float waveFactor  = sin(uv.x * 5.0 + u_time * 2.0) * 0.5 + 0.5;
-    float waveY       = uv.y + waveFactor * 0.1;
+    float waveY       = uv.y + waveFactor * 0.3;
   
     // Interpolate background coloring
     vec3 gradient = mix(startColor, endColor, waveY);
@@ -126,7 +126,7 @@ function outrunShaderSketch(p) {
     vec3 lineColor = gradient;
     // Let's slightly modulate line intensity with "drive"
     float lineIntensity = -uv.y * u_drive * 0.5;
-    float lineGlow      = 0.01 + (u_glow * 0.1); // smaller base + param
+    float lineGlow      = 0.01 + (u_glow * 0.4); // smaller base + param
   
     // We'll feed in "gridSpeed" for speed, "u_glow" for glow, etc
     float gridRoaming = 0.25; // fixed
@@ -146,9 +146,10 @@ function outrunShaderSketch(p) {
     else {
       // Sun portion
       // We'll let "u_sunSize" shift the coordinates for the sun:
-      vec2 sunUV = uv;
+      vec2 sunUV = uv - uv * u_sunSize * .2;
+      //sunUV.y += waveNorm * 0.02;
       // shift the sun's vertical position by sunSize
-      sunUV += vec2(0.0, -0.25 * u_sunSize);
+      sunUV += vec2(0.0, -0.25 * u_sunSize - u_rms * .1);
   
       // We'll combine "u_synthDepth" with "u_rms" to modulate the sun's waves
       float battery = (u_synthDepth + 0.15) + (u_rms * 2.0);
@@ -165,9 +166,8 @@ function outrunShaderSketch(p) {
     backgroundColor += fog * fog * fog;
   
     // optional final dryness/wetness from "u_mix"
-    // 0.0 = "dry" (just black?), 1.0 = fully effect
-    // For demonstration, let's simply fade to black if user wants dryness:
-    backgroundColor = mix(vec3(0.0), backgroundColor, u_mix);
+    // todo: implement this
+
     gl_FragColor = vec4(backgroundColor, 1.0);
   }
   `;
@@ -210,14 +210,14 @@ function outrunShaderSketch(p) {
       passShader.setUniform("u_resolution", [p.width, p.height]);
   
       // Hook up outrun.json parameters (with default fallbacks):
-      const drive       = p.params.drive       || 1.0; 
-      const gridSpeed   = p.params.gridSpeed   || 0.5;
-      const sunSize     = p.params.sunSize     || 0.5;
-      const glow        = p.params.glow        || 0.0;
-      const synthDepth  = p.params.synthDepth  || 0.5;
-      const mixVal      = p.params.mix         || 1.0;
+      const drive       = p.params.drive;
+      const gridSpeed   = p.params.gridSpeed;
+      const sunSize     = p.params.sunSize;
+      const glow        = p.params.glow;
+      const synthDepth  = p.params.synthDepth;
+      const mixVal      = p.params.mix;
       // We'll read RMS from p.rmsOutput (sent from audio analysis)
-      const rmsOutput   = p.rmsOutput          || 0.0;
+      const rmsOutput   = p.rmsOutput;
   
       passShader.setUniform("u_drive", drive);
       passShader.setUniform("u_gridSpeed", gridSpeed);

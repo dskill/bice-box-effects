@@ -9,9 +9,9 @@
         
         sig = In.ar(in_bus);
         dry = sig;
-        
-        // Drive stage with soft clipping
-        wet = (sig * (drive * 5)).tanh;
+                
+        wet = sig * (drive * 2);
+        wet = (2/pi) * atan(wet);
         
         // Multi-voice chorus for that 80s width
         chorus = Mix.fill(3, {|i|
