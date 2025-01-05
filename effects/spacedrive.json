@@ -6,24 +6,29 @@
   "curated": true,
   "params": [
     {
-      "name": "drive",
-      "value": 1,
-      "range": [0, 1]
-    }, 
-    {
-      "name": "hyperdrive",
-      "value": 0.0,
+      "name": "gain",
+      "value": 1.0,
       "range": [0, 1]
     },
     {
       "name": "tone",
-      "value": 0.5,
+      "value": 0.1,
+      "range": [0.01, 1]
+    },
+    {
+      "name": "res",
+      "value": 1.37,
+      "range": [0, 2]
+    },
+    {
+      "name": "level",
+      "value": 0.75,
       "range": [0, 1]
     },
     {
       "name": "mix",
-      "value": 0.0,
-      "range": [-1.0, 1.0]
+      "value": 0.5,
+      "range": [0, 1]
     }
   ]
 }
