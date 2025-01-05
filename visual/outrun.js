@@ -61,7 +61,7 @@ function outrunShaderSketch(p) {
   
   // Retro neon grid, adapted from the user snippet
   float grid(vec2 uv, float intensity, float speed, float glow, float gridRoam) {
-    uv = uv * .25 + uv * glow * 2.0;
+    uv = uv * (.25 + glow);
     vec2 size = .01 * vec2(uv.y, uv.y * uv.y * 0.3);
     // Roaming effect
     uv += vec2(gridRoam, u_time * speed);
@@ -72,7 +72,7 @@ function outrunShaderSketch(p) {
     // Smooth lines
     vec2 lines = smoothstep(size, vec2(0.0), uv);
     // Additional highlight lines
-    lines += smoothstep(size * 5.0, vec2(0.0), uv) * intensity;
+    lines += smoothstep(size * 1.0, vec2(0.0), uv) * intensity;
   
     return clamp(lines.x + lines.y, 0.0, 3.0);
   }
@@ -109,7 +109,7 @@ function outrunShaderSketch(p) {
     //uv.y += waveNorm * .25;// * 0.1 * u_synthDepth * u_drive;
   
     // A basic "fog" effect
-    float pointOfInflection = abs(waveNorm * .5);// + u_rms * (cos(uv.x * 3.1415 * .5 + 3.1415) + 1.0) * .5;// + .0*sin(u_time * 10.0 + uv.y * 10.0);
+    float pointOfInflection = abs(waveNorm * 1.5);// + u_rms * (cos(uv.x * 3.1415 * .5 + 3.1415) + 1.0) * .5;// + .0*sin(u_time * 10.0 + uv.y * 10.0);
     float fogSize = 0.25;
     float fogIntensity = -0.0;
     float fog = smoothstep(fogSize, fogIntensity, abs(uv.y -  pointOfInflection));
