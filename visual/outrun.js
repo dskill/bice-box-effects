@@ -97,20 +97,22 @@ function outrunShaderSketch(p) {
     // uv.x is in [-someValue..someValue], so let's clamp
     float xCoord   = clamp((uv.x * 0.5 + 0.5), 0.0, 1.0);
     // sample channel from waveform
-    vec2 sampleCoord = vec2(1.0, 0.5) * fragCoord/u_resolution.xy + vec2(0.0, 0.5);
-    sampleCoord.y = pow(sampleCoord.y, 4.0) + .6;
+    // we pick just a part of the waveform to read, cause zooming in looks better
+    vec2 sampleCoord = fragCoord/u_resolution.xy;
+    sampleCoord.y = (sampleCoord.y - 1.0) * 0.015 + 1.0;
+    sampleCoord.y += .006;
     float waveVal  = texture2D(u_waveform, sampleCoord).r;  
     // waveVal is in [0..1], shift to [-1..1]
     float waveNorm = (waveVal - 0.5) * 2.0;
   
     // Use waveNorm to distort Y, combined with the user param (drive, synthDepth, etc)
-    uv.y += waveNorm * .25;// * 0.1 * u_synthDepth * u_drive;
+    //uv.y += waveNorm * .25;// * 0.1 * u_synthDepth * u_drive;
   
     // A basic "fog" effect
-    float pointOfInflection = 0.0;//+ abs(waveNorm * .2);
-    float fogSize = 0.15;
-    float fogIntensity = -0.025;
-    float fog = smoothstep(fogSize, fogIntensity, abs(uv.y + pointOfInflection));
+    float pointOfInflection = abs(waveNorm * .5);// + u_rms * (cos(uv.x * 3.1415 * .5 + 3.1415) + 1.0) * .5;// + .0*sin(u_time * 10.0 + uv.y * 10.0);
+    float fogSize = 0.25;
+    float fogIntensity = -0.0;
+    float fog = smoothstep(fogSize, fogIntensity, abs(uv.y -  pointOfInflection));
   
     // We define two base colors for a gradient
     vec3 startColor = vec3(0.6, 0.0, 1.0); // Neon purple
@@ -153,13 +155,13 @@ function outrunShaderSketch(p) {
     else {
       // Sun portion
       // We'll let "u_sunSize" shift the coordinates for the sun:
-      vec2 sunUV = uv - uv * u_sunSize * .2;
+      vec2 sunUV = uv - uv * u_sunSize * .2 * (u_rms * 1.1 + 1.0);
       //sunUV.y += waveNorm * 0.02;
       // shift the sun's vertical position by sunSize
-      sunUV += vec2(0.0, -0.25 * u_sunSize - u_rms * .1);
+      sunUV += vec2(0.0, -0.25 * u_sunSize - u_rms * .3);
   
       // We'll combine "u_synthDepth" with "u_rms" to modulate the sun's waves
-      float battery = (u_synthDepth + 0.15) + (u_rms * 2.0);
+      float battery = 15.0 * u_synthDepth;//(u_synthDepth + 0.15) + (u_rms * 5.0);
   
       float sunVal = sun(sunUV, battery);
       // color ramp
@@ -170,7 +172,7 @@ function outrunShaderSketch(p) {
     }
   
     // Add in "fog"
-    backgroundColor += fog * fog * fog;
+    backgroundColor += .3 * fog * fog * fog;
   
     // optional final dryness/wetness from "u_mix"
     // todo: implement this
@@ -204,7 +206,7 @@ function outrunShaderSketch(p) {
       void main() {
         vec2 uv = gl_FragCoord.xy / u_resolution.xy;
         
-        float shiftMultiplier = 5.0;
+        float shiftMultiplier = 1.0;
         // Shift everything up by one pixel
         if (uv.y < 1.0 -  u_texelSize) {
           gl_FragColor = texture2D(u_texture, vec2(uv.x, uv.y + shiftMultiplier*u_texelSize));
@@ -212,7 +214,11 @@ function outrunShaderSketch(p) {
         } else {
           // Bottom row: write new waveform data
           float waveformValue = texture2D(u_newWaveform, vec2(uv.x, 0.0)).r;
-          gl_FragColor = vec4(vec3(waveformValue), 1.0);
+          // but blend with the last row to soften things
+         // vec4 lastRow = texture2D(u_texture, vec2(uv.x, 1.0 - u_texelSize));
+         //gl_FragColor = vec4(mix(lastRow.rgb, vec3(waveformValue), 0.5), 1.0);
+         //gl_FragColor = vec4(vec3(waveformValue + lastRow.r) * 0.5, 1.0);
+         gl_FragColor = vec4(vec3(waveformValue), 1.0);
          // gl_FragColor.r = sin(uv.x * 41.0 + u_time * 10.0);
         }
 

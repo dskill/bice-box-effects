@@ -5,11 +5,7 @@
   "visual": "visual/outrun.js",
   "curated": true,
   "params": [
-    {
-      "name": "drive",
-      "value": 1.0,
-      "range": [0.0, 2.0]
-    },
+
     {
       "name": "gridSpeed",
       "value": 0.5,

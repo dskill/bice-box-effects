@@ -13,9 +13,9 @@
         // Apply soft clipping and add some even harmonics
         // Adjust drive scaling if needed for more subtle or aggressive distortion
         distorted = (sig * (drive + 1.0));//.tanh;  // Basic tanh shaping
-        distorted = (distorted * (hyperdrive + 1.0)).fold2(0.9);  // Wavefolder effect
-        distorted = (distorted * (hyperdrive + 1.0) * 20).clip2(0.8);  // Hard clipping for that fuzzy edge
-        distorted = (distorted * (hyperdrive + 1.0)).softclip * 0.7;  // Additional saturation scaled by hyperdrive
+        distorted = (distorted * (hyperdrive*2.0 + 1.0)).fold2(0.9);  // Wavefolder effect
+        //distorted = (distorted * (hyperdrive + 1.0) * 20).clip2(0.8);  // Hard clipping for that fuzzy edge
+        //distorted = (distorted * (hyperdrive + 1.0)).softclip * 0.7;  // Additional saturation scaled by hyperdrive
         distorted = LeakDC.ar(distorted);  // Clean up DC offset early
        
         // Add tone shaping: low shelf, mid peak, and high shelf adjustments
