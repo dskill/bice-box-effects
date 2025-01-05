@@ -1,5 +1,5 @@
 (
-    SynthDef(\spacedrive, {
+    SynthDef(\hyperdrive, {
         |out = 0, in_bus = 0, 
         gain = 1.0, tone = 0.1, res = 1.37, level = 0.75, mix = 0.5|  // Simplified parameters
         var sig, distorted;
@@ -55,6 +55,6 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\spacedrive, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\hyperdrive, [\in_bus, ~input_bus], ~effectGroup);
     };
 )

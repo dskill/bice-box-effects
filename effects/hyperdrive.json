@@ -1,18 +1,18 @@
 {
-  "name": "Space Drive",
+  "name": "Hyperdrive",
   "description": "a simple overdrive effect",
-  "audio": "audio/spacedrive.sc",
-  "visual": "visual/spacedrive.js",
+  "audio": "audio/hyperdrive.sc",
+  "visual": "visual/hyperdrive.js",
   "curated": true,
   "params": [
     {
       "name": "gain",
-      "value": 1.0,
+      "value": 0.5,
       "range": [0, 1]
     },
     {
       "name": "tone",
-      "value": 0.1,
+      "value": 0.5,
       "range": [0.01, 1]
     },
     {
