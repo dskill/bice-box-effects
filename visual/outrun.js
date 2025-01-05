@@ -99,7 +99,7 @@ function outrunShaderSketch(p) {
     // sample channel from waveform
     // we pick just a part of the waveform to read, cause zooming in looks better
     vec2 sampleCoord = fragCoord/u_resolution.xy;
-    sampleCoord.y = (sampleCoord.y - 1.0) * 0.015 + 1.0;
+    sampleCoord.y = (sampleCoord.y - 1.0) * 0.035 + 1.0;
     sampleCoord.y += .006;
     float waveVal  = texture2D(u_waveform, sampleCoord).r;  
     // waveVal is in [0..1], shift to [-1..1]
@@ -109,7 +109,7 @@ function outrunShaderSketch(p) {
     //uv.y += waveNorm * .25;// * 0.1 * u_synthDepth * u_drive;
   
     // A basic "fog" effect
-    float pointOfInflection = abs(waveNorm * 1.5);// + u_rms * (cos(uv.x * 3.1415 * .5 + 3.1415) + 1.0) * .5;// + .0*sin(u_time * 10.0 + uv.y * 10.0);
+    float pointOfInflection = abs(waveNorm * 1.0);// + u_rms * (cos(uv.x * 3.1415 * .5 + 3.1415) + 1.0) * .5;// + .0*sin(u_time * 10.0 + uv.y * 10.0);
     float fogSize = 0.25;
     float fogIntensity = -0.0;
     float fog = smoothstep(fogSize, fogIntensity, abs(uv.y -  pointOfInflection));

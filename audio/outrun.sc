@@ -28,7 +28,7 @@
 
         chorus = FreeVerb.ar(chorus,
             mix: 0.8,        // reverb mix
-            room: 0.8,       // room size (0-1)
+            room: 10.8,       // room size (0-1)
             damp: 0.2        // high frequency damping
         );
         
