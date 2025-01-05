@@ -1,6 +1,6 @@
 (
     SynthDef(\neon_love, {
-        |out = 0, in_bus = 0, decay = 1.0, roomSize = 0.7, predelay = 0.03, intensity = 1.3, speed = -0.5, mix = 0.5|
+        |out = 0, in_bus = 0, decay = 1.0, roomSize = 0.7, intensity = 1.3, speed = -0.5, mix = 0.5|
         var sig, verb, dry, finalSig,
             dampedSig,
             phase, trig, partition, kr_impulse,
@@ -18,7 +18,7 @@
         dampedSig = BHiShelf.ar(sig, 6000, 0.7, 1.2);
         
         // Slightly more predelay for spaciousness
-        dampedSig = DelayN.ar(dampedSig, 0.2, predelay);
+        // dampedSig = DelayN.ar(dampedSig, 0.2, predelay);
         
         //////////////////////////////////////////////
         // Main reverb with increased damping
@@ -26,8 +26,8 @@
 
         verb = FreeVerb.ar(
             dampedSig, 
-            mul: decay * 1.1,    // slightly less reverb multiplier
-            room: roomSize,      // keep default room size
+            mul: decay,    // slightly less reverb multiplier
+            room: roomSize * 2.0,      // keep default room size
             damp: 0.4            // increased damping for less brightness
         );
         
@@ -39,7 +39,7 @@
             FreeVerb.ar(
                 DelayN.ar(dampedSig, 0.03, 0.02),
                 mul: decay * 0.5,
-                room: roomSize * 1.0,
+                room: roomSize * 4.0,
                 damp: 0.5
             ) * 0.3  // lower blend
         );

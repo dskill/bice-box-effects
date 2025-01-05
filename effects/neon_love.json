@@ -7,18 +7,13 @@
   "params": [
     {
       "name": "decay",
-      "value": 1.0,
-      "range": [0.1, 5.0]
+      "value": 0.1,
+      "range": [0.1, 0.3]
     },
     {
       "name": "roomSize",
       "value": 0.7,
       "range": [0.1, 0.99]
-    },
-    {
-      "name": "predelay",
-      "value": 0.03,
-      "range": [0.0, 0.1]
     },
     {
       "name": "intensity",
@@ -28,7 +23,7 @@
     {
       "name": "speed",
       "value": 0.1,
-      "range": [0.0, 1.0]
+      "range": [0.0, 0.2]
     },
     {
       "name": "mix",

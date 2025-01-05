@@ -25,7 +25,7 @@ uniform float u_rms;
 uniform float u_speed;
 uniform float u_intensity;
 uniform float u_roomSize;
-uniform float u_predelay;
+uniform float u_decay;
 
 varying vec2 vTexCoord;
 
@@ -107,7 +107,7 @@ float getSegment(float t, vec2 pos, float offset) {
     float len = 0.25;
     float scale = 0.012;
     scale = u_roomSize * .01;
-    len *= u_predelay*15.0 + 0.5;
+    len *= u_decay*5.0 + 0.5;
     
     for(int i = 0; i < POINT_COUNT; i++) {
         points[i] = getHeartPosition(offset + float(i)*len + fract(u_speed * t) * 6.28);
@@ -142,7 +142,7 @@ void main() {
     vec2 posDir = normalize(pos.xy);
     pos.xy += posDir * waveVal * 0.1;
     
-    float t = u_time * .1 + u_amplitudeTime * .5;
+    float t = u_time * .3 + u_amplitudeTime * 1.5;
     radius *= 10.0*u_rms + 0.1;
     // Get first segment
     float dist = getSegment(t, pos, 0.0);
@@ -163,7 +163,7 @@ void main() {
     
     
     // Add RMS influence to color
-     col *= 1.0 + u_rms * 2.0;
+     col *= 1.0 + u_rms * 4.0;
         
     // Tone mapping
      col = 1.0 - exp(-col);
@@ -248,7 +248,7 @@ const sketch = function (p) {
         shaderProgram.setUniform('u_speed', p.params.speed);
         shaderProgram.setUniform('u_intensity', p.params.intensity );
         shaderProgram.setUniform('u_roomSize', p.params.roomSize);
-        shaderProgram.setUniform('u_predelay', p.params.predelay);
+        shaderProgram.setUniform('u_decay', p.params.decay);
         p.shader(shaderProgram);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
 
