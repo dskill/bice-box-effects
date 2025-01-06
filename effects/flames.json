@@ -1,8 +1,8 @@
 {
-  "name": "fluid",
+  "name": "flames",
   "description": "a stereo delay effect that alternates between left and right channels",
-  "audio": "audio/fluid.sc",
-  "visual": "visual/fluid.js",
+  "audio": "audio/flames.sc",
+  "visual": "visual/flames.js",
   "curated": true,
   "params": [
     {

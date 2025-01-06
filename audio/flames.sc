@@ -1,5 +1,5 @@
 (
-    SynthDef(\fluid, {
+    SynthDef(\flames, {
         |out = 0, in_bus = 0, 
         gain = 1.0, tone = 0.1, res = 1.37, flameVol = 0.75, mix = 0.5|  // Simplified parameters
         var sig, distorted, flameSig;
@@ -93,7 +93,7 @@
         SendReply.kr(kr_impulse, '/rms');
 
         // send 
-        //SendReply.kr(Impulse.kr(30), '/fluidData', [delayTime, feedback]);
+        //SendReply.kr(Impulse.kr(30), '/flamesData', [delayTime, feedback]);
 
         
 
@@ -103,14 +103,14 @@
 
     // OSC responder to send tuner data to the client
     /*
-	OSCdef(\fluidData).free;
-	OSCdef(\fluidData, { |msg|
+	OSCdef(\flamesData).free;
+	OSCdef(\flamesData, { |msg|
 		var a = msg[3];
 		var b = msg[4];
 		// Send the data to the client
-		~o.sendMsg(\fluidData, 
+		~o.sendMsg(\flamesData, 
 			a, b
-    );  	}, '/fluidData', s.addr);
+    );  	}, '/flamesData', s.addr);
     */
 
     fork {
@@ -122,8 +122,8 @@
             ~effect.free;
         });
 
-        // Create new fluid synth in the effect group
-        ~effect = Synth(\fluid, [\in_bus, ~input_bus], ~effectGroup);
+        // Create new flames synth in the effect group
+        ~effect = Synth(\flames, [\in_bus, ~input_bus], ~effectGroup);
         "New effect synth created".postln;
     };
 ) 
