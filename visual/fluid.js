@@ -37,7 +37,11 @@ const splatShader = `
         float distance_from_center = abs(pow(1.0-vUv.y, 30.0));
         vec2 splatForce;
         splatForce.y =   50.0 * abs(waveform) * distance_from_center;
-        splatForce.x = 50.0 * waveform * distance_from_center;
+        splatForce.x = 10.0 * waveform * distance_from_center;
+
+        // a wind tunnel out the top
+        splatForce.y += smoothstep(0.5, 1.0, vUv.y) * 0.1 * abs(sin(vUv.x * 3.14158 + 3.14158));
+        
 
         //vec3 base = texture2D(uTarget, vUv).xyz;
         vec2 baseVel = texture2D(uTarget, vUv).xy * 2.0 - 1.0; // decode from [0..1] → [−1..1]
@@ -104,13 +108,24 @@ const pressureShader = `
     uniform sampler2D uDivergence;
 
     void main () {
+        // Apply open boundary condition at the top
+        if (vUv.y > 0.99) {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // zero pressure at top
+            return;
+        }
+
         float L = texture2D(uPressure, vL).x * 2.0 - 1.0;
         float R = texture2D(uPressure, vR).x * 2.0 - 1.0;
         float T = texture2D(uPressure, vT).x * 2.0 - 1.0;
         float B = texture2D(uPressure, vB).x * 2.0 - 1.0;
         float C = texture2D(uPressure, vUv).x * 2.0 - 1.0;
         float divergence = texture2D(uDivergence, vUv).x * 2.0 - 1.0;
+        
+        // Gradually reduce pressure influence towards the top
+        //float topFalloff = smoothstep(1.0, 0.7, vUv.y);
         float pressure = (L + R + T + B - divergence) * 0.25;
+        //pressure *= topFalloff;
+        
         gl_FragColor = vec4(0.5 + pressure * 0.5, 0.5, 0.5, 1.0);
     }
 `;
@@ -219,12 +234,13 @@ const colorSplatShader = `
         // Hue: map absolute waveform value to [0,1]
         // Saturation: keep high
         // Value: keep high for visibility
+        float intensity = waveform;
         vec3 hsv = vec3(
-            u_rms* 2.0 - .5, // hue
-            -u_rms * 1.0 + 1.0,           // saturation
-            u_rms * 4.0 + .025   // value
+            abs(intensity)*1.2 - .5, // hue
+            -abs(intensity) * 0.5 + 1.0,           // saturation
+            abs(intensity) * 2.0 + .025   // value
         );
-        hsv.x = min(hsv.x, 0.05);
+        hsv.x = min(hsv.x, 0.1);
         vec3 color = hsv2rgb(hsv);
         
         vec3 splat = exp(-dist / radius) * color;
@@ -315,8 +331,8 @@ const sketch = (p) => {
     p.draw = () => {
 
         dt = 5.0;//2.0 + 3.0 * p.params.gain;
-        dye_dissipation = 0.995;// + 0.002 * p.params.gain;
-        advection_dissipation = 0.95;// + 0.08 * p.params.gain;
+        dye_dissipation = 0.999 * (p.params.gain * 0.02 + 0.98);// + 0.002 * p.params.gain;
+        advection_dissipation = 0.997 *  (p.params.flameVol * 0.05 + 0.95);// + 0.08 * p.params.gain;
         //radius = p.params.radius;
         // Update waveform texture
         waveformTex.loadPixels();

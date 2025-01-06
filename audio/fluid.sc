@@ -62,7 +62,7 @@
         );
         
         // Adjust overall flame volume
-        flameSig = flameSig * flameVol;
+        flameSig = flameSig * flameVol * 2.0;
         
         // Combine flame sound with distorted output
         distorted =  distorted + flameSig;
