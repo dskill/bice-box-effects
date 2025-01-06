@@ -6,24 +6,29 @@
   "curated": true,
   "params": [
     {
-      "name": "delayTime",
-      "value": 0.4,
-      "range": [0.1, 1]
-    },
-    {
-      "name": "feedback",
+      "name": "gain",
       "value": 0.5,
-      "range": [0, 0.9]
-    },
-    {
-      "name": "wetLevel",
-      "value": 0.8,
       "range": [0, 1]
     },
     {
-      "name": "gain",
-      "value": 1,
+      "name": "tone",
+      "value": 0.5,
+      "range": [0.01, 1]
+    },
+    {
+      "name": "res",
+      "value": 1.0,
       "range": [0, 2]
+    },
+    {
+      "name": "flameVol",
+      "value": 0.5,
+      "range": [0, 2]
+    },
+    {
+      "name": "mix",
+      "value": 0.5,
+      "range": [0, 1]
     }
   ]
-} 
+}

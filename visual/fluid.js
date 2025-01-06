@@ -237,8 +237,10 @@ const sketch = (p) => {
     let fps;
     let fpsArray = [];
     const fpsArraySize = 10;
-    const dt = 5.0;
-    const radius = 0.15;
+    let dt = 5.0;
+    let radius = 0.15;
+    let dye_dissipation = 0.998;
+    let advection_dissipation = 0.97;
 
     let waveformTex;
     p.waveform1 = [];
@@ -312,6 +314,10 @@ const sketch = (p) => {
 
     p.draw = () => {
 
+        dt = 5.0;//2.0 + 3.0 * p.params.gain;
+        dye_dissipation = 0.995;// + 0.002 * p.params.gain;
+        advection_dissipation = 0.95;// + 0.08 * p.params.gain;
+        //radius = p.params.radius;
         // Update waveform texture
         waveformTex.loadPixels();
         for (let i = 0; i < p.waveform1.length; i++) {
@@ -329,7 +335,7 @@ const sketch = (p) => {
         advectionProgram.setUniform('uSource', velocity[0]);
         advectionProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
         advectionProgram.setUniform('dt', dt); // Slightly reduced timestep
-        advectionProgram.setUniform('dissipation', 0.97); // Less dissipation
+        advectionProgram.setUniform('dissipation', advection_dissipation); // Less dissipation
         velocity[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         velocity[1].end();
@@ -371,7 +377,7 @@ const sketch = (p) => {
         dyeProgram.setUniform('uSource', dye[0]);
         dyeProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
         dyeProgram.setUniform('dt', dt);
-        dyeProgram.setUniform('dissipation', 0.998); // Slightly stronger dissipation for dye
+        dyeProgram.setUniform('dissipation', dye_dissipation); // Slightly stronger dissipation for dye
         dye[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         dye[1].end();
