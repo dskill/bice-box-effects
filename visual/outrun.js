@@ -43,7 +43,6 @@ function outrunShaderSketch(p) {
   uniform vec2  u_resolution;
   
   // Audio/visual effect params
-  uniform float u_drive;
   uniform float u_gridSpeed;
   uniform float u_sunSize;
   uniform float u_glow;
@@ -105,9 +104,6 @@ function outrunShaderSketch(p) {
     // waveVal is in [0..1], shift to [-1..1]
     float waveNorm = (waveVal - 0.5) * 2.0;
   
-    // Use waveNorm to distort Y, combined with the user param (drive, synthDepth, etc)
-    //uv.y += waveNorm * .25;// * 0.1 * u_synthDepth * u_drive;
-  
     // A basic "fog" effect
     float pointOfInflection = abs(waveNorm * 1.0);// + u_rms * (cos(uv.x * 3.1415 * .5 + 3.1415) + 1.0) * .5;// + .0*sin(u_time * 10.0 + uv.y * 10.0);
     float fogSize = 0.25;
@@ -124,12 +120,9 @@ function outrunShaderSketch(p) {
   
     // Interpolate background coloring
     vec3 gradient = mix(startColor, endColor, waveY);
-  
     // Basic background
     vec3 backgroundColor = vec3(0.1, 0.0, 0.1);
     vec3 lineColor = gradient;
-    // Let's slightly modulate line intensity with "drive"
-    float lineIntensity = -uv.y * u_drive * 0.5;
     float lineGlow      = 0.01 + (u_glow * 0.4); // smaller base + param
   
     // We'll feed in "gridSpeed" for speed, "u_glow" for glow, etc
@@ -148,7 +141,9 @@ function outrunShaderSketch(p) {
       // transform X
       float gridSegmentWidthMultiplier = abs(uv.y);
       uv.x *= -1.0 * gridSegmentWidthMultiplier - sin(distance * 0.5);
-  
+      
+      float lineIntensity = -uv.y * 0.005;
+
       float gridVal = grid(uv, lineIntensity, u_gridSpeed*2.0, lineGlow, gridRoaming);
       backgroundColor = mix(backgroundColor, lineColor, gridVal);
     }
@@ -294,7 +289,6 @@ function outrunShaderSketch(p) {
       passShader.setUniform("u_resolution", [p.width, p.height]);
   
       // Hook up outrun.json parameters (with default fallbacks):
-      const drive       = p.params.drive;
       const gridSpeed   = p.params.gridSpeed;
       const sunSize     = p.params.sunSize;
       const glow        = p.params.glow;
@@ -303,7 +297,6 @@ function outrunShaderSketch(p) {
       // We'll read RMS from p.rmsOutput (sent from audio analysis)
       const rmsOutput   = p.rmsOutput;
   
-      passShader.setUniform("u_drive", drive);
       passShader.setUniform("u_gridSpeed", gridSpeed);
       passShader.setUniform("u_sunSize", sunSize);
       passShader.setUniform("u_glow", glow);
