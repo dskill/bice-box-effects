@@ -26,6 +26,11 @@
       "range": [0.0, 1.0]
     },
     {
+      "name": "reverse_verb",
+      "value": 0.0,
+      "range": [0.0, 1.0]
+    },
+    {
       "name": "mix",
       "value": 0.5,
       "range": [0.0, 1.0]

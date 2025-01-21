@@ -1,15 +1,28 @@
 (
     SynthDef(\mbv, {
         |out = 0, in_bus = 0, 
-        gain = 0.5, tone = 0.5, res = 1.37, level = 0.75, mix = 0.5|
+        gain = 0.5, tone = 0.5, res = 1.37, level = 0.75, reverse_verb = 0.0, mix = 0.5|
         
         var sig, processed;
         var rms_input, rms_output;
         var phase, trig, partition, kr_impulse;
         var freq, hasFreq;
+        var reverb_buffer, reverse_sig, reverse_verb_sig;
 
         sig = In.ar(in_bus);
         
+        // Create a local buffer for reverse reverb
+        reverb_buffer = LocalBuf(SampleRate.ir * 0.75); // 1 second buffer
+        
+        // Continuously record into the buffer
+        RecordBuf.ar(sig, reverb_buffer, loop: 1); // Set loop to 1 for continuous recording
+
+        // Play back the buffer in reverse
+        reverse_sig = PlayBuf.ar(1, reverb_buffer, rate: -1, loop: 1, startPos: BufFrames.kr(reverb_buffer));
+
+        // Apply reverb to the reversed signal
+        reverse_verb_sig = FreeVerb.ar(reverse_sig, mix: 1, room: 1.25, damp: 0.5);
+        reverse_verb_sig = reverse_verb_sig + reverse_sig;
         // Pre-emphasis filter to boost mids before distortion
         sig = BPF.ar(sig, 800, 2.0, 2.0) + sig;
         
@@ -32,9 +45,13 @@
         processed = BPeakEQ.ar(processed, 1200, 0.5, 3); // Mid presence boost
         processed = BHiShelf.ar(processed, 3000, 1.0, 2); // High end sparkle
         
+        // Mix in the reverse reverb
+        processed = processed + (reverse_verb_sig * reverse_verb);
+        
         // Level control and final shaping
         processed = processed * level * 0.8;
         processed = LeakDC.ar(processed);
+        //processed = reverse_verb_sig;
         // Final mix
         processed = XFade2.ar(sig, processed, mix*2.0-1.0);
 
