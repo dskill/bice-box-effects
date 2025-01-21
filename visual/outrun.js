@@ -19,8 +19,11 @@ function outrunShaderSketch(p) {
     
     const vertexShader = `
       attribute vec3 aPosition;
+      attribute vec2 aTexCoord;
+      varying vec2 vTexCoord;
       
       void main() {
+        vTexCoord = aTexCoord;
         gl_Position = vec4(aPosition, 1.0);
       }
     `;
@@ -86,10 +89,13 @@ function outrunShaderSketch(p) {
     return clamp(val * cut, 0.0, 1.0) + bloom * 0.9;
   }
   
+  varying vec2 vTexCoord;
+
   void main() {
-    // get fragCoord in [-1..1] range
-    vec2 fragCoord = gl_FragCoord.xy;
-    vec2 uv = (2.0 * fragCoord - u_resolution.xy) / u_resolution.y;
+    vec2 uv = vec2(1.0) - vTexCoord.xy;
+    uv = uv * 2.0 - 1.0;  // Convert from [0,1] to [-1,1] range
+    float aspect = u_resolution.x/u_resolution.y;
+    uv.x *= aspect;
   
     // We'll sample waveform at uv.x, turning it into [0..1] range
     // we want to read within the x dimension of the waveform texture
@@ -97,7 +103,7 @@ function outrunShaderSketch(p) {
     float xCoord   = clamp((uv.x * 0.5 + 0.5), 0.0, 1.0);
     // sample channel from waveform
     // we pick just a part of the waveform to read, cause zooming in looks better
-    vec2 sampleCoord = fragCoord/u_resolution.xy;
+    vec2 sampleCoord = uv;
     sampleCoord.y = (sampleCoord.y - 1.0) * 0.035 + 1.0;
     sampleCoord.y += .006;
     float waveVal  = texture2D(u_waveform, sampleCoord).r;  
@@ -171,9 +177,9 @@ function outrunShaderSketch(p) {
   
     // optional final dryness/wetness from "u_mix"
     // todo: implement this
-    //backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
+    backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
     //backgroundColor.rgb = vec3(waveNorm);
-    //backgroundColor.rg = gl_FragCoord.xy/u_resolution.xy;
+    //backgroundColor.rg = vec2(vTexCoord.y,0.0);//vTexCoord;
     gl_FragColor = vec4(backgroundColor, 1.0);
   }
   `;
@@ -181,8 +187,11 @@ function outrunShaderSketch(p) {
     // Add new vertex shader for the waveform processing
     const waveformShiftVertexShader = `
       attribute vec3 aPosition;
+      attribute vec2 aTexCoord;
+      varying vec2 vTexCoord;
       
       void main() {
+        vTexCoord = aTexCoord;
         gl_Position = vec4(aPosition, 1.0);
       }
     `;
@@ -198,8 +207,10 @@ function outrunShaderSketch(p) {
       uniform float u_time;
       uniform vec2 u_resolution;
 
+      varying vec2 vTexCoord;
+
       void main() {
-        vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+        vec2 uv = vTexCoord;
         
         float shiftMultiplier = 1.0;
         // Shift everything up by one pixel
@@ -227,6 +238,9 @@ function outrunShaderSketch(p) {
     };
   
     p.setup = () => {
+      // Force 1:1 pixel ratio, ignoring Retina scaling
+      p.pixelDensity(1);
+
       p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
       p.noStroke();
 
