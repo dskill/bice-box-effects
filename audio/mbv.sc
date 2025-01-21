@@ -11,18 +11,6 @@
 
         sig = In.ar(in_bus);
         
-        // Create a local buffer for reverse reverb
-        reverb_buffer = LocalBuf(SampleRate.ir * 0.75); // 1 second buffer
-        
-        // Continuously record into the buffer
-        RecordBuf.ar(sig, reverb_buffer, loop: 1); // Set loop to 1 for continuous recording
-
-        // Play back the buffer in reverse
-        reverse_sig = PlayBuf.ar(1, reverb_buffer, rate: -1, loop: 1, startPos: BufFrames.kr(reverb_buffer));
-
-        // Apply reverb to the reversed signal
-        reverse_verb_sig = FreeVerb.ar(reverse_sig, mix: 1, room: 1.25, damp: 0.5);
-        reverse_verb_sig = reverse_verb_sig + reverse_sig;
         // Pre-emphasis filter to boost mids before distortion
         sig = BPF.ar(sig, 800, 2.0, 2.0) + sig;
         
@@ -44,6 +32,19 @@
         // Additional filtering for character
         processed = BPeakEQ.ar(processed, 1200, 0.5, 3); // Mid presence boost
         processed = BHiShelf.ar(processed, 3000, 1.0, 2); // High end sparkle
+
+        // Create a local buffer for reverse reverb
+        reverb_buffer = LocalBuf(SampleRate.ir * 0.75); // 1 second buffer
+        
+        // Continuously record into the buffer
+        RecordBuf.ar(processed, reverb_buffer, loop: 1); // Set loop to 1 for continuous recording
+
+        // Play back the buffer in reverse
+        reverse_sig = PlayBuf.ar(1, reverb_buffer, rate: -1, loop: 1, startPos: BufFrames.kr(reverb_buffer));
+
+        // Apply reverb to the reversed signal
+        reverse_verb_sig = FreeVerb.ar(reverse_sig, mix: 1, room: 1.25, damp: 0.5);
+        reverse_verb_sig = reverse_verb_sig + reverse_sig;
         
         // Mix in the reverse reverb
         processed = processed + (reverse_verb_sig * reverse_verb);
