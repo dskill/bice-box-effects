@@ -16,7 +16,7 @@
         // Gain stage with asymmetrical soft clipping
         processed = sig * (gain * 400 + 1);
         processed = Select.ar(processed > 0, [
-            processed * .8,  // Negative values get less gain
+            processed * 0.8,  // Negative values get less gain
             processed        // Positive values get full gain
         ]);
         processed = processed.softclip;
