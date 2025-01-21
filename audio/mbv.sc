@@ -1,7 +1,7 @@
 (
     SynthDef(\mbv, {
         |out = 0, in_bus = 0, 
-        gain = 0.5, tone = 0.5, res = 1.37, level = 0.75, mirror = 0.5, mix = 0.5|
+        gain = 0.5, tone = 0.5, res = 1.37, level = 0.75, mix = 0.5|
         
         var sig, processed;
         var rms_input, rms_output;
@@ -14,9 +14,9 @@
         sig = BPF.ar(sig, 800, 2.0, 2.0) + sig;
         
         // Gain stage with asymmetrical soft clipping
-        processed = sig * (gain * 40 + 1);
+        processed = sig * (gain * 400 + 1);
         processed = Select.ar(processed > 0, [
-            processed * 0.8,  // Negative values get less gain
+            processed * .8,  // Negative values get less gain
             processed        // Positive values get full gain
         ]);
         processed = processed.softclip;
@@ -35,14 +35,6 @@
         // Level control and final shaping
         processed = processed * level * 0.8;
         processed = LeakDC.ar(processed);
-
-        // Mirror effect - create a subtle pitch-shifted double
-        processed = processed + DelayC.ar(
-            processed * mirror * 0.3,
-            0.05,
-            SinOsc.kr(0.1).range(0.01, 0.03)
-        );
-
         // Final mix
         processed = XFade2.ar(sig, processed, mix*2.0-1.0);
 
