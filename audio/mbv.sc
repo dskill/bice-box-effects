@@ -1,15 +1,21 @@
 (
     SynthDef(\mbv, {
         |out = 0, in_bus = 0, 
-        gain = 0.5, tone = 0.5, res = 1.37, level = 0.75, reverse_verb = 0.0, mix = 0.5|
+        gain = 0.5, tone = 0.5, res = 1.37, level = 0.75, reverse_verb = 0.0, mix = 0.5,
+        pitch_rate = 0.1, pitch_depth = 0.01|
         
         var sig, processed;
         var rms_input, rms_output;
         var phase, trig, partition, kr_impulse;
         var freq, hasFreq;
         var reverb_buffer, reverse_sig, reverse_verb_sig;
+        var pitch_mod;
 
         sig = In.ar(in_bus);
+        
+        // Add slow pitch oscillation
+        pitch_mod = SinOsc.kr(pitch_rate).range(1 - pitch_depth, 1 + pitch_depth);
+        sig = PitchShift.ar(sig, 0.2, pitch_mod);
         
         // Pre-emphasis filter to boost mids before distortion
         sig = BPF.ar(sig, 800, 2.0, 2.0) + sig;

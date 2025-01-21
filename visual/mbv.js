@@ -26,28 +26,28 @@ const splatShader = `
     varying vec2 vUv;
     uniform sampler2D uTarget;
     uniform float aspectRatio;
+    //uniform vec3 color;
     uniform vec2 point;
     uniform float radius;
     uniform sampler2D waveformTex;
 
     void main () {
-        // Mirror the UV coordinates
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
-        
-        float waveform = texture2D(waveformTex, vec2(mirrorUv.x, 0.5)).x * 2.0 - 1.0;
-        float distance_from_center = abs(pow(1.0-mirrorUv.y, 30.0));
+        // Only consider the vertical UV coordinate
+        float waveform = texture2D(waveformTex, vec2(vUv.x,0.5)).x * 2.0 - 1.0;
+        float distance_from_center = abs(pow(1.0-vUv.y, 30.0));
         vec2 splatForce;
-        splatForce.y = 50.0 * abs(waveform) * distance_from_center;
+        splatForce.y =   50.0 * abs(waveform) * distance_from_center;
         splatForce.x = 10.0 * waveform * distance_from_center;
 
-        // Add mirrored wind tunnel effect
-        splatForce.y += smoothstep(0.5, 1.0, mirrorUv.y) * 0.1 * abs(sin(mirrorUv.x * 3.14158 + 3.14158));
+        // a wind tunnel out the top
+        splatForce.y += smoothstep(0.5, 1.0, vUv.y) * 0.1 * abs(sin(vUv.x * 3.14158 + 3.14158));
+        
 
-        vec2 baseVel = texture2D(uTarget, mirrorUv).xy * 2.0 - 1.0;
-        baseVel += splatForce;
-        baseVel = clamp(baseVel, -1.0, 1.0);
-        gl_FragColor = vec4(0.5 + 0.5 * baseVel, 0.0, 1.0);
+        //vec3 base = texture2D(uTarget, vUv).xyz;
+        vec2 baseVel = texture2D(uTarget, vUv).xy * 2.0 - 1.0; // decode from [0..1] → [−1..1]
+        baseVel += splatForce; // add your force
+        baseVel = clamp(baseVel, -1.0, 1.0); // optional clamp
+        gl_FragColor = vec4(0.5 + 0.5 * baseVel, 0.0, 1.0); // encode again
     }
 `;
 
@@ -63,11 +63,13 @@ const advectionShader = `
     uniform float dissipation;
 
     void main () {
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
+        // Decode velocity from [0,1] to [-1,1]
+        vec2 coord = vUv - dt * (texture2D(uVelocity, vUv).xy * 2.0 - 1.0) * texelSize;
         
-        vec2 coord = mirrorUv - dt * (texture2D(uVelocity, mirrorUv).xy * 2.0 - 1.0) * texelSize;
+        // Get source value and decode from [0,1] to [-1,1]
         vec2 result = texture2D(uSource, coord).xy * 2.0 - 1.0;
+        
+        // Apply dissipation in [-1,1] space, then encode back to [0,1]
         gl_FragColor = vec4(0.5 + 0.5 * (dissipation * result), 0.0, 1.0);
     }
 `;
@@ -84,13 +86,10 @@ const divergenceShader = `
     uniform sampler2D uVelocity;
 
     void main () {
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
-        
-        float L = texture2D(uVelocity, vec2(abs(vL.x * 2.0 - 1.0), vL.y)).x * 2.0 - 1.0;
-        float R = texture2D(uVelocity, vec2(abs(vR.x * 2.0 - 1.0), vR.y)).x * 2.0 - 1.0;
-        float T = texture2D(uVelocity, vec2(abs(vT.x * 2.0 - 1.0), vT.y)).y * 2.0 - 1.0;
-        float B = texture2D(uVelocity, vec2(abs(vB.x * 2.0 - 1.0), vB.y)).y * 2.0 - 1.0;
+        float L = texture2D(uVelocity, vL).x * 2.0 - 1.0;
+        float R = texture2D(uVelocity, vR).x * 2.0 - 1.0;
+        float T = texture2D(uVelocity, vT).y * 2.0 - 1.0;
+        float B = texture2D(uVelocity, vB).y * 2.0 - 1.0;
         float div = 0.5 * (R - L + T - B);
         gl_FragColor = vec4(0.5 + div, 0.5, 0.5, 1.0);
     }
@@ -109,21 +108,24 @@ const pressureShader = `
     uniform sampler2D uDivergence;
 
     void main () {
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
-
-        if (mirrorUv.y > 0.99) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        // Apply open boundary condition at the top
+        if (vUv.y > 0.99) {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // zero pressure at top
             return;
         }
 
-        float L = texture2D(uPressure, vec2(abs(vL.x * 2.0 - 1.0), vL.y)).x * 2.0 - 1.0;
-        float R = texture2D(uPressure, vec2(abs(vR.x * 2.0 - 1.0), vR.y)).x * 2.0 - 1.0;
-        float T = texture2D(uPressure, vec2(abs(vT.x * 2.0 - 1.0), vT.y)).x * 2.0 - 1.0;
-        float B = texture2D(uPressure, vec2(abs(vB.x * 2.0 - 1.0), vB.y)).x * 2.0 - 1.0;
-        float C = texture2D(uPressure, mirrorUv).x * 2.0 - 1.0;
-        float divergence = texture2D(uDivergence, mirrorUv).x * 2.0 - 1.0;
+        float L = texture2D(uPressure, vL).x * 2.0 - 1.0;
+        float R = texture2D(uPressure, vR).x * 2.0 - 1.0;
+        float T = texture2D(uPressure, vT).x * 2.0 - 1.0;
+        float B = texture2D(uPressure, vB).x * 2.0 - 1.0;
+        float C = texture2D(uPressure, vUv).x * 2.0 - 1.0;
+        float divergence = texture2D(uDivergence, vUv).x * 2.0 - 1.0;
+        
+        // Gradually reduce pressure influence towards the top
+        //float topFalloff = smoothstep(1.0, 0.7, vUv.y);
         float pressure = (L + R + T + B - divergence) * 0.25;
+        //pressure *= topFalloff;
+        
         gl_FragColor = vec4(0.5 + pressure * 0.5, 0.5, 0.5, 1.0);
     }
 `;
@@ -136,27 +138,23 @@ const displayShader = `
     uniform sampler2D uTexture;
     uniform float u_rms;
     uniform sampler2D waveformTex;
-    uniform float mirror;
 
     void main () {
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
+        float waveform = texture2D(waveformTex, vUv).x * 2.0 - 1.0;
+        vec2 uv = vUv;
+        //uv.y = abs(uv.y - 0.5)*2.0;
+        //uv.y += pow(uv.y*2.0-1.0,2.0);
+        //uv.y = pow(abs(uv.y-0.5)*2.0,0.2);
+        //uv.y = smoothstep(0.0,0.1,uv.y);
+        //uv.y += .05 * waveform * pow(1.0 - abs(vUv.y - .9)*2.0,8.0) * (1.0 - abs(vUv.x-.9)*2.0);
+        //uv.x += .05 * waveform * pow(1.0 - abs(vUv.y - .9)*2.0,8.0) * (1.0 - abs(vUv.x-.9)*2.0);
         
-        float waveform = texture2D(waveformTex, mirrorUv).x * 2.0 - 1.0;
-        vec3 color = texture2D(uTexture, mirrorUv).rgb;
-        
-        // Convert to pink-based color scheme
-        float intensity = max(color.r, max(color.g, color.b));
-        vec3 pink = vec3(1.0, 0.4, 0.7); // Hot pink base
-        color = mix(color, pink * intensity, 0.8);
-        
-        // Add some shimmer based on waveform
-        color += vec3(0.1, 0.05, 0.08) * abs(waveform);
-        
-        // Enhance the mirror effect with a subtle gradient
-        color *= 1.0 + 0.2 * smoothstep(0.4, 0.6, abs(vUv.x - 0.5));
-        
-        color = pow(color, vec3(0.7));
+        //uv.y += .1* pow( abs(uv.x - 0.5)*2.0, 0.1);
+        vec3 color = texture2D(uTexture, uv).rgb;
+        //float brightness = max(color.r, max(color.g, color.b));
+        //color = mix(color, vec3(1.0), brightness);// * u_rms);
+        color = pow(color, vec3(.7));
+        //color.rgb = vec3(uv.x,uv.y,0.0);
         gl_FragColor = vec4(color, 1.0);
     }
 `;
@@ -174,14 +172,11 @@ const gradientSubtractShader = `
     uniform sampler2D uVelocity;
 
     void main () {
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
-        
-        float L = texture2D(uPressure, vec2(abs(vL.x * 2.0 - 1.0), vL.y)).x * 2.0 - 1.0;
-        float R = texture2D(uPressure, vec2(abs(vR.x * 2.0 - 1.0), vR.y)).x * 2.0 - 1.0;
-        float T = texture2D(uPressure, vec2(abs(vT.x * 2.0 - 1.0), vT.y)).x * 2.0 - 1.0;
-        float B = texture2D(uPressure, vec2(abs(vB.x * 2.0 - 1.0), vB.y)).x * 2.0 - 1.0;
-        vec2 velocity = texture2D(uVelocity, mirrorUv).xy * 2.0 - 1.0;
+        float L = texture2D(uPressure, vL).x * 2.0 - 1.0;
+        float R = texture2D(uPressure, vR).x * 2.0 - 1.0;
+        float T = texture2D(uPressure, vT).x * 2.0 - 1.0;
+        float B = texture2D(uPressure, vB).x * 2.0 - 1.0;
+        vec2 velocity = texture2D(uVelocity, vUv).xy * 2.0 - 1.0;
         velocity.xy -= vec2(R - L, T - B);
         gl_FragColor = vec4(0.5 + velocity * 0.5, 0.0, 1.0);
     }
@@ -199,15 +194,16 @@ const dyeShader = `
     uniform float dissipation;
 
     void main () {
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
+        // Decode velocity from [0,1] to [-1,1] when sampling
+        vec2 coord = vUv - dt * (texture2D(uVelocity, vUv).xy * 2.0 - 1.0) * texelSize;
         
-        vec2 coord = mirrorUv - dt * (texture2D(uVelocity, mirrorUv).xy * 2.0 - 1.0) * texelSize;
+        // Color/dye values stay in [0,1] range since they represent actual colors
         vec3 result = dissipation * texture2D(uSource, coord).rgb;
         gl_FragColor = vec4(result, 1.0);
     }
 `;
 
+// Modify splatShader to handle color differently
 const colorSplatShader = `
     precision highp float;
     precision highp sampler2D;
@@ -219,6 +215,7 @@ const colorSplatShader = `
     uniform float u_rms;
     uniform sampler2D waveformTex;
 
+    // HSV to RGB conversion
     vec3 hsv2rgb(vec3 c) {
         vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
         vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
@@ -226,21 +223,24 @@ const colorSplatShader = `
     }
 
     void main () {
-        vec2 mirrorUv = vUv;
-        mirrorUv.x = abs(mirrorUv.x * 2.0 - 1.0);
-        
-        float waveform = texture2D(waveformTex, mirrorUv).x * 2.0 - 1.0;
-        float dist = abs(mirrorUv.y - 0.15);
+        // Sample waveform and convert to [-1,1] range
+        float waveform = texture2D(waveformTex, vUv).x * 2.0 - 1.0;
+        float dist = abs(vUv.y - 0.15);
         dist *= 15.0;
 
-        vec3 base = texture2D(uTarget, mirrorUv).rgb;
+        vec3 base = texture2D(uTarget, vUv).rgb;
         
+        // Convert waveform intensity to color
+        // Hue: map absolute waveform value to [0,1]
+        // Saturation: keep high
+        // Value: keep high for visibility
         float intensity = waveform;
         vec3 hsv = vec3(
-            0.9 + abs(intensity) * 0.1, // Hue - pink range
-            0.8 - abs(intensity) * 0.3,  // Saturation
-            abs(intensity) * 2.0 + 0.025  // Value
+            abs(intensity)*1.2 - .5, // hue
+            -abs(intensity) * 0.5 + 1.0,           // saturation
+            abs(intensity) * 2.0 + .025   // value
         );
+        hsv.x = min(hsv.x, 0.1);
         vec3 color = hsv2rgb(hsv);
         
         vec3 splat = exp(-dist / radius) * color;
@@ -274,18 +274,21 @@ const sketch = (p) => {
     let pressure;
     let divergence;
 
-    let dye;
-    let dyeProgram, colorSplatProgram;
+    let dye; // Add dye framebuffers
+    let dyeProgram, colorSplatProgram; // Add new programs
 
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
         p.pixelDensity(1);
 
-        simWidth = 256;
-        simHeight = 256;
+        // Use full resolution for simulation
+        simWidth = 256;//p.width / DOWNSAMPLE;
+        simHeight = 256;// p.height / DOWNSAMPLE;
 
         waveformTex = p.createGraphics(512, 1, p.WEBGL);
         waveformTex.pixelDensity(1);
+        //waveformTex.noSmooth();
+
 
         // Initialize shaders
         advectionProgram = p.createShader(baseVertexShader, advectionShader);
@@ -295,6 +298,7 @@ const sketch = (p) => {
         splatProgram = p.createShader(baseVertexShader, splatShader);
         gradientSubtractProgram = p.createShader(baseVertexShader, gradientSubtractShader);
 
+        // Create simulation framebuffers with floating point textures
         velocity = [
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB }),
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB })
@@ -305,6 +309,7 @@ const sketch = (p) => {
         ];
         divergence = p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB });
 
+        // Initialize FPS counter
         fps = p.createP('');
         fps.style('color', '#444444');
         fps.style('font-family', 'monospace');
@@ -312,9 +317,11 @@ const sketch = (p) => {
         fps.style('bottom', '10px');
         fps.style('left', '10px');
 
+        // Add new shader programs
         dyeProgram = p.createShader(baseVertexShader, dyeShader);
         colorSplatProgram = p.createShader(baseVertexShader, colorSplatShader);
 
+        // Create dye framebuffers
         dye = [
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB }),
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB })
@@ -322,10 +329,12 @@ const sketch = (p) => {
     };
 
     p.draw = () => {
-        dt = 5.0;
-        dye_dissipation = 0.999 * (p.params.gain * 0.02 + 0.98);
-        advection_dissipation = 0.997 * (p.params.mirror * 0.05 + 0.95);
 
+        dt = 5.0;//2.0 + 3.0 * p.params.gain;
+        dye_dissipation = 0.999 * (p.params.gain * 0.02 + 0.98);// + 0.002 * p.params.gain;
+        advection_dissipation = 0.997 *  (p.params.flameVol * 0.05 + 0.95);// + 0.08 * p.params.gain;
+        //radius = p.params.radius;
+        // Update waveform texture
         waveformTex.loadPixels();
         for (let i = 0; i < p.waveform1.length; i++) {
             let val = (p.waveform1[i]*.5 +.5) * 255.0;
@@ -341,8 +350,8 @@ const sketch = (p) => {
         advectionProgram.setUniform('uVelocity', velocity[0]);
         advectionProgram.setUniform('uSource', velocity[0]);
         advectionProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
-        advectionProgram.setUniform('dt', dt);
-        advectionProgram.setUniform('dissipation', advection_dissipation);
+        advectionProgram.setUniform('dt', dt); // Slightly reduced timestep
+        advectionProgram.setUniform('dissipation', advection_dissipation); // Less dissipation
         velocity[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         velocity[1].end();
@@ -356,8 +365,8 @@ const sketch = (p) => {
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         divergence.end();
 
-        // Pressure step
-        for (let i = 0; i < 4; i++) {
+        // Pressure step - more iterations for better accuracy
+        for (let i = 0; i < 4; i++) { // Increased from 20 to 40
             p.shader(pressureProgram);
             pressureProgram.setUniform('uPressure', pressure[0]);
             pressureProgram.setUniform('uDivergence', divergence);
@@ -378,13 +387,13 @@ const sketch = (p) => {
         velocity[1].end();
         [velocity[0], velocity[1]] = [velocity[1], velocity[0]];
 
-        // Dye advection step
+        // Add dye advection step
         p.shader(dyeProgram);
         dyeProgram.setUniform('uVelocity', velocity[0]);
         dyeProgram.setUniform('uSource', dye[0]);
         dyeProgram.setUniform('texelSize', [1.0/simWidth, 1.0/simHeight]);
         dyeProgram.setUniform('dt', dt);
-        dyeProgram.setUniform('dissipation', dye_dissipation);
+        dyeProgram.setUniform('dissipation', dye_dissipation); // Slightly stronger dissipation for dye
         dye[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         dye[1].end();
@@ -392,15 +401,25 @@ const sketch = (p) => {
 
         // Display
         p.shader(displayProgram);
-        displayProgram.setUniform('uTexture', dye[0]);
+        displayProgram.setUniform('uTexture', dye[0]); // Changed from velocity[0] to dye[0]
         displayProgram.setUniform('u_rms', p.rmsOutput || 0.5);
         displayProgram.setUniform('waveformTex', waveformTex);
-        displayProgram.setUniform('mirror', p.params.mirror || 0.5);
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
 
         updateFPS();
+
+        // Add forces and color based on audio input
+        /*
+        if (p.rmsOutput) {
+            const x = p.mouseX/p.width;
+            const y = 1.0 - p.mouseY/p.height;
+            addForce(x, y, p.rmsOutput * 0.0, p.rmsOutput * 2.0);
+            addColor(x, y, [1.0, 0.5, 0.0]); // Add orange dye
+        }
+        */
         addForce();
-        addColor();
+        addColor(); // Add orange dye
+
     };
 
     const addForce = () => {
@@ -438,7 +457,10 @@ const sketch = (p) => {
 
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
+        //simWidth = 256;//p.width / DOWNSAMPLE;
+        //simHeight = 512;// p.height / DOWNSAMPLE;
 
+        // Recreate framebuffers at new size
         velocity = [
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB }),
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB })
@@ -449,6 +471,7 @@ const sketch = (p) => {
         ];
         divergence = p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB });
 
+        // Add dye buffer resize
         dye = [
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB }),
             p.createFramebuffer({ width: simWidth, height: simHeight, format: p.RGB })
