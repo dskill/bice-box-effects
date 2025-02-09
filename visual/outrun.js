@@ -177,7 +177,7 @@ function outrunShaderSketch(p) {
   
     // optional final dryness/wetness from "u_mix"
     // todo: implement this
-    backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
+    //backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
     //backgroundColor.rgb = vec3(waveNorm);
     //backgroundColor.rg = vec2(vTexCoord.y,0.0);//vTexCoord;
     gl_FragColor = vec4(backgroundColor, 1.0);
