@@ -5,7 +5,7 @@
   also incorporates waveform data (via p.waveform1) to distort the scene or otherwise
   modulate the visuals.
 
-  Note: We’re ignoring FFT data in this version, but waveform data is still read and 
+  Note: We're ignoring FFT data in this version, but waveform data is still read and 
   mapped into the uniform "u_waveform". The "mix" parameter is optionally used at the 
   final color output stage, if desired.
 */
@@ -56,7 +56,7 @@ function outrunShaderSketch(p) {
   // Waveform texture (1D in X dimension)
   uniform sampler2D u_waveform;
   
-  // Utility: Shadertoy’s fract-based noise example:
+  // Utility: Shadertoy's fract-based noise example:
   float noise(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
   }
@@ -97,89 +97,56 @@ function outrunShaderSketch(p) {
     float aspect = u_resolution.x/u_resolution.y;
     uv.x *= aspect;
   
-    // We'll sample waveform at uv.x, turning it into [0..1] range
-    // we want to read within the x dimension of the waveform texture
-    // uv.x is in [-someValue..someValue], so let's clamp
-    float xCoord   = clamp((uv.x * 0.5 + 0.5), 0.0, 1.0);
-    // sample channel from waveform
-    // we pick just a part of the waveform to read, cause zooming in looks better
-    vec2 sampleCoord = uv;
-    sampleCoord.y = (sampleCoord.y - 1.0) * 0.035 + 1.0;
-    sampleCoord.y += .006;
-    float waveVal  = texture2D(u_waveform, sampleCoord).r;  
-    // waveVal is in [0..1], shift to [-1..1]
+    // Sample waveform data
+    float xCoord = clamp((uv.x * 0.5 + 0.5), 0.0, 1.0);
+    float waveVal = texture2D(u_waveform, vec2(xCoord, 0.0)).r;
     float waveNorm = (waveVal - 0.5) * 2.0;
   
-    // A basic "fog" effect
-    float pointOfInflection = abs(waveNorm * 1.0);// + u_rms * (cos(uv.x * 3.1415 * .5 + 3.1415) + 1.0) * .5;// + .0*sin(u_time * 10.0 + uv.y * 10.0);
+    // Set horizon line with waveform influence
+    float baseHorizon = 0.2;  // Fixed base horizon
+    float waveInfluence = waveNorm * 0.3;  // Waveform affects horizon position
+    float pointOfInflection = baseHorizon + waveInfluence;
+  
+    // Fog effect
     float fogSize = 0.25;
     float fogIntensity = -0.0;
-    float fog = smoothstep(fogSize, fogIntensity, abs(uv.y -  pointOfInflection));
+    float fog = smoothstep(fogSize, fogIntensity, abs(uv.y - pointOfInflection));
   
-    // We define two base colors for a gradient
+    // Colors
     vec3 startColor = vec3(0.6, 0.0, 1.0); // Neon purple
     vec3 endColor   = vec3(0.0, 1.0, 1.0); // Cyan
   
-    // We'll do a waveFactor to modulate the interpolation
-    float waveFactor  = sin(uv.x * 5.0 + u_time * 2.0) * 0.5 + 0.5;
-    float waveY       = uv.y + waveFactor * 0.3;
+    float waveFactor = sin(uv.x * 5.0 + u_time * 2.0) * 0.5 + 0.5;
+    float waveY = uv.y + waveFactor * 0.3 + waveNorm * 0.1; // Add waveform influence to color gradient
   
-    // Interpolate background coloring
     vec3 gradient = mix(startColor, endColor, waveY);
-    // Basic background
     vec3 backgroundColor = vec3(0.1, 0.0, 0.1);
     vec3 lineColor = gradient;
-    float lineGlow      = 0.01 + (u_glow * 0.4); // smaller base + param
+    float lineGlow = 0.01 + (u_glow * 0.4);
   
-    // We'll feed in "gridSpeed" for speed, "u_glow" for glow, etc
-    float gridRoaming = 0.25; // fixed
-   // uv.y += waveNorm * .2;
+    float gridRoaming = 0.25;
     if (uv.y < pointOfInflection) {
-      // uv.y += abs(waveNorm * .5);
       float distance = length(uv);
-      // transform Y for "3D" segmenting
-      //uv.y += waveNorm * .2;
-      //pointOfInflection -= abs(waveNorm * .2);
-
-      float time = u_time ;// + 10.0 * abs(waveNorm);
-      float spaceBetweenGridSegments = sin(uv.y + time) + 2.0 / (abs(uv.y - pointOfInflection) + 0.05);
+      float spaceBetweenGridSegments = sin(uv.y + u_time) + 2.0 / (abs(uv.y - pointOfInflection) + 0.05);
       uv.y = spaceBetweenGridSegments;
-      // transform X
+      
       float gridSegmentWidthMultiplier = abs(uv.y);
       uv.x *= -1.0 * gridSegmentWidthMultiplier - sin(distance * 0.5);
       
       float lineIntensity = -uv.y * 0.005;
-
       float gridVal = grid(uv, lineIntensity, u_gridSpeed*2.0, lineGlow, gridRoaming);
       backgroundColor = mix(backgroundColor, lineColor, gridVal);
     }
     else {
-      // Sun portion
-      // We'll let "u_sunSize" shift the coordinates for the sun:
       vec2 sunUV = uv - uv * u_sunSize * .2 * (u_rms * 1.1 + 1.0);
-      //sunUV.y += waveNorm * 0.02;
-      // shift the sun's vertical position by sunSize
       sunUV += vec2(0.0, -0.25 * u_sunSize - u_rms * .3);
-  
-      // We'll combine "u_synthDepth" with "u_rms" to modulate the sun's waves
-      float battery = 15.0 * u_synthDepth;//(u_synthDepth + 0.15) + (u_rms * 5.0);
-  
+      float battery = 15.0 * u_synthDepth;
       float sunVal = sun(sunUV, battery);
-      // color ramp
       vec3 sunBg = mix(vec3(0.625,0.4,0.2), vec3(1.125,0.439,0.208), sunUV.y * 1.0 + 0.4);
-  
-      // fade in the sun
       backgroundColor = mix(vec3(0.0), sunBg, sunVal);
     }
   
-    // Add in "fog"
     backgroundColor += .3 * fog * fog * fog;
-  
-    // optional final dryness/wetness from "u_mix"
-    // todo: implement this
-    //backgroundColor.rgb = texture2D(u_waveform, vec2(gl_FragCoord.x/u_resolution.x, gl_FragCoord.y/u_resolution.y)).rgb;
-    //backgroundColor.rgb = vec3(waveNorm);
-    //backgroundColor.rg = vec2(vTexCoord.y,0.0);//vTexCoord;
     gl_FragColor = vec4(backgroundColor, 1.0);
   }
   `;
