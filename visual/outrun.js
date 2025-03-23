@@ -155,6 +155,9 @@ void main() {
     }
 
     backgroundColor += .3 * fog * fog * fog;
+
+    //backgroundColor = texture2D(u_waveform, vTexCoord.xy).xyz;
+
     gl_FragColor = vec4(backgroundColor, 1.0);
 }
 `;
@@ -166,7 +169,7 @@ void main() {
       varying vec2 vTexCoord;
       
       void main() {
-        vTexCoord = aTexCoord;
+        vTexCoord = aPosition.xy * 0.5 + 0.5;
         gl_Position = vec4(aPosition, 1.0);
       }
     `;
@@ -188,14 +191,14 @@ void main() {
         vec2 uv = vTexCoord;
         
         // Bottom 10% of the texture: write new waveform
-        if (uv.y > 0.9) {
+        if (uv.y < 0.05) {
           float waveformValue = texture2D(u_newWaveform, vec2(uv.x, 0.0)).r;
           gl_FragColor = vec4(vec3(waveformValue), 1.0);
         } 
         // Rest of texture: shift previous content up
         else {
           // Map from 0-0.9 to 0-1.0 range for reading previous frame
-          float sourceY = (uv.y / 0.9) * 1.0;
+          float sourceY = uv.y - u_texelSize * 10.0;// (uv.y / 0.9) * 1.0;
           gl_FragColor = texture2D(u_texture, vec2(uv.x, sourceY));
         }
       }
