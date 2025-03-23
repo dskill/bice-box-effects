@@ -112,7 +112,7 @@ void main() {
 
     // Set horizon line with waveform influence
     float baseHorizon = 0.2;
-    float waveInfluence = waveNorm * 1.3;
+    float waveInfluence = waveNorm * 3.3;
     float pointOfInflection = baseHorizon + waveInfluence;
 
     // Fog effect
@@ -187,23 +187,17 @@ void main() {
       void main() {
         vec2 uv = vTexCoord;
         
-        float shiftMultiplier = 1.0;
-        // Shift everything up by one pixel
-        if (uv.y < 1.0 -  u_texelSize) {
-          gl_FragColor = texture2D(u_texture, vec2(uv.x, uv.y + shiftMultiplier*u_texelSize));
-          //gl_FragColor.r = sin(uv.x * 100.0);
-        } else {
-          // Bottom row: write new waveform data
+        // Bottom 10% of the texture: write new waveform
+        if (uv.y > 0.9) {
           float waveformValue = texture2D(u_newWaveform, vec2(uv.x, 0.0)).r;
-          // but blend with the last row to soften things
-         // vec4 lastRow = texture2D(u_texture, vec2(uv.x, 1.0 - u_texelSize));
-         //gl_FragColor = vec4(mix(lastRow.rgb, vec3(waveformValue), 0.5), 1.0);
-         //gl_FragColor = vec4(vec3(waveformValue + lastRow.r) * 0.5, 1.0);
-         gl_FragColor = vec4(vec3(waveformValue), 1.0);
-         // gl_FragColor.r = sin(uv.x * 41.0 + u_time * 10.0);
+          gl_FragColor = vec4(vec3(waveformValue), 1.0);
+        } 
+        // Rest of texture: shift previous content up
+        else {
+          // Map from 0-0.9 to 0-1.0 range for reading previous frame
+          float sourceY = (uv.y / 0.9) * 1.0;
+          gl_FragColor = texture2D(u_texture, vec2(uv.x, sourceY));
         }
-
-        //gl_FragColor.rg =uv;
       }
     `;
 
@@ -266,7 +260,8 @@ void main() {
       currentFBO = !currentFBO;  // Swap FBOs
 
       // Use the updated texture for the main shader
-      passShader.setUniform("u_waveform", currentTarget);
+      passShader.setUniform("u_waveform", currentTarget);  // Switch back to using the history FBO
+      //passShader.setUniform("u_waveform", waveformTex);  // Comment out raw waveform
 
       // Pass uniforms
       passShader.setUniform("u_time", p.millis() * 0.001);
