@@ -50,7 +50,7 @@ s.waitForBoot{
 	~audioInSynth = Synth(\audioIn, target: ~sourceGroup);
 
 	// in case we want a bus with some looping guitar
-	~buffer = Buffer.read(Server.default, "~/bice-box-effects/resources/guitar_riff.wav".standardizePath, action: { |buf|
+	~buffer = Buffer.read(Server.default, "~/bice-box-effects/resources/karaoke_shack_riff_mono.wav".standardizePath, action: { |buf|
 		("Buffer loaded. Original sample rate: " ++ buf.sampleRate).postln;
 		("Server sample rate: " ++ Server.default.sampleRate).postln;
 		("Buffer channels: " ++ buf.numChannels).postln;

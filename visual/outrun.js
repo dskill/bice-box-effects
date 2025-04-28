@@ -85,7 +85,8 @@ float sun(vec2 uv, float battery) {
 // Sample waveform with history based on perceived distance
 float sampleWaveform(vec2 uv, float distanceFromCamera) {
     // Sample current waveform at x position
-    float xCoord = clamp((uv.x * 0.5 + 0.5), 0.0, 1.0);
+    // why * 0.25?  seems wrong
+    float xCoord = clamp((uv.x * 0.25 + 0.5), 0.0, 1.0);
     
     // Map distance to history sample - closer to camera (lower y) = older samples
     // Adjust the 0.7 multiplier to control how much history is visible
