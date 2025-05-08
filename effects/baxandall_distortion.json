@@ -1,8 +1,9 @@
 {
-  "name": "Gritty Baxandall Distortion",
+  "name": "Baxandall Distortion",
   "description": "A gritty distortion effect with Baxandall-style bass and treble tone controls, plus drive, level, and mix adjustments.",
-  "audio": "audio/gritty_baxandall_distortion.sc",
+  "audio": "audio/baxandall_distortion.sc",
   "visual": "visual/oscilloscope.js",
+  "curated": true,
   "params": [
     {
       "name": "drive",

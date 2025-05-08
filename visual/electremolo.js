@@ -165,7 +165,7 @@ const sketch = function (p) {
         shader.setUniform('u_resolution', [p.width, p.height]);
         shader.setUniform('u_time', p.millis() / 1000.0);
         shader.setUniform('u_rms', p.rmsOutput);
-        if (p.customMessage) {
+        if (p.customMessage && p.customMessage.values.length == 3) {
             shader.setUniform('u_electremoloData', p.customMessage.values);
         }
         p.shader(shader);

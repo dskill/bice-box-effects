@@ -2,7 +2,8 @@
   "name": "Crackle Reverb",
   "description": "A reverb effect where the tail increasingly distorts and crackles as it fades out.",
   "audio": "audio/crackle_reverb.sc",
-  "visual": "visual/oscilloscope.js",
+  "visual": "visual/green_machine.js",
+  "curated": true,
   "params": [
     {
       "name": "mix",
