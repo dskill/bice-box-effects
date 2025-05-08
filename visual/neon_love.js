@@ -245,10 +245,10 @@ const sketch = function (p) {
         shaderProgram.setUniform('u_rms', p.rmsOutput);
         
         // Set uniforms from params
-        shaderProgram.setUniform('u_speed', p.params.speed);
-        shaderProgram.setUniform('u_intensity', p.params.intensity );
-        shaderProgram.setUniform('u_roomSize', p.params.roomSize);
-        shaderProgram.setUniform('u_decay', p.params.decay);
+        shaderProgram.setUniform('u_speed', p.params.speed !== null ? p.params.speed : 0.5);
+        shaderProgram.setUniform('u_intensity', p.params.intensity !== null ? p.params.intensity : 0.5);
+        shaderProgram.setUniform('u_roomSize', p.params.roomSize !== null ? p.params.roomSize : 0.5);
+        shaderProgram.setUniform('u_decay', p.params.decay !== null ? p.params.decay : 0.5);
         p.shader(shaderProgram);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
 
