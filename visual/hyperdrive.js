@@ -192,10 +192,17 @@ const sketch = function (p)
         feedback.setUniform('u_next', write);
         feedback.setUniform('u_resolution', [p.width * p.pixelDensity(), p.height * p.pixelDensity()]);
         feedback.setUniform('u_framecount', p.frameCount);
-        feedback.setUniform('u_tone', p.params.tone);
-        feedback.setUniform('u_mix', p.params.mix * .5 + 0.5);
-        feedback.setUniform('u_gain', p.params.gain * p.params.mix);
-        feedback.setUniform('u_res', p.params.res * p.params.mix);
+
+        const tone = p.params.tone != null ? p.params.tone : 0.5;
+        const mix = p.params.mix != null ? p.params.mix : 0.5;
+        const gain = p.params.gain != null ? p.params.gain : 0.5;
+        const res = p.params.res != null ? p.params.res : 0.5;
+
+        feedback.setUniform('u_tone', tone);
+        feedback.setUniform('u_mix', mix * 0.5 + 0.5);
+        feedback.setUniform('u_gain', gain * mix);
+        feedback.setUniform('u_res', res * mix);
+
         feedback.setUniform('u_rmsOutput', p.rmsOutput);
         // Pass waveform texture to the shader
         feedback.setUniform('u_waveform', waveformTex);

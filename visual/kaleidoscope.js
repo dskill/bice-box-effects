@@ -206,11 +206,11 @@ const sketch = function(p) {
         shader.setUniform('u_rms', p.rmsOutput);
 
         // Pass effect parameters to shader
-        shader.setUniform('u_sparkle', p.params.sparkle !== undefined ? p.params.sparkle : 0.5);
-        shader.setUniform('u_shimmer', p.params.shimmer !== undefined ? p.params.shimmer : 0.5);
-        shader.setUniform('u_rotation', p.params.rotation !== undefined ? p.params.rotation : 0.5);
-        shader.setUniform('u_delay', p.params.delayTime !== undefined ? p.params.delayTime : 0.5);
-        shader.setUniform('u_feedback', p.params.feedback !== undefined ? p.params.feedback : 0.5);
+        shader.setUniform('u_sparkle', p.params.sparkle != null ? p.params.sparkle : 0.5);
+        shader.setUniform('u_shimmer', p.params.shimmer != null ? p.params.shimmer : 0.5);
+        shader.setUniform('u_rotation', p.params.rotation != null ? p.params.rotation : 0.5);
+        shader.setUniform('u_delay', p.params.delayTime != null ? p.params.delayTime : 0.5);
+        shader.setUniform('u_feedback', p.params.feedback != null ? p.params.feedback : 0.5);
         
 
         p.shader(shader);

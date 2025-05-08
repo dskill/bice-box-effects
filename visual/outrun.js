@@ -268,24 +268,18 @@ void main() {
       //passShader.setUniform("u_waveform", waveformTex);  // Comment out raw waveform
 
       // Pass uniforms
-      passShader.setUniform("u_time", p.millis() * 0.001);
+      passShader.setUniform('u_time', p.millis() / 1000.0);
+      passShader.setUniform('u_rms', p.rmsOutput);
+
+      // Uniforms from p.params, with defaults
+      passShader.setUniform('u_gridSpeed', p.params.gridSpeed != null ? p.params.gridSpeed : 0.2);
+      passShader.setUniform('u_sunSize', p.params.sunSize != null ? p.params.sunSize : 0.5);
+      passShader.setUniform('u_glow', p.params.glow != null ? p.params.glow : 0.3);
+      passShader.setUniform('u_synthDepth', p.params.synthDepth != null ? p.params.synthDepth : 0.5);
+      passShader.setUniform('u_mix', p.params.mix != null ? p.params.mix : 0.5);
+
+      // Select correct FBO for reading (previous frame)
       passShader.setUniform("u_resolution", [p.width, p.height]);
-  
-      // Hook up outrun.json parameters (with default fallbacks):
-      const gridSpeed   = p.params.gridSpeed;
-      const sunSize     = p.params.sunSize;
-      const glow        = p.params.glow;
-      const synthDepth  = p.params.synthDepth;
-      const mixVal      = p.params.mix;
-      // We'll read RMS from p.rmsOutput (sent from audio analysis)
-      const rmsOutput   = p.rmsOutput;
-  
-      passShader.setUniform("u_gridSpeed", gridSpeed);
-      passShader.setUniform("u_sunSize", sunSize);
-      passShader.setUniform("u_glow", glow);
-      passShader.setUniform("u_synthDepth", synthDepth);
-      passShader.setUniform("u_mix", mixVal);
-      passShader.setUniform("u_rms", rmsOutput);
   
       p.shader(passShader);
       p.quad(-1, 1, 1, 1, 1, -1, -1, -1);

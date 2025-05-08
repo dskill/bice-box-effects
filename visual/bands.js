@@ -227,9 +227,9 @@ const sketch = function (p) {
         shader.setUniform('u_resolution', [p.width, p.height]);
         shader.setUniform('u_time', p.millis() / 1000.0);
         shader.setUniform('u_rms', p.rmsOutput);
-        shader.setUniform('u_tone', p.params.tone);
-        shader.setUniform('u_mix', p.params.mix);
-        shader.setUniform('u_drive', p.params.drive);
+        shader.setUniform('u_tone', p.params.tone != null ? p.params.tone : 0.5);
+        shader.setUniform('u_mix', p.params.mix != null ? p.params.mix : 0.5);
+        shader.setUniform('u_drive', p.params.drive != null ? p.params.drive : 0.5);
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
 
