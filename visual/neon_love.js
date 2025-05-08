@@ -244,7 +244,6 @@ const sketch = function (p) {
         shaderProgram.setUniform('u_time', p.millis() / 1000.0);
         shaderProgram.setUniform('u_rms', p.rmsOutput);
         
-        console.log(p.params.roomSize);
         // Set uniforms from params
         shaderProgram.setUniform('u_speed', p.params.speed != null ? p.params.speed : 0.5);
         shaderProgram.setUniform('u_intensity', p.params.intensity != null ? p.params.intensity : 0.5);
