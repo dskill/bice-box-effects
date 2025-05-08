@@ -174,8 +174,6 @@ const sketch = function(p) {
     };
 
     p.draw = () => {
-        if (!p.params) return;
-
         // Update amplitude-driven time
         amplitudeTime += p.rmsOutput;
 
@@ -208,11 +206,12 @@ const sketch = function(p) {
         shader.setUniform('u_rms', p.rmsOutput);
 
         // Pass effect parameters to shader
-        shader.setUniform('u_sparkle', p.params.sparkle);
-        shader.setUniform('u_shimmer', p.params.shimmer);
-        shader.setUniform('u_rotation', p.params.rotation);
-        shader.setUniform('u_delay', p.params.delayTime);
-        shader.setUniform('u_feedback', p.params.feedback);
+        shader.setUniform('u_sparkle', p.params.sparkle !== undefined ? p.params.sparkle : 0.5);
+        shader.setUniform('u_shimmer', p.params.shimmer !== undefined ? p.params.shimmer : 0.5);
+        shader.setUniform('u_rotation', p.params.rotation !== undefined ? p.params.rotation : 0.5);
+        shader.setUniform('u_delay', p.params.delayTime !== undefined ? p.params.delayTime : 0.5);
+        shader.setUniform('u_feedback', p.params.feedback !== undefined ? p.params.feedback : 0.5);
+        
 
         p.shader(shader);
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
