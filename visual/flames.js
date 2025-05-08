@@ -330,10 +330,14 @@ const sketch = (p) => {
 
     p.draw = () => {
 
-        dt = 5.0;//2.0 + 3.0 * p.params.gain;
-        dye_dissipation = 0.999 * (p.params.gain * 0.02 + 0.98);// + 0.002 * p.params.gain;
-        advection_dissipation = 0.997 *  (p.params.flameVol * 0.05 + 0.95);// + 0.08 * p.params.gain;
-        //radius = p.params.radius;
+        const gain = p.params.gain != null ? p.params.gain : 0.5;
+        const flameVol = p.params.flameVol != null ? p.params.flameVol : 0.5;
+
+        dt = 5.0; // Original: dt = 5.0;//2.0 + 3.0 * p.params.gain;
+        dye_dissipation = 0.999 * (gain * 0.02 + 0.98); // Original: dye_dissipation = 0.999 * (p.params.gain * 0.02 + 0.98);// + 0.002 * p.params.gain;
+        advection_dissipation = 0.997 * (flameVol * 0.05 + 0.95); // Original: advection_dissipation = 0.997 *  (p.params.flameVol * 0.05 + 0.95);// + 0.08 * p.params.gain;
+        //radius = p.params.radius; // This line remains commented but if used, needs similar protection.
+
         // Update waveform texture
         waveformTex.loadPixels();
         for (let i = 0; i < p.waveform1.length; i++) {
@@ -441,7 +445,7 @@ const sketch = (p) => {
         colorSplatProgram.setUniform('aspectRatio', simWidth/simHeight);
         colorSplatProgram.setUniform('radius', radius);
         colorSplatProgram.setUniform('waveformTex', waveformTex);
-        colorSplatProgram.setUniform('u_rms', p.rmsOutput);
+        colorSplatProgram.setUniform('u_rms', p.rmsOutput != null ? p.rmsOutput : 0.0);
         dye[1].begin();
         p.quad(-1, -1, 1, -1, 1, 1, -1, 1);
         dye[1].end();
