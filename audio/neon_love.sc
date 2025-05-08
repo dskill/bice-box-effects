@@ -112,8 +112,6 @@
         SendReply.kr(kr_impulse, '/fft_data');
         SendReply.kr(kr_impulse, '/rms');
 
-        // Example custom message for visuals
-        SendReply.kr(kr_impulse, '/neonLoveData', [intensity, speed]);
 
         // Output the effect in stereo
         Out.ar(out, [finalSig, finalSig]);
@@ -121,14 +119,8 @@
 
     "Effect SynthDef added".postln;
 
-    // Free any existing OSCdef for the custom message and re-create it
-    OSCdef(\neonLoveData).free;
-    OSCdef(\neonLoveData, { |msg|
-        // The incoming message: ['/neonLoveData', <time>, <senderID>, intensity, speed]
-        var intensity = msg[3];
-        var speed = msg[4];
-        ~o.sendMsg(\neonLoveData, intensity, speed);
-    }, '/neonLoveData', s.addr);
+ 
+    
 
     // Launch the effect
     fork {
