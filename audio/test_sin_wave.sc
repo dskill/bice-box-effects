@@ -4,6 +4,7 @@
         // START USER EFFECT CODE
         var sig, final_sig;
         var phase, trig, partition, kr_impulse;
+        var chain_out;
 
         sig = In.ar(in_bus); 
         final_sig = SinOsc.ar(freq) * 0.2;
@@ -20,8 +21,12 @@
         BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(final_sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
+        // FFT Analysis (on the output signal)
+        chain_out = FFT(~fft_buffer_out, final_sig, wintype: 1);
+
         // send data as soon as it's available
         SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
+        SendReply.kr(kr_impulse, '/fft_data');
 
         Out.ar(out, [final_sig,final_sig]);
     }).add;
