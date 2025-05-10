@@ -21,7 +21,9 @@ precision highp float;
 // varying vec2 vTexCoord; // Commented out
 uniform vec2 u_resolution;
 uniform float u_time;
-uniform vec2 u_mouse; // Added for mouse input
+uniform vec2 u_mouse;
+uniform sampler2D u_waveform;
+uniform float u_rms;
 
 mat2 Rot(float a) {
     float c = cos(a), s = sin(a);
@@ -36,17 +38,17 @@ vec3 pal(in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d) {
 void main() {
     vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
     vec2 ms = (u_mouse - 0.5 * u_resolution.xy) / u_resolution.y;
+    float waveformVal = texture2D(u_waveform, vec2(clamp(uv.x + 0.5, 0.0, 1.0), 0.5)).x * 2.0 - 1.0;
+    ms.x += waveformVal * 0.3;
     
-    // change me! (and uncomment for loop stuff below)
-    float A = 1.;    // -1. // 0.
-    float r = 0.3;   // 0.6
-    float th = 0.02; // 0.12
+    float A = mix(-1.0, 1.0, u_rms);    // -1. // 0.
+    float r = mix(0.2, 1.5, u_rms);   // 0.6
+    float th = mix(0.01, 0.1, u_rms); // 0.12
     
     vec2 dir = uv - ms;
     float a = atan(dir.x, dir.y);
     float s = 0.;
     
-    // n is higher than it needs to be but works fine
     const float n_val_for_calc = 20.0; // For calculations where 'n' was used
     const int num_loop_iterations = 20; // For the loop itself
 
@@ -77,9 +79,9 @@ void main() {
 
 const sketch = function (p) {
     let shader;
-    // waveformTex is no longer needed for this shader
-    // p.waveform1 = []; // No longer needed
-    // p.rmsOutput = 0; // No longer needed
+    let waveformTex;
+    p.waveform1 = [];
+    p.rmsOutput = 0;
 
     p.preload = () => {
         // Shader creation moved to setup()
@@ -89,67 +91,9 @@ const sketch = function (p) {
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
         
         shader = p.createShader(vertexShader, fragmentShader);
-
-        console.log('[DEBUG] Shader object immediately after p.createShader:', shader);
-
-        if (shader && shader._renderer && shader._renderer.GL) {
-            const gl = shader._renderer.GL;
-            let shadersCompiled = true;
-
-            // Check Vertex Shader
-            if (shader._vertShader && shader._vertShader !== -1 && typeof shader._vertShader === 'object') {
-                console.log('[DEBUG] Vertex shader object appears valid:', shader._vertShader);
-                if (!gl.getShaderParameter(shader._vertShader, gl.COMPILE_STATUS)) {
-                    shadersCompiled = false;
-                    console.error('Vertex Shader Compilation Error:', gl.getShaderInfoLog(shader._vertShader));
-                } else {
-                    console.log('[DEBUG] Vertex shader compiled successfully.');
-                    let vsLog = gl.getShaderInfoLog(shader._vertShader);
-                    if (vsLog) console.warn('Vertex Shader Log (may contain warnings/info):', vsLog);
-                }
-            } else {
-                shadersCompiled = false;
-                console.error('[DEBUG] Vertex shader object (shader._vertShader) is invalid or -1. Value:', shader._vertShader);
-            }
-
-            // Check Fragment Shader
-            if (shader._fragShader && shader._fragShader !== -1 && typeof shader._fragShader === 'object') {
-                console.log('[DEBUG] Fragment shader object appears valid:', shader._fragShader);
-                if (!gl.getShaderParameter(shader._fragShader, gl.COMPILE_STATUS)) {
-                    shadersCompiled = false;
-                    console.error('Fragment Shader Compilation Error:', gl.getShaderInfoLog(shader._fragShader));
-                } else {
-                    console.log('[DEBUG] Fragment shader compiled successfully.');
-                    let fsLog = gl.getShaderInfoLog(shader._fragShader);
-                    if (fsLog) console.warn('Fragment Shader Log (may contain warnings/info):', fsLog);
-                }
-            } else {
-                shadersCompiled = false;
-                console.error('[DEBUG] Fragment shader object (shader._fragShader) is invalid or -1. Value:', shader._fragShader);
-            }
-
-            // Check Program Linking
-            if (shadersCompiled && shader.program && shader.program !== 0 && typeof shader.program === 'object') {
-                console.log('[DEBUG] Shader program object appears valid:', shader.program);
-                if (!gl.getProgramParameter(shader.program, gl.LINK_STATUS)) {
-                    console.error('Shader Program Linking Error:', gl.getProgramInfoLog(shader.program));
-                } else {
-                    console.log('[DEBUG] Shader program linked successfully.');
-                    let programLog = gl.getProgramInfoLog(shader.program);
-                    if (programLog) {
-                        console.warn('Program Link Log (may contain warnings/info):', programLog);
-                    }
-                }
-            } else if (shadersCompiled) { // Shaders might have compiled but program object is bad
-                 console.error('[DEBUG] Shader program object (shader.program) is invalid (0, null, or not an object) despite individual shaders potentially compiling. Value:', shader.program);
-            } else { // Shaders did not compile
-                console.error('[DEBUG] Shader program linking not attempted or failed due to compilation errors in vertex or fragment shaders.');
-            }
-
-        } else {
-            console.error('[DEBUG] Shader object, its renderer, or GL context is not available. Cannot check compilation/linking. Shader object:', shader);
-        }
-        
+        waveformTex = p.createGraphics(512, 1, p.WEBGL);
+        waveformTex.pixelDensity(1);
+        // waveformTex.noSmooth();
         p.frameRate(60);
         p.noStroke();
     };
@@ -157,29 +101,26 @@ const sketch = function (p) {
     p.draw = () => {
         p.background(0);
 
-        // Waveform generation and texture update logic is no longer needed
-        // if (p.waveform1.length === 0) {
-        //    for (let j = 0; j < 512; j++) { 
-        //        p.waveform1[j] = Math.sin(p.frameCount * 0.01 + j * 0.1) * 0.5;
-        //    }
-        // }
-        // waveformTex.loadPixels();
-        // for (let j = 0; j < p.waveform1.length && j < 512; j++) { 
-        //     let val = (p.waveform1[j] * 0.5 + 0.5) * 255.0;
-        //     val = Math.max(0, Math.min(255, val));
-        //     waveformTex.pixels[j * 4 + 0] = val;
-        //     waveformTex.pixels[j * 4 + 1] = val;
-        //     waveformTex.pixels[j * 4 + 2] = val;
-        //     waveformTex.pixels[j * 4 + 3] = 255;
-        // }
-        // waveformTex.updatePixels();
+        // Fill waveformTex from p.waveform1
+        if (p.waveform1.length === 0) {
+            p.waveform1 = new Array(512).fill(0).map((_, i) => Math.sin(i*0.1)*0.5);
+        }
+        waveformTex.loadPixels();
+        for (let i = 0; i < p.waveform1.length; i++) {
+            let val = (p.waveform1[i]*.5 +.5) * 255.0;
+            waveformTex.pixels[i * 4] = val;
+            waveformTex.pixels[i * 4 + 1] = val;
+            waveformTex.pixels[i * 4 + 2] = val;
+            waveformTex.pixels[i * 4 + 3] = 255;
+        }
+        waveformTex.updatePixels();
 
         p.shader(shader);
         shader.setUniform('u_resolution', [p.width, p.height]);
         shader.setUniform('u_time', p.millis() / 1000.0);
-        shader.setUniform('u_mouse', [p.mouseX, p.height - p.mouseY]); // Pass mouse coords, flipping Y
-        // shader.setUniform('u_waveform', waveformTex); // No longer used
-        // shader.setUniform('u_rms', p.rmsOutput); // No longer used
+        shader.setUniform('u_mouse', [p.mouseX, p.height - p.mouseY]);
+        shader.setUniform('u_waveform', waveformTex);
+        shader.setUniform('u_rms', p.rmsOutput != null ? p.rmsOutput : 0.0);
         
         p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
     };
