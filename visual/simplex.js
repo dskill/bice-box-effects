@@ -33,7 +33,7 @@ void main() {
     // Center on mouse
     vec2 center = u_mouse;
     // Raymarch 10 steps
-    for(int j = 0; j < 30; ++j) {
+    for(int j = 0; j < 20; ++j) {
         i = float(j);
         // Compute raymarch point from raymarch distance and ray direction
         vec3 p = z * normalize(vec3(I - center, 0.0) - vec3(u_resolution.x/2.0, u_resolution.y/2.0, u_resolution.y/2.0));
