@@ -1,5 +1,9 @@
 // from https://www.shadertoy.com/view/wctGz8
 // Created by Xor in 2025-05-09
+
+const simWidth = 256;
+const simHeight = 256;
+
 const vertexShader = `
     attribute vec3 aPosition;
     void main() {
@@ -28,11 +32,11 @@ void main() {
     float d = 0.0;
     // Center on mouse
     vec2 center = u_mouse;
-    // Raymarch 50 steps
-    for(int j = 0; j < 10; ++j) {
+    // Raymarch 10 steps
+    for(int j = 0; j < 30; ++j) {
         i = float(j);
         // Compute raymarch point from raymarch distance and ray direction
-        vec3 p = z * normalize(vec3(I - center, 0.0) - vec3(u_resolution.x, u_resolution.y, u_resolution.y/2.0));
+        vec3 p = z * normalize(vec3(I - center, 0.0) - vec3(u_resolution.x/2.0, u_resolution.y/2.0, u_resolution.y/2.0));
         p.z -= u_time + u_rms * 100.0;
         
 
@@ -51,7 +55,8 @@ void main() {
 `;
 
 const sketch = function (p) {
-    let shader;
+    let renderBuffer;
+    let bufferShader;
     let accumulatedRMS = 0;
     p.rmsOutput = 0;
 
@@ -61,34 +66,51 @@ const sketch = function (p) {
 
     p.setup = () => {
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
-        shader = p.createShader(vertexShader, fragmentShader);
+        
+        renderBuffer = p.createGraphics(simWidth, simHeight, p.WEBGL);
+        bufferShader = renderBuffer.createShader(vertexShader, fragmentShader);
+        
         p.frameRate(60);
-        p.noStroke();
+        p.noStroke(); // For main canvas
+        renderBuffer.noStroke(); // For buffer
     };
 
     p.draw = () => {
-        p.background(0);
         // Simulate RMS for testing if not present
         if (!p.rmsOutput || p.rmsOutput === 0) {
             p.rmsOutput = 0;
         }
         accumulatedRMS += (p.rmsOutput != null ? p.rmsOutput : 0.0) * 0.1; // scale for visual effect
-        console.log('accumulatedRMS:', accumulatedRMS);
+        // console.log('accumulatedRMS:', accumulatedRMS); // Commented out for less console noise
         let scrollValue = accumulatedRMS;
         // If RMS is not changing, use u_time for scroll
         if (p.rmsOutput === 0) {
             scrollValue = p.millis() / 1000.0;
         }
-        p.shader(shader);
-        shader.setUniform('u_resolution', [p.width, p.height]);
-        shader.setUniform('u_time', p.millis() / 1000.0);
-        shader.setUniform('u_rms', scrollValue);
-        shader.setUniform('u_mouse', [p.mouseX, p.height - p.mouseY]);
-        p.quad(-1, 1, 1, 1, 1, -1, -1, -1);
+
+        // Calculate mouse coordinates scaled to the buffer resolution
+        let mx = p.mouseX * (simWidth / p.width);
+        let my = (p.height - p.mouseY) * (simHeight / p.height); // Invert Y for GLSL
+
+        // Set uniforms for the buffer shader
+        renderBuffer.background(0);
+        renderBuffer.shader(bufferShader);
+        bufferShader.setUniform('u_resolution', [simWidth, simHeight]);
+        bufferShader.setUniform('u_time', p.millis() / 1000.0);
+        bufferShader.setUniform('u_rms', scrollValue);
+        bufferShader.setUniform('u_mouse', [mx, my]);
+        
+        // Draw into the buffer
+        renderBuffer.quad(-1, -1, 1, -1, 1, 1, -1, 1);
+
+        // Draw the buffer to the main canvas
+        p.background(0); // Clear main canvas
+        p.image(renderBuffer, -p.width/2, -p.height/2, p.width, p.height);
     };
 
     p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
+        // The renderBuffer size remains fixed at simWidth x simHeight
     };
 };
 
