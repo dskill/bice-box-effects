@@ -1,5 +1,5 @@
-// from https://www.shadertoy.com/view/wctGz8
-// Created by Xor in 2025-05-09
+// Inspired by https://www.shadertoy.com/view/tXlXDX
+// Created by Xor, adapted for p5.js by Drew, 2024-06-10
 const vertexShader = `
     attribute vec3 aPosition;
     void main() {
@@ -12,41 +12,50 @@ const fragmentShader = `
 precision highp float;
 #endif
 
-// "Simplex" by @XorDev
-// Adapted for p5.js GLSL ES 1.0
+// "Ripples" by @XorDev, adapted for p5.js GLSL ES 1.0
+// https://www.shadertoy.com/view/tXlXDX
 
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_rms;
 uniform vec2 u_mouse;
 
+// GLSL ES 1.0 does not have tanh, so we implement it
+float tanh_f(float x) {
+    float e1 = exp(x);
+    float e2 = exp(-x);
+    return (e1 - e2) / (e1 + e2);
+}
+vec4 tanh_v4(vec4 v) {
+    return vec4(tanh_f(v.x), tanh_f(v.y), tanh_f(v.z), tanh_f(v.w));
+}
+
 void main() {
-    vec2 I = gl_FragCoord.xy;
-    vec4 O = vec4(0.0);
-    float i = 0.0;
-    float z = 0.0;
-    float d = 0.0;
+    vec2 u = gl_FragCoord.xy;
+    vec4 o = vec4(0.0);
+    float i = 0.0, d = 0.0, s = 0.0;
     // Center on mouse
     vec2 center = u_mouse;
-    // Raymarch 50 steps
-    for(int j = 0; j < 10; ++j) {
-        i = float(j);
-        // Compute raymarch point from raymarch distance and ray direction
-        vec3 p = z * normalize(vec3(I - center, 0.0) - vec3(u_resolution.x, u_resolution.y, u_resolution.y/2.0));
-        p.z -= u_time + u_rms * 100.0;
-        
-
-        // Temporary vector for sine waves
-        vec3 v = cos(p) - sin(p).yzx;
-        // Scroll forward based on accumulated RMS
-        // Compute distance for sine pattern (and step forward)
-        z += d = 1e-4 + 0.5 * length(max(v, v.yzx * 0.2));
-        // Use position for coloring
-        O.rgb += (cos(p) + 1.2) / d;
+    // Raymarch 100 steps
+    for (int j = 0; j < 100; ++j) {
+        i = float(j) + 1.0;
+        vec3 p = d * normalize(vec3(u + u - center * 2.0, 0.0) - vec3(u_resolution.x, u_resolution.y, u_resolution.x));
+        // Inner loop for ripples
+        s = 0.1;
+        for (int k = 0; k < 5; ++k) { // Unroll s loop for GLSL ES 1.0 compatibility
+            if (s < 1.0) {
+                p -= dot(sin(p * s * 16.0), vec3(0.01)) / s;
+                float angle = 0.3 * u_time + float(j) * 1.0;
+                mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+                p.xz = rot * p.xz;
+                s += s;
+            }
+        }
+        d += s = 0.01 + abs(p.y);
+        o += (1.0 + cos(d + vec4(4.0, 2.0, 1.0, 0.0))) / s;
     }
-    // Tonemapping
-    O /= O + 1e3;
-    gl_FragColor = O;
+    o = tanh_v4(o / 6000.0);
+    gl_FragColor = o;
 }
 `;
 
@@ -73,7 +82,6 @@ const sketch = function (p) {
             p.rmsOutput = 0;
         }
         accumulatedRMS += (p.rmsOutput != null ? p.rmsOutput : 0.0) * 0.1; // scale for visual effect
-        console.log('accumulatedRMS:', accumulatedRMS);
         let scrollValue = accumulatedRMS;
         // If RMS is not changing, use u_time for scroll
         if (p.rmsOutput === 0) {
