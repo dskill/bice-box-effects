@@ -145,6 +145,82 @@ for (int iter = 0; iter < num_loop_iterations; ++iter) {
 
 - **Declaration:** Varyings must be declared in both vertex and fragment shaders with the same name and type if they are to pass data.
 - **Usage:** If a varying is declared but not used in the fragment shader, it might be optimized away. While not always an error, it can sometimes lead to linking warnings or unexpected behavior in some drivers.
-- **Best Practice:** If `vTexCoord` (or any other varying) is not used in the fragment shader, it's cleaner to comment it out or remove its declaration and assignment from both shaders to avoid potential confusion or subtle issues.
+- **Best Practice:** If `vTexCoord` (or any other varying) is not used in the fragment shader, it's cleaner to comment it out or remove its declaration and assignment from both shaders to avoid potential confusion or subtle issues. This is especially important for `vTexCoord` if you intend to use it for fragment coordinate calculations (see Section 5).
+
+## 5. Handling Fragment Coordinates with `vTexCoord` (Recommended)
+
+While `gl_FragCoord` provides the window-relative coordinates of the current fragment, it's often more robust and flexible to derive spatial information within your fragment shader from texture coordinates passed as a varying from the vertex shader. This approach gives you more explicit control and can avoid inconsistencies, especially when dealing with offscreen buffers or different rendering setups.
+
+**Rationale:**
+- **Explicit Control:** You define the coordinate system precisely.
+- **Consistency:** Aligns with standard texture mapping practices.
+- **p5.js Primitives:** p5.js automatically supplies texture coordinates for primitives like `quad()`, making this a natural fit. For a standard `quad(-1, -1, 1, -1, 1, 1, -1, 1)`, `aTexCoord` will range from (0,0) to (1,1), typically with (0,0) at the bottom-left.
+- **Portability:** Can reduce surprises related to `gl_FragCoord.y` orientation (top vs. bottom origin) which can vary between OpenGL and WebGL contexts or how buffers are handled.
+
+### 5.1. Vertex Shader Setup
+
+The vertex shader needs to accept `aTexCoord` (usually supplied by p5.js for its geometry) and pass it to the fragment shader via a varying `vTexCoord`.
+
+```glsl
+// Vertex Shader
+attribute vec3 aPosition;
+attribute vec2 aTexCoord; // Input texture coordinate (e.g., from p5.js quad)
+varying vec2 vTexCoord;   // Varying to pass to fragment shader
+
+void main() {
+    // Standard projection for p5.js WEBGL mode
+    gl_Position = vec4(aPosition, 1.0);
+    
+    // Pass the texture coordinate to the fragment shader
+    vTexCoord = aTexCoord; 
+}
+```
+
+### 5.2. Fragment Shader Usage
+
+The fragment shader receives `vTexCoord` and can use it as the basis for its spatial calculations. `vTexCoord` will typically be in the `[0, 1]` range.
+
+```glsl
+// Fragment Shader
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform vec2 u_resolution; // Canvas/buffer resolution
+uniform float u_time;     // Time uniform
+varying vec2 vTexCoord;   // Received from vertex shader (typically [0,1])
+
+void main() {
+    // vTexCoord is in [0,1] range. For a standard p5 quad, 
+    // (0,0) is often bottom-left, (1,1) is top-right.
+    // (0.5, 0.5) is the center.
+    vec2 uv = vTexCoord;
+
+    // Example 1: Direct use (colors from bottom-left origin)
+    // gl_FragColor = vec4(uv.x, uv.y, 0.0, 1.0); // Red increases right, Green increases up
+
+    // Example 2: Centered coordinates for visualization (black in center)
+    // This makes coordinates range from [-0.5, 0.5] around the center.
+    // vec2 centered_uv_for_viz = uv - 0.5; 
+    // gl_FragColor = vec4(abs(centered_uv_for_viz.x * 2.0), abs(centered_uv_for_viz.y * 2.0), 0.0, 1.0);
+
+    // Example 3: Transforming vTexCoord to a custom coordinate system
+    // (Similar to the Singularity.js example after its vTexCoord update)
+    // Create coordinates centered at (0,0), ranging roughly from -1 to 1, with aspect correction.
+    vec2 p = (uv - 0.5) * 2.0; // Range [-1, 1]
+    p.x *= u_resolution.x / u_resolution.y; // Aspect ratio correction
+    // p /= 0.7; // Further scaling if needed by a specific effect
+
+    // Your shader logic would then use 'uv' or 'p' or another derived coordinate set.
+    // For this example, let's output based on 'p'
+    float brightness = 1.0 - smoothstep(0.0, 1.0, length(p)); // Bright in center, dark at edges
+    gl_FragColor = vec4(brightness, brightness, brightness, 1.0);
+
+    // Original Singularity.js debug output, which should show black at center:
+    // gl_FragColor = vec4(abs(vTexCoord.x - 0.5), abs(vTexCoord.y - 0.5), 0.0, 1.0);
+}
+```
+
+By adopting this `vTexCoord`-based approach, you gain more predictable control over your shader's spatial awareness.
 
 By following these guidelines, you can streamline your p5.js shader development and more effectively debug issues when they arise. 

@@ -6,8 +6,12 @@ const simHeight = 256;
 
 const vertexShader = `
     attribute vec3 aPosition;
+    attribute vec2 aTexCoord;
+    varying vec2 vTexCoord;
+
     void main() {
         gl_Position = vec4(aPosition, 1.0);
+        vTexCoord = aTexCoord;
     }
 `;
 
@@ -23,20 +27,28 @@ uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_rms;
 uniform vec2 u_mouse;
+varying vec2 vTexCoord;
 
 void main() {
-    vec2 I = gl_FragCoord.xy;
+    vec2 uv_norm = vTexCoord;
+    vec2 I_pixel = uv_norm * u_resolution.xy;
+
     vec4 O = vec4(0.0);
     float i = 0.0;
     float z = 0.0;
     float d = 0.0;
     // Center on mouse
-    vec2 center = u_mouse;
+    vec2 center = u_mouse * u_resolution.xy - 0.5 * u_resolution.xy;
+
+    // Calculate initial ray direction (once, before the loop)
+    vec3 initial_ray_direction_base = vec3(I_pixel - center, 0.0) -  0.5 * vec3(u_resolution.x, u_resolution.y, u_resolution.y);
+    vec3 normalized_initial_ray_direction = normalize(initial_ray_direction_base);
+
     // Raymarch 10 steps
     for(int j = 0; j < 20; ++j) {
         i = float(j);
         // Compute raymarch point from raymarch distance and ray direction
-        vec3 p = z * normalize(vec3(I - center, 0.0) - vec3(u_resolution.x/2.0, u_resolution.y/2.0, u_resolution.y/2.0));
+        vec3 p = z * normalized_initial_ray_direction;
         p.z -= u_time + u_rms * 100.0;
         
 
@@ -89,8 +101,8 @@ const sketch = function (p) {
         }
 
         // Calculate mouse coordinates scaled to the buffer resolution
-        let mx = p.mouseX * (simWidth / p.width);
-        let my = (p.height - p.mouseY) * (simHeight / p.height); // Invert Y for GLSL
+        let mx = p.mouseX / p.width;//* (simWidth / p.width);
+        let my = (p.height - p.mouseY)/p.height;// * (simHeight / p.height); // Invert Y for GLSL
 
         // Set uniforms for the buffer shader
         renderBuffer.background(0);

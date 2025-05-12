@@ -6,8 +6,12 @@ const simHeight = 256;
 
 const vertexShader = `
     attribute vec3 aPosition;
+    attribute vec2 aTexCoord;
+    varying vec2 vTexCoord;
+
     void main() {
         gl_Position = vec4(aPosition, 1.0);
+        vTexCoord = aTexCoord;
     }
 `;
 
@@ -24,6 +28,7 @@ uniform float u_time;
 uniform float u_rms;
 uniform float u_accumulatedRms;
 uniform vec2 u_mouse;
+varying vec2 vTexCoord;
 
 // GLSL ES 1.0 does not have tanh, so we implement it
 float tanh_f(float x) {
@@ -36,7 +41,7 @@ vec4 tanh_v4(vec4 v) {
 }
 
 void main() {
-    vec2 u = gl_FragCoord.xy; // u is pixel coordinate, equivalent to Shadertoy's U
+    vec2 uv_norm = vTexCoord;
     vec4 o = vec4(0.0);
     float d = 0.0; // Represents D from Shadertoy (accumulated distance)
 
@@ -45,7 +50,7 @@ void main() {
     for (int j = 0; j < 30; ++j) {
         // Original ray direction: vec3(2.0*u - u_resolution.xy, -u_resolution.x)
         // Which is vec3(2.0*u.x - u_resolution.x, 2.0*u.y - u_resolution.y, -u_resolution.x)
-        vec3 p_direction = vec3(2.0*u.x - u_resolution.x, 2.0*u.y - u_resolution.y, -u_resolution.x);
+        vec3 p_direction = vec3((2.0*uv_norm - 1.0) * u_resolution.xy, -u_resolution.x);
         vec3 p = d * normalize(p_direction);
 
         // Inner loop for ripples
