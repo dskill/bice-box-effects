@@ -2,6 +2,6 @@
   "name": "Phaser 2D",
   "description": "A 2D phaser effect where X controls the number of stages and Y controls the LFO frequency.",
   "audio": "audio/phaser_2d.sc",
-  "visual": "visual/squiggles.js",
+  "visual": "visual/phaser_2d.js",
   "curated": true
 }
