@@ -135,15 +135,35 @@ void main() {
 
     float gridRoaming = 0.25;
     if (uv.y < pointOfInflection) {
-        float distance = length(uv);
-        float spaceBetweenGridSegments = sin(uv.y + u_time) + 2.0 / (abs(uv.y - pointOfInflection) + 0.05);
-        uv.y = spaceBetweenGridSegments;
-        
-        float gridSegmentWidthMultiplier = abs(uv.y);
-        uv.x *= -1.0 * gridSegmentWidthMultiplier - sin(distance * 0.5);
-        
-        float lineIntensity = -uv.y * 0.005;
-        float gridVal = grid(uv, lineIntensity, u_gridSpeed*2.0, lineGlow, gridRoaming);
+        // uv is original screen-space uv here.
+        // waveNorm is already calculated: sampleWaveform(uv, distanceFromCamera) * u_synthDepth;
+        // u_synthDepth controls the amplitude of waveNorm.
+
+        // 1. Calculate base for grid's y-coordinate with perspective
+        // This term makes lines appear closer together towards the horizon.
+        // (abs(uv.y - pointOfInflection) + 0.05) goes from ~abs(-1 - baseHorizon) to 0.05
+        // So perspectiveSpacing is larger at bottom, smaller near horizon.
+        float perspectiveSpacing = 2.0 / (abs(uv.y - pointOfInflection) + 0.1); // Original was 0.05, 0.1 avoids extreme values
+
+        // 2. Create the grid's uv coordinates, starting with screen uv.
+        vec2 gridCoords = uv; 
+
+        // 3. Define gridCoords.y: base perspective + waveform displacement.
+        // waveNorm is already scaled by u_synthDepth.
+        gridCoords.y = perspectiveSpacing + waveNorm; 
+                                           
+        // 4. Handle gridCoords.x: this part creates the converging lines effect.
+        // It uses the magnitude of gridCoords.y and distance from screen center.
+        float distanceToCenter = length(uv); // Based on original screen uv for consistent perspective distortion.
+        float gridLineWidthFactor = abs(gridCoords.y); 
+        // Modify gridCoords.x for perspective convergence, with a slight animation on the curve.
+        // The original uv.x (from gridCoords.x) is scaled.
+        gridCoords.x *= (-1.0 * gridLineWidthFactor - sin(distanceToCenter * 0.5 + u_time * 0.1)); 
+
+        // 5. Calculate line intensity and draw grid
+        // Intensity can be based on the new 'height' of the grid line.
+        float lineIntensity = -gridCoords.y * 0.005; 
+        float gridVal = grid(gridCoords, lineIntensity, u_gridSpeed*2.0, lineGlow, gridRoaming);
         backgroundColor = mix(backgroundColor, lineColor, gridVal);
     }
     else {
