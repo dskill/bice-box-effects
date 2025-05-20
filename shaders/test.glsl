@@ -1,30 +1,53 @@
-/*
-    Playing with turbulence and translucency from
-    @Xor's recent shaders, e.g.
-        https://www.shadertoy.com/view/wXjSRt
-        https://www.shadertoy.com/view/wXSXzV
-        
+        // Assuming iChannel0 is a 1D texture with waveform data
+        // UV.x goes from 0.0 to 1.0 across the waveform
+        float waveformSample(float uv_x) {
+            // texelFetch is good for precise sample access, texture for interpolated access
+            // Using texture() for simplicity here, might need texelFetch for raw samples
+            // The .r component is assumed to hold the waveform value.
+            return texture(iChannel0, vec2(uv_x, 0.5)).r; 
+        }
+/* This animation is the material of my first youtube tutorial about creative 
+   coding, which is a video in which I try to introduce programmers to GLSL 
+   and to the wonderful world of shaders, while also trying to share my recent 
+   passion for this community.
+                                       Video URL: https://youtu.be/f4s1h2YETNY
 */
 
-void mainImage(out vec4 o, vec2 u) {
-    float i,d,s,t=iTime*.2;
-    vec3  p = iResolution; 
-    u = (u-p.xy/2.)/p.y;
+//https://iquilezles.org/articles/palettes/
+vec3 palette( float t ) {
+    vec3 a = vec3(0.5, 0.5, 0.5);
+    vec3 b = vec3(0.5, 0.5, 0.5);
+    vec3 c = vec3(1.0, 1.0, 1.0);
+    vec3 d = vec3(0.263,0.416,0.557);
+
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+//https://www.shadertoy.com/view/mtyGWy
+void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
+    vec2 uv0 = uv;
+    vec3 finalColor = vec3(0.0);
     
-    for(o*=i;
-        i++<1e2;
-        d += s = .03 + abs(.4-abs(p.x))*.3,
-        o += 1. /  s)
+    float waveform = waveformSample( fragCoord.x/iResolution.x);
+
+    for (float i = 0.0; i < 4.0; i++) {
+        uv.y += waveform * .4;
+
+        uv = fract(uv * 1.5) - 0.5;
+
+        float d = length(uv) * exp(-length(uv0));
+        vec3 col = palette(length(uv0) + i*.4 + iTime*.4);
+    
+
+        d = sin(d*8. + iTime)/8.;
+        d = abs(d);
+
+        d = pow(0.01 / d, 1.2);
+
+        finalColor += col * d;
+        uv.y += sin(2.0*waveform) * 0.3;
+    }
         
-        for (s = .05, p = vec3(u* d,d+t);
-             s < 1.;
-             p.yz *= mat2(cos(.01*t+vec4(0,33,11,0))),
-             p += cos(t+p.yzx*2.)*.1,
-             p += abs(dot(sin(6.*t+p.z+p * s * 32.), vec3(.006))) / s,
-             s += s);
-             
-    o *= mix(vec4(1,2,4,0), vec4(4,2,1,0),
-             smoothstep(.3, -.3, u.x));
-         
-    o = tanh(o*o / 1e7);
+    fragColor = vec4(finalColor, 1.0);
 }
