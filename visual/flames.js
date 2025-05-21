@@ -278,7 +278,7 @@ const sketch = (p) => {
     let dyeProgram, colorSplatProgram; // Add new programs
 
     p.setup = () => {
-        p.setAttributes('version', 1); // Request WebGL1
+        //p.setAttributes('version', 1); // Request WebGL1
         p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL);
         p.pixelDensity(1);
 
