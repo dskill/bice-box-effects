@@ -31,7 +31,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     
     float waveform = waveformSample( fragCoord.x/iResolution.x);
 
-    for (float i = 0.0; i < 1.0; i++) {
+    for (float i = 0.0; i < 4.0; i++) {
         uv.y += waveform * .4;
 
         uv = fract(uv * 1.5) - 0.5;
