@@ -4,7 +4,7 @@
             // texelFetch is good for precise sample access, texture for interpolated access
             // Using texture() for simplicity here, might need texelFetch for raw samples
             // The .r component is assumed to hold the waveform value.
-            return texture(iChannel0, vec2(uv_x, 0.5)).r * 255.0; 
+            return texture(iChannel0, vec2(uv_x, 0.5)).r*.5-0.5; 
         }
 /* This animation is the material of my first youtube tutorial about creative 
    coding, which is a video in which I try to introduce programmers to GLSL 
