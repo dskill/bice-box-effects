@@ -1,111 +1,126 @@
-// CCO: Colorful underwater bubbles II
-//  Recoloring of earlier shader + spherical shading
+#define iTime iChannelTime[0]
+float det=.005, maxdist=50., pi=3.1416, gl=0.;
+vec2 id;
 
-#define TIME        iTime
-#define RESOLUTION  iResolution
-#define PI          3.141592654
-#define TAU         (2.0*PI)
-const float MaxIter = 12.0;
 
-// License: Unknown, author: Unknown, found: don't remember
-float hash(float co) {
-  return fract(sin(co*12.9898) * 13758.5453);
+float hash12(vec2 p)
+{
+    p*=1000.;
+    vec3 p3  = fract(vec3(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
-// License: Unknown, author: Unknown, found: don't remember
-float hash(vec2 co) {
-  return fract(sin(dot(co.xy ,vec2(12.9898,58.233))) * 13758.5453);
+
+mat2 rot(float a)
+{
+    float s=sin(a), c=cos(a);
+    return mat2(c,s,-s,c);
 }
 
-// License: MIT OR CC-BY-NC-4.0, author: mercury, found: https://mercury.sexy/hg_sdf/
-vec2 mod2(inout vec2 p, vec2 size) {
-  vec2 c = floor((p + size*0.5)/size);
-  p = mod(p + size*0.5,size) - size*0.5;
-  return c;
+float box(vec3 p, vec3 c)
+{
+    vec3 pc=abs(p)-c;
+    return length(max(vec3(0.),pc))-min(0.,max(pc.z,max(pc.x,pc.y)));
 }
 
-vec4 plane(vec2 p, float i, float zf, float z, vec3 bgcol) {
-  float sz = 0.5*zf;
-  vec2 cp = p;
-  vec2 cn = mod2(cp, vec2(2.0*sz, sz));
-  float h0 = hash(cn+i+123.4);
-  float h1 = fract(4483.0*h0);
-  float h2 = fract(8677.0*h0);
-  float h3 = fract(9677.0*h0);
-  float h4 = fract(7877.0*h0);
-  float h5 = fract(9967.0*h0);
-  if (h4 < 0.5) {
-    return vec4(0.0);
-  }
-  float fi = exp(-0.25*max(z-2.0, 0.0));
-  float aa = mix(0.0125, 2.0/RESOLUTION.y, fi); 
-  float r  = sz*mix(0.1, 0.475, h0*h0);
-  float amp = mix(0.5, 0.5, h3)*r;
-  cp.x -= amp*sin(mix(3.0, 0.25, h0)*TIME+TAU*h2);
-  cp.x += 0.95*(sz-r-amp)*sign(h3-0.5)*h3;
-  cp.y += 0.475*(sz-2.0*r)*sign(h5-0.5)*h5;
-  float d = length(cp)-r;
-  if (d > aa) {
-    return vec4(0.0);
-  }
-  vec3 ocol = (0.5+0.5*sin(vec3(0.0, 1.0, 2.0)+h1*TAU));
-  vec3 icol = sqrt(ocol);
-  ocol *= 1.5;
-  icol *= 2.0;
-  const vec3 lightDir = normalize(vec3(1.0, 1.5, 2.0));
-  float z2 = (r*r-dot(cp, cp));
-  vec3 col = ocol;
-  float t = smoothstep(aa, -aa, d);
-  if (z2 > 0.0) {
-    float z = sqrt(z2);
-    t *= mix(1.0, 0.8, z/r);
-    vec3 pp = vec3(cp, z);
-    vec3 nn = normalize(pp);
-    float dd= max(dot(lightDir, nn), 0.0);
-    
-    col = mix(ocol, icol, dd*dd*dd);
-  }
-  col *= mix(0.8, 1.0, h0);
-  col = mix(bgcol, col, fi);
-  return vec4(col, t);
+vec2 amod(vec2 p, float n, float off, out float i)
+{
+    float l=length(p)-off;
+    float at=atan(p.x,p.y)/pi*n*.5;
+    i=abs(floor(at));
+    float a=fract(at)-.5;
+    return vec2(a,l);
 }
 
-// License: Unknown, author: Claude Brezinski, found: https://mathr.co.uk/blog/2017-09-06_approximating_hyperbolic_tangent.html
-float tanh_approx(float x) {
-  //  Found this somewhere on the interwebs
-  //  return tanh(x);
-  float x2 = x*x;
-  return clamp(x*(27.0 + x2)/(27.0+9.0*x2), -1.0, 1.0);
+float ring(vec3 p,inout vec2 id)
+{
+    p.xy=amod(p.xy*rot(iTime*0.), 20., 2., id.x);
+    float h=max(0.,texture(iChannel0,vec2(.5+fract(id.x*.2+id.y*.1),0.)*.5).r*3.-.5);
+    h+=sin(iTime*10.+id.x)*.2;
+    float d=box(p+vec3(0.,-h*1.5,0.),vec3(.1,h,.1));
+    return d*.5;
 }
 
-vec3 effect(vec2 p, vec2 pp) {
-  const vec3 bgcol0 = vec3(0.1, 0.0, 1.0)*0.1; 
-  const vec3 bgcol1 = vec3(0.0, 0.4, 1.0)*0.6;
-  vec3 bgcol = mix(bgcol1, bgcol0, tanh_approx(1.5*length(p)));
-  vec3 col = bgcol;
-
-  for (float i = 0.0; i < MaxIter; ++i) {
-    const float Near = 4.0;
-    float z = MaxIter - i;
-    float zf = Near/(Near + MaxIter - i);
-    vec2 sp = p;
-    float h = hash(i+1234.5); 
-    sp.y += -mix(0.2, 0.3, h*h)*TIME*zf;
-    sp += h;
-    vec4 pcol = plane(sp, i, zf, z, bgcol);
-    col = mix(col, pcol.xyz, pcol.w);
-  }
-  col *= smoothstep(1.5, 0.5, length(pp));
-  col = clamp(col, 0.0, 1.0);
-  col = sqrt(col);
-  return col;
+float de(vec3 p)
+{
+    float d=100.,ii=0.;
+    p.xz*=rot(iTime);
+    p.yz*=rot(sin(iTime));
+    float r=4.;
+    vec2 ids;
+    for (float i=0.; i<r; i++)
+    {
+        p.xz*=rot(pi/r);
+        ids.y=i;
+        float r=ring(p,ids);
+        if (r<d)
+        {
+            d=r;
+            id=ids;
+        }
+    }
+    d=min(d,length(p)-1.5);
+    return d*.7;
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  vec2 q = fragCoord/RESOLUTION.xy;
-  vec2 p = -1. + 2. * q;
-  vec2 pp = p;
-  p.x *= RESOLUTION.x/RESOLUTION.y;
-  vec3 col = effect(p, pp);
-  fragColor = vec4(col, 1.0);
+vec3 normal(vec3 p)
+{
+    vec2 e=vec2(0.,det);
+    return normalize(vec3(de(p+e.yxx),de(p+e.xyx),de(p+e.xxy))-de(p));
+}
+
+
+vec3 march(vec3 from, vec3 dir)
+{
+    float d, td=0.;
+    vec3 p, col=vec3(0.);
+    for (int i=0; i<100; i++)
+    {
+        p=from+td*dir;
+        d=de(p);
+        if (d<det || td>maxdist) break;
+        td+=d;
+        gl+=.1/(10.+d*d*10.)*step(.7,hash12(id+floor(iTime*5.)));
+    }
+    if (d<det)
+    {
+        //id+=floor(iTime*5.);
+        vec3 colid=vec3(hash12(id),hash12(id+123.123),1.);
+        p-=dir*det;
+        vec3 n=normal(p);
+        vec2 e=vec2(0.,.05);
+        col=.1+max(0.,dot(-dir,n))*colid;
+        col*=.5+step(.7,hash12(id+floor(iTime*5.)));
+    } 
+    else
+    {
+        dir.xz*=rot(iTime*.5);
+        dir.yz*=rot(iTime*.25);
+        vec2 p2=abs(.5-fract(dir.yz));
+        float d2=100.,is=0.;
+        for(int i=0; i<10; i++)
+        {
+            p2=abs(p2*1.3)*rot(radians(45.))-.5;
+            float sh=length(max(vec2(0.),abs(p2)-.05));
+            if (sh<d2)
+            {
+                d2=sh;
+                is=float(i);
+            }
+        }
+        col+=smoothstep(.05,.0,d2)*fract(is*.1+iTime)*normalize(p+50.);
+    }
+    return col*mod(gl_FragCoord.y,4.)*.5+gl;
+}
+
+
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = (fragCoord-iResolution.xy*.5)/iResolution.y;
+    vec3 from = vec3(0.,0.,-8.);
+    vec3 dir = normalize(vec3(uv,.7));
+    vec3 col = march(from, dir);
+    fragColor = vec4(col,1.0);
 }
