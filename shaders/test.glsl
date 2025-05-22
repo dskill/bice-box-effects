@@ -75,7 +75,7 @@ vec3 march(vec3 from, vec3 dir)
 {
     float d, td=0.;
     vec3 p, col=vec3(0.);
-    for (int i=0; i<100; i++)
+    for (int i=0; i<10; i++)
     {
         p=from+td*dir;
         d=de(p);
