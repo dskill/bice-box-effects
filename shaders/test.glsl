@@ -1,53 +1,125 @@
-        // Assuming iChannel0 is a 1D texture with waveform data
-        // UV.x goes from 0.0 to 1.0 across the waveform
-        float waveformSample(float uv_x) {
-            // texelFetch is good for precise sample access, texture for interpolated access
-            // Using texture() for simplicity here, might need texelFetch for raw samples
-            // The .r component is assumed to hold the waveform value.
-            return texture(iChannel0, vec2(uv_x, 0.5)).r*.5-0.5; 
-        }
-/* This animation is the material of my first youtube tutorial about creative 
-   coding, which is a video in which I try to introduce programmers to GLSL 
-   and to the wonderful world of shaders, while also trying to share my recent 
-   passion for this community.
-                                       Video URL: https://youtu.be/f4s1h2YETNY
-*/
+// Created by David Gallardo - xjorma/2020
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0
 
-//https://iquilezles.org/articles/palettes/
-vec3 palette( float t ) {
-    vec3 a = vec3(0.5, 0.5, 0.5);
-    vec3 b = vec3(0.5, 0.5, 0.5);
-    vec3 c = vec3(1.0, 1.0, 1.0);
-    vec3 d = vec3(0.263,0.416,0.557);
+const int	nbBall = 8;
+const float ballRadius = 0.07;
+const float maxLateralSpeed = 1.;
+const float Tau = radians(360.);
+const float minPhaseSpeed = 2.1;
+const float maxPhaseSpeed = 3.2;
+const float sinAmplitude = 1.2;
+const vec3	drawColor = vec3(0.2,0.3,0.4);
 
-    return a + b*cos( 6.28318*(c*t+d) );
+// Hash without Sine, https://www.shadertoy.com/view/4djSRW
+float hash11(float p)
+{
+    p = fract(p * .1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return fract(p);
 }
 
-//https://www.shadertoy.com/view/mtyGWy
-void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
-    vec2 uv0 = uv;
-    vec3 finalColor = vec3(0.0);
+float sdCircle( vec2 p, float r )
+{
+    return length(p) - r;
+}
+
+float udSegment( in vec2 p, in vec2 a, in vec2 b )
+{
+    vec2 ba = b-a;
+    vec2 pa = p-a;
+    float h =clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+    return length(pa-h*ba);
+}
+
+float triangleSignal(float x, float f)
+{
+    f = 1. / f;
+    return (abs((f * x - 4. * floor(0.25 * f * x)) - 2.) - 1.) / f;
+}
+
+float smoothFilter(float d)
+{
+    float v = 2. / iResolution.y;
+    return smoothstep(v, -v, d);
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+	vec2	p = (2. * fragCoord - iResolution.xy) / iResolution.y;
+    float	ratio = iResolution.x / iResolution.y;
+    vec3	col = vec3(0);
     
-    float waveform = waveformSample( fragCoord.x/iResolution.x);
-
-    for (float i = 0.0; i < 1.0; i++) {
-        uv.y += waveform * .4;
-
-        uv = fract(uv * 1.5) - 0.5;
-
-        float d = length(uv) * exp(-length(uv0));
-        vec3 col = palette(length(uv0) + i*.4 + iTime*.4);
-    
-
-        d = sin(d*8. + iTime)/8.;
-        d = abs(d);
-
-        d = pow(0.01 / d, 1.2);
-
-        finalColor += col * d;
-        uv.y += sin(2.0*waveform) * 0.3;
+    // Compute and draw balls
+    vec2	ballArray[nbBall + 1];
+    for(int i = 0; i < nbBall; ++i)
+    {
+        float LateralSpeed = (hash11(float(i) * 1.2544) - 0.5) * 2. * maxLateralSpeed;
+        float phaseOffset = hash11(float(i) * 1.4482) * Tau;
+        float LateralOffset = hash11(float(i) * 1.9528) * (ratio * 2. - 2. * ballRadius);
+        float phaseSpeed = mix(minPhaseSpeed, maxPhaseSpeed, hash11(float(i) * 1.1273));
+        ballArray[i] = vec2(	triangleSignal(LateralOffset + LateralSpeed * iTime, ratio - ballRadius),
+                       			sinAmplitude * (abs(sin(phaseOffset + phaseSpeed * iTime)) - 0.5) 
+                           );
+        float a = smoothFilter(sdCircle( ballArray[i] - p , ballRadius));
+        col = mix(col, drawColor, a);           
     }
+    
+    // Sort Ball in X (Lame bubble)
+    for(int i = 0; i < nbBall - 1; ++i)
+    {
+	    for(int j = 0; j < nbBall - 1 - i; ++j)
+        {
+            if(ballArray[j].x > ballArray[j + 1].x)
+            {
+                vec2 tmp = ballArray[j + 1];
+                ballArray[j + 1] = ballArray[j];
+                ballArray[j] = tmp;
+            }
+        }
+    }
+    
+   	// Find convex using an algorithm similar to gift wraping
+ 	ballArray[nbBall] = vec2(ratio, 0);
+    int   convexSize = 0;
+    vec2  convexHull[nbBall + 2];
+    convexHull[convexSize++] = vec2(-ratio, 0);
+    int	  SmallestIndex = 0;
+    for(;;)
+    {
+        float SmallestDir = 1.;
+        bool  found = false;
+        for(int i = SmallestIndex; i < nbBall + 1; ++i)
+        {
+            vec2 dir = normalize(ballArray[i] - convexHull[convexSize - 1]);
+            if(dir.y < SmallestDir)
+            {
+                
+                SmallestDir = dir.y;
+                SmallestIndex = i;
+                found = true;
+            }
+        }
+       	if(found)
+        {
+            convexHull[convexSize++] = ballArray[SmallestIndex];
+        }
+        else
+        {
+            break;
+        }
+    }
+      
         
-    fragColor = vec4(finalColor, 1.0);
+    // Draw hull
+    for(int i = 0; i < convexSize - 1; ++i)
+    {
+	    float a = smoothFilter(udSegment(p, convexHull[i] - vec2(0, ballRadius), convexHull[i + 1] - vec2(0, ballRadius)) - 0.005);
+        col = mix(col, drawColor, a);
+          
+    }
+
+ 
+    // Output to screen
+    fragColor = vec4(col,1.0);
 }
