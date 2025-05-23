@@ -2,7 +2,8 @@
   "name": "Granular Delay",
   "description": "A granular delay effect where each grain is randomly pitch-shifted within a defined range, creating shimmering textures. The grains are read from a delay line, allowing for evolving soundscapes.",
   "audio": "audio/granular_delay.sc",
-  "visual": "visual/neon_love.js",
+  "shader": "shaders/claude_spectrum.glsl",
+  "curated": true,
   "params": [
     {
       "name": "grain_size",

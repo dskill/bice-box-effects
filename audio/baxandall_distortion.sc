@@ -47,6 +47,9 @@
         // Buffer writing for waveform display
         //BufWr.ar(monoDryForVisuals, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(monoFinalForVisuals, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
+        chain_out = FFT(~fft_buffer_out, monoFinalForVisuals, wintype: 1); // Hanning window by default (wintype: 1)
+        chain_out.do(~fft_buffer_out);
+        SendReply.kr(kr_impulse, '/combined_data', partition);
 
         // RMS Calculation
         //rms_input = RunningSum.rms(monoDryForVisuals, 1024);
@@ -56,14 +59,12 @@
 
         // FFT Analysis (on mono version of the output signal)
         // The FFT UGen writes directly to the ~fft_buffer_out
-        chain_out = FFT(~fft_buffer_out, monoFinalForVisuals, wintype: 1); // Hanning window by default (wintype: 1)
-        chain_out.do(~fft_buffer_out);
+
 
         // SendReply for GUI updates
         //SendReply.kr(kr_impulse, '/buffer_refresh', partition); // Notify GUI which buffer partition is ready
         //SendReply.kr(kr_impulse, '/rms');                      // Notify GUI that RMS values are updated
         //SendReply.kr(kr_impulse, '/fft_data');               // Notify GUI that FFT data in ~fft_buffer_out is ready
-        SendReply.kr(kr_impulse, '/combined_data', partition);
 
         Out.ar(out, finalSig); // Output stereo (finalSig is already a stereo signal)
 
