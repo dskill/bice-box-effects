@@ -1,85 +1,84 @@
-//CBS
-//Parallax scrolling fractal galaxy.
-//Inspired by JoshP's Simplicity shader: https://www.shadertoy.com/view/lslGWr
+//Oscilloscope Shader
+//Visualizes waveform and FFT data from audio input
+//
+// iChannel0 texture layout (512x2 RGBA):
+// Row 0 (y=0.0): FFT magnitude data (pre-computed in SuperCollider, 512 frequency bins)
+// Row 1 (y=1.0): Waveform time-domain data (512 samples)
 
-// http://www.fractalforums.com/new-theories-and-research/very-simple-formula-for-fractal-patterns/
-float field(in vec3 p,float s) {
-	float strength = 7. + .03 * log(1.e-6 + fract(sin(iTime) * 4373.11));
-	float accum = s/4.;
-	float prev = 0.;
-	float tw = 0.;
-	for (int i = 0; i < 26; ++i) {
-		float mag = dot(p, p);
-		p = abs(p) / mag + vec3(-.5, -.4, -1.5);
-		float w = exp(-float(i) / 7.);
-		accum += w * exp(-strength * pow(abs(mag - prev), 2.2));
-		tw += w;
-		prev = mag;
-	}
-	return max(0., 5. * accum / tw - .7);
+#define SAMPLES 15.0
+#define PI 3.14159265359
+
+float sdBox( in vec2 p, in vec2 b ) {
+    vec2 d = abs(p)-b;
+    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
 }
 
-// Less iterations for second layer
-float field2(in vec3 p, float s) {
-	float strength = 7. + .03 * log(1.e-6 + fract(sin(iTime) * 4373.11));
-	float accum = s/4.;
-	float prev = 0.;
-	float tw = 0.;
-	for (int i = 0; i < 18; ++i) {
-		float mag = dot(p, p);
-		p = abs(p) / mag + vec3(-.5, -.4, -1.5);
-		float w = exp(-float(i) / 7.);
-		accum += w * exp(-strength * pow(abs(mag - prev), 2.2));
-		tw += w;
-		prev = mag;
-	}
-	return max(0., 5. * accum / tw - .7);
+float sdSound(vec2 uv) {
+    // Sample waveform data from iChannel0
+    // Based on the SuperCollider code, waveform data is in the texture
+    float waveformValue = (texture(iChannel0, vec2(uv.x, 1.0)).x - 0.5) * 2.0; // Normalize to -1 to 1
+    waveformValue *= .2;
+    waveformValue *= 1.0 - abs(pow(abs(uv.x - .5)*2.0, 2.5)); // Apply tapering
+
+    float lineOffset = uv.y - waveformValue;
+    lineOffset += .15; // Apply vertical offset
+    //lineOffset ;
+    float line = 1.0 - abs(lineOffset) * 1.0;
+    line = abs(line);
+    float milkyLine = pow(line, .2)*.2;
+    milkyLine += pow(line, 10.0)*.3;
+    milkyLine += pow(line, 2000.0)*30.0;
+
+    return milkyLine;
 }
 
-vec3 nrand3( vec2 co )
-{
-	vec3 a = fract( cos( co.x*8.3e-3 + co.y )*vec3(1.3e5, 4.7e5, 2.9e5) );
-	vec3 b = fract( sin( co.x*0.3e-3 + co.y )*vec3(8.1e5, 1.0e5, 0.1e5) );
-	vec3 c = mix(a, b, 0.5);
-	return c;
+float sdFFT(vec2 uv) {
+    // Sample FFT data from iChannel0 row 0
+    // FFT magnitude data has been pre-computed from complex FFT data
+    float fftValue = texture(iChannel0, vec2(abs(uv.x - .5)*.5, 0.0)).x * 0.1; // Use full uv.x and scale by 0.2
+    
+    // FFT value is already normalized and logarithmically scaled
+    // Scale and position the FFT visualization
+    float lineOffset = (uv.y) - (fftValue);
+    lineOffset -= .15; // Adjust offset to match oscilloscope.js
+    float line = 1.0 - abs(lineOffset) * 1.0;
+    line = abs(line);
+    // Create a similar "milky" glow effect as the waveform
+    float milkyLine = pow(line, .2)*.2;
+    milkyLine += pow(line, 10.0)*.6;
+    milkyLine += pow(line, 2000.0)*30.0;
+
+    return milkyLine;
 }
 
+vec2 cube(vec2 uv) {
+    return mod((uv+.5)*8., vec2(1))-.5;
+}
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-    vec2 uv = 2. * fragCoord.xy / iResolution.xy - 1.;
-	vec2 uvs = uv * iResolution.xy / max(iResolution.x, iResolution.y);
-	vec3 p = vec3(uvs / 4., 0) + vec3(1., -1.3, 0.);
-	p += .2 * vec3(sin(iTime / 16.), sin(iTime / 12.),  sin(iTime / 128.));
-	
-	float freqs[4];
-	//Sound
-	freqs[0] = texture( iChannel0, vec2( 0.01, 0.25 ) ).x;
-	freqs[1] = texture( iChannel0, vec2( 0.07, 0.25 ) ).x;
-	freqs[2] = texture( iChannel0, vec2( 0.15, 0.25 ) ).x;
-	freqs[3] = texture( iChannel0, vec2( 0.30, 0.25 ) ).x;
+    vec2 uv = fragCoord.xy / iResolution.xy;
+    uv.y -= 0.5;
+    
+    vec3 col = vec3(0.0);
+    
+    // Add waveform effect (green)
+    float wave = sdSound(uv);
+    col += mix(col, vec3(0.404,0.984,0.396), wave);
+    
+    // Add FFT effect (magenta)
+    float fft = sdFFT(uv);
+    col += mix(col, vec3(0.984,0.404,0.796), fft);
+    
+    // Add grid pattern
+    col += .1*mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));
 
-	float t = field(p,freqs[2]);
-	float v = (1. - exp((abs(uv.x) - 1.) * 6.)) * (1. - exp((abs(uv.y) - 1.) * 6.));
-	
-    //Second Layer
-	vec3 p2 = vec3(uvs / (4.+sin(iTime*0.11)*0.2+0.2+sin(iTime*0.15)*0.3+0.4), 1.5) + vec3(2., -1.3, -1.);
-	p2 += 0.25 * vec3(sin(iTime / 16.), sin(iTime / 12.),  sin(iTime / 128.));
-	float t2 = field2(p2,freqs[3]);
-	vec4 c2 = mix(.4, 1., v) * vec4(1.3 * t2 * t2 * t2 ,1.8  * t2 * t2 , t2* freqs[0], t2);
-	
-	
-	//Let's add some stars
-	//Thanks to http://glsl.heroku.com/e#6904.0
-	vec2 seed = p.xy * 2.0;	
-	seed = floor(seed * iResolution.x);
-	vec3 rnd = nrand3( seed );
-	vec4 starcolor = vec4(pow(rnd.y,40.0));
-	
-	//Second Layer
-	vec2 seed2 = p2.xy * 2.0;
-	seed2 = floor(seed2 * iResolution.x);
-	vec3 rnd2 = nrand3( seed2 );
-	starcolor += vec4(pow(rnd2.y,40.0));
-	
-	fragColor = mix(freqs[3]-.3, 1., v) * vec4(1.5*freqs[2] * t * t* t , 1.2*freqs[1] * t * t, freqs[3]*t, 1.0)+c2+starcolor;
+    // Add vignette
+    vec2 puv = fragCoord.xy / iResolution.xy;
+    puv *= 1.0 - puv.yx;
+    col *= pow(puv.x*puv.y*30.0, 0.5);
+    
+    // Apply blue tint
+    col *= vec3(0.0, 0.667, 1.0);
+    
+    fragColor = vec4(col, 1.0);
 }

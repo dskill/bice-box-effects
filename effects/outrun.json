@@ -2,7 +2,7 @@
   "name": "Outrun",
   "description": "A retrofuturistic effect with neon-colored grid visualization and 80s-inspired audio processing",
   "audio": "audio/outrun.sc",
-  "visual": "visual/outrun.js",
+  "shader": "shaders/test2.glsl",
   "curated": true,
   "params": [
 

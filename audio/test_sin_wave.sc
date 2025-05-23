@@ -5,6 +5,7 @@
         var sig, final_sig;
         var phase, trig, partition, kr_impulse;
         var chain_out;
+        var rms_input, rms_output;
 
         sig = In.ar(in_bus); 
         final_sig = SinOsc.ar(freq) * 0.2;
@@ -15,18 +16,16 @@
         phase = Phasor.ar(0, 1, 0, ~chunkSize);
         trig = HPZ1.ar(phase) < 0;
         partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
+        kr_impulse = Impulse.kr(30);  // Trigger 60 times per second
 
-        // write to buffers that will contain the waveform data we send via OSC
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(final_sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // FFT Analysis (on the output signal)
         chain_out = FFT(~fft_buffer_out, final_sig, wintype: 1);
+        chain_out.do(~fft_buffer_out);
 
         // send data as soon as it's available
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
-        SendReply.kr(kr_impulse, '/fft_data');
+        SendReply.kr(kr_impulse, '/combined_data', partition);
 
         Out.ar(out, [final_sig,final_sig]);
     }).add;

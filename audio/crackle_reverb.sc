@@ -6,6 +6,7 @@
         var crackle_level, crackle_noise, wet_sig, final_sig;
         var phase, trig, partition, kr_impulse;
         var rms_input, rms_output;
+        var fft_chain, fft_output_sig;
 
         // Get input signal
         sig = In.ar(in_bus); // Assumes mono input, or stereo summed to mono by In.ar
@@ -54,6 +55,12 @@
 
         // --- End Effect Processing ---
 
+        // --- FFT Analysis for Visualization ---
+        // Perform FFT on the final output signal (mono version for analysis)
+        fft_output_sig = (final_sig[0] + final_sig[1]) * 0.5; // Convert stereo to mono for FFT
+        fft_chain = FFT(~fft_buffer_out, fft_output_sig);
+        fft_chain.do(~fft_buffer_out); // This line was missing - it actually writes the FFT data to the buffer
+        // The FFT buffer is automatically updated by the FFT UGen
 
         // --- Standard Machinery for GUI ---
         phase = Phasor.ar(0, 1, 0, ~chunkSize);
@@ -72,13 +79,14 @@
 
         // Buffer writing for waveform display
         // Input waveform (using mono sig)
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
+        //BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         // Output waveform (using stereo final_sig, so average channels)
         BufWr.ar((final_sig[0] + final_sig[1]) * 0.5, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
         // Send notifications to GUI
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-        SendReply.kr(kr_impulse, '/rms');
+        //SendReply.kr(kr_impulse, '/buffer_refresh', partition);
+        //SendReply.kr(kr_impulse, '/rms');
+        SendReply.kr(kr_impulse, '/combined_data', partition);
 
 	    Out.ar(out, final_sig); // Output the final stereo signal
     }).add;

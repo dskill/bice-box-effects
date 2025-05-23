@@ -7,7 +7,7 @@ s.waitForBoot{
 	"Server booted, initializing...".postln;
 	Server.freeAll;
 
-	~useTestLoop = false;  
+	~useTestLoop = true;  
 
 	~o = NetAddr.new("127.0.0.1", 57121);
 	~chunkSize = 512;
@@ -27,7 +27,7 @@ s.waitForBoot{
 	~relay_buffer_out = Buffer.alloc(s, ~chunkSize * ~numChunks);
 	"New relay buffers allocated".postln;
 
-	~fft_size = 4096;  // Set the FFT size
+	~fft_size = 1024;  // Set the FFT size
 	~fft_buffer_out = Buffer.alloc(s, ~fft_size);
 	"FFT buffers allocated".postln;
 
@@ -124,6 +124,84 @@ s.waitForBoot{
 	}, '/fft_data');
 
 	"FFT OSCdef created".postln;
+
+
+
+	// Add new OSCdef for combined waveform + FFT data (1024 samples total)
+	OSCdef(\combinedData).free;
+	OSCdef(\combinedData, { |msg|
+		var fftMagnitudes, i, dataIdx, numComplexBins, binsToProcess, dcMag, real, imag, mag, nyquistMag, combinedData;
+		var partition = (msg[3] - 1) % ~numChunks;
+
+		if(~relay_buffer_out.notNil and: ~fft_buffer_out.notNil, {
+			~relay_buffer_out.getn(partition.asInteger * ~chunkSize, ~chunkSize, { |waveformData| // waveformData is an arg
+				// Variables for this waveformData callback scope
+
+				// Resample waveform data if needed, target 512 samples
+				if(waveformData.size != 512, {
+					waveformData = waveformData.resamp1(512);
+				});
+				
+				~fft_buffer_out.getn(0, ~fft_size, { |fftData| // fftData is an arg
+					// All local vars for this fftData callback scope must be declared FIRST
+
+					// THEN, initial assignments to those declared vars:
+					fftMagnitudes = Array.newClear(512); 
+					i = 0;
+					numComplexBins = (~fft_size / 2).asInteger;
+					binsToProcess = min(512, numComplexBins);
+					// dataIdx, dcMag, real, imag, mag, nyquistMag, combinedData will be initialized later, before use.
+
+					// THEN, the rest of the logic:
+					if(fftData.size < ~fft_size, {
+						"Warning: Insufficient FFT data for combinedData, got % samples, expected %".format(fftData.size, ~fft_size).postln;
+						fftMagnitudes = Array.fill(512, 0.0);
+					}, {
+						// Bin 0: DC component
+						if (binsToProcess > 0 and: fftData.size > 0) {
+							dcMag = fftData[0].abs; 
+							fftMagnitudes[i] = (dcMag + 0.001).log / 10.log;
+							i = i + 1;
+						};
+
+						// Initialize dataIdx just before the loop that uses it
+						dataIdx = 2;
+						while({i < (binsToProcess - 1)  and: (dataIdx + 1 < fftData.size)}) { 
+							real = fftData[dataIdx] ? 0;
+							imag = fftData[dataIdx+1] ? 0;
+							mag = (real.squared + imag.squared).sqrt;
+							fftMagnitudes[i] = (mag + 0.001).log / 10.log;
+							i = i + 1;
+							dataIdx = dataIdx + 2;
+						};
+
+						// Bin N/2: Nyquist frequency (real)
+						if (i < binsToProcess and: fftData.size > 1) { 
+							nyquistMag = fftData[1].abs; 
+							fftMagnitudes[i] = (nyquistMag + 0.001).log / 10.log;
+							i = i + 1;
+						};
+						
+						while({i < 512}) {
+							fftMagnitudes[i] = 0.0;
+							i = i + 1;
+						};
+					});
+
+					if(waveformData.size == 512 and: fftMagnitudes.size == 512) {
+						combinedData = waveformData ++ fftMagnitudes;
+						~o.sendMsg(\combined_data, *combinedData);
+					} {
+						"Warning: combinedData array size mismatch before sending - waveform: %, FFT: %".format(waveformData.size, fftMagnitudes.size).postln;
+					}
+				});
+			});
+		}, {
+			"Warning: Relay buffer or FFT buffer is nil for combinedData".postln;
+		});
+	}, '/combined_data');
+
+	"Combined waveform+FFT OSCdef created".postln;
 
 	// OSC responder to send tuner data to the client
 	OSCdef(\tunerData).free;
