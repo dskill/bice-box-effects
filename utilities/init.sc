@@ -190,6 +190,9 @@ s.waitForBoot{
 
 					if(waveformData.size == 512 and: fftMagnitudes.size == 512) {
 						combinedData = waveformData ++ fftMagnitudes;
+						// Get RMS values synchronously
+						combinedData = combinedData.add(~rms_bus_input.getSynchronous);
+						combinedData = combinedData.add(~rms_bus_output.getSynchronous);
 						~o.sendMsg(\combined_data, *combinedData);
 					} {
 						"Warning: combinedData array size mismatch before sending - waveform: %, FFT: %".format(waveformData.size, fftMagnitudes.size).postln;

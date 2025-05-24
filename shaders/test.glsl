@@ -60,14 +60,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     uv.y -= 0.5;
     
     vec3 col = vec3(0.0);
+    float rmsMultiplier = iRMSOutput + .5;
     
     // Add waveform effect (green)
     float wave = sdSound(uv);
-    col += mix(col, vec3(0.404,0.984,0.396), wave);
+    col += mix(col, vec3(0.404,0.984,0.396), wave * rmsMultiplier);
     
     // Add FFT effect (magenta)
     float fft = sdFFT(uv);
-    col += mix(col, vec3(0.984,0.404,0.796), fft);
+    col += mix(col, vec3(0.984,0.404,0.796), fft * rmsMultiplier);
     
     // Add grid pattern
     col += .1*mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));

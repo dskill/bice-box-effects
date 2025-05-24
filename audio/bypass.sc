@@ -22,11 +22,11 @@
         partition = PulseCount.ar(trig) % ~numChunks;
 
         // write to buffers that will contain the waveform data we send via OSC
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
+        //BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
  
         // FFT Analysis
-        kr_impulse = Impulse.kr(30);  // Trigger 60 times per second
+        kr_impulse = Impulse.kr(60);  
 
         // FFT
         chain_out = FFT(~fft_buffer_out, sig, wintype: 1);
@@ -38,9 +38,10 @@
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);
         Out.kr(~rms_bus_output, rms_output);
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
-        SendReply.kr(kr_impulse, '/fft_data');
-        SendReply.kr(kr_impulse, '/rms'); 
+        // SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
+        // SendReply.kr(kr_impulse, '/fft_data');
+        // SendReply.kr(kr_impulse, '/rms'); 
+        SendReply.kr(kr_impulse, '/combined_data', partition);
 
 	    Out.ar(out, [sig, sig]);
     }).add;

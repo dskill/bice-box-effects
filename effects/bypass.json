@@ -2,7 +2,8 @@
   "name": "bypass",
   "description": "a passthrough bypass",
   "audio": "audio/bypass.sc",
-  "visual": "visual/waveform_with_fft_simple.js",
+  "visual": null,
+  "shader": "shaders/test.glsl",
   "curated": true,
   "params": [
   ]
