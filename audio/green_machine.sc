@@ -1,5 +1,5 @@
 (
-    SynthDef(\oscilloscope, {
+    SynthDef(\green_machine, {
         |out = 0, in_bus = 0, analysis_out_bus, bits = 8, rate = 0.5, mix = 1.0, 
         machine = 2000, reverb = 0.3, delay = 0.25, delay_mix = 0.2|
         var sig, crushed, filtered, wet, delayed, mono_for_analysis;
@@ -49,7 +49,7 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\oscilloscope, [
+        ~effect = Synth(\green_machine, [
             \in_bus, ~input_bus,
             \analysis_out_bus, ~effect_output_bus_for_analysis,
             \bits, 8, 
@@ -60,6 +60,6 @@
             \delay, 0.25, 
             \delay_mix, 0.2
         ], ~effectGroup);
-        ("New oscilloscope synth created with analysis output bus").postln;
+        ("New green_machine synth created with analysis output bus").postln;
     };
 )
