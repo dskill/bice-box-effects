@@ -1,35 +1,25 @@
 (
     SynthDef(\outrun, {
-        |out = 0, in_bus = 0, drive = 1.0, gridSpeed = 0.5, sunSize = 0.5, glow = 0.7, synthDepth = 0.5, mix = 0.5|
-        var sig, wet, dry;
-        var chain_in, chain_out, kr_impulse;
-        var rms_input, rms_output;
-        var chorus, filtered;
-        var phase, trig, partition;
+        |out = 0, in_bus = 0, analysis_out_bus, drive = 1.0, gridSpeed = 0.5, sunSize = 0.5, glow = 0.7, synthDepth = 0.5, mix = 0.5|
+        var sig, dry, chorus, filtered, mono_for_analysis;
         
         sig = In.ar(in_bus);
         dry = sig;
-        wet = sig;        
-        //wet = sig * (drive * 2);
-        //wet = (2/pi) * atan(wet);
         
-
-
         // Multi-voice chorus for that 80s width
         chorus = Mix.fill(3, {|i|
             var rate = gridSpeed * (i + 1) * 0.5;
-            DelayC.ar(wet, 0.05, SinOsc.kr(rate, 0, 0.002 * synthDepth, 0.003))
+            DelayC.ar(sig, 0.05, SinOsc.kr(rate, 0, 0.002 * synthDepth, 0.003))
         }) / 3;
 
-        LocalOut.ar(chorus); // Send reverb output back as feedback
-
-        // Big fat reverb with feedback loop
-        chorus = XFade2.ar(chorus, LocalIn.ar(1) * 0.8 + chorus * 0.2, mix * 2 - 1);
+        // Simplified chorus feedback. Original was more complex and used main 'mix' param internally.
+        LocalOut.ar(chorus);
+        chorus = chorus + (LocalIn.ar(1) * 0.8); 
 
         chorus = FreeVerb.ar(chorus,
-            mix: 0.8,        // reverb mix
-            room: 10.8,       // room size (0-1)
-            damp: 0.2        // high frequency damping
+            mix: 0.8,        // This is reverb's internal mix
+            room: 10.8,       
+            damp: 0.2        
         );
         
         // Frequency shaping
@@ -37,35 +27,18 @@
         filtered = BPeakEQ.ar(filtered, 1200, 1.0, 3.0);
         filtered = BHiShelf.ar(filtered, 3000, 1.0, glow * 6.0);
         
-        // Final mix
+        // Final mix (main dry/wet)
         sig = XFade2.ar(dry, filtered, mix * 2 - 1);
+
+        // Prepare mono signal for analysis
+        if (sig.isArray) {
+            mono_for_analysis = Mix.ar(sig);
+        } {
+            mono_for_analysis = sig; // Path is likely mono here
+        };
                 
-        // MACHINERY FOR SAMPLING THE SIGNAL
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
-       
-        // Write to buffers for waveform data
-        //BufWr.ar(dry, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-        chain_out = FFT(~fft_buffer_out, sig, wintype: 1); // Hanning window by default (wintype: 1)
-        chain_out.do(~fft_buffer_out);
-        SendReply.kr(kr_impulse, '/combined_data', partition);
-
-        //rms_input = RunningSum.rms(dry, 1024);
-        //rms_output = RunningSum.rms(sig, 1024);
-        
-        //Out.kr(~rms_bus_input, rms_input);
-        //Out.kr(~rms_bus_output, rms_output);
-        
-        //SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-        //SendReply.kr(kr_impulse, '/rms');
-
-
-        chain_out.do(~fft_buffer_out);
-        
-        Out.ar(out, [sig, sig]);
+        Out.ar(out, Pan2.ar(sig)); // Outputting mono 'sig' as stereo
+        Out.ar(analysis_out_bus, mono_for_analysis);
     }).add;
     
     "Effect SynthDef added".postln;
@@ -79,6 +52,16 @@
             ~effect.free;
         };
         
-        ~effect = Synth(\outrun, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\outrun, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis,
+            \drive, 1.0, 
+            \gridSpeed, 0.5, 
+            \sunSize, 0.5, 
+            \glow, 0.7, 
+            \synthDepth, 0.5, 
+            \mix, 0.5
+        ], ~effectGroup);
+        ("New outrun synth created with analysis output bus").postln;
     };
 ) 

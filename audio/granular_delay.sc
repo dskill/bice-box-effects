@@ -1,6 +1,6 @@
 (
     SynthDef(\shimmering_granular_delay, {
-        |out = 0, in_bus = 0,
+        |out = 0, in_bus = 0, analysis_out_bus,
          grain_size = 0.05, /* Grain duration in seconds (10ms to 200ms) */
          density = 10,    /* Grains per second (1 to 50) */
          delay_time = 0.5,  /* Delay time in seconds (0ms to 2000ms) */
@@ -11,8 +11,7 @@
         var sig, dry_sig, wet_sig, final_sig, buf, max_delay_time, write_head_samples,
             current_write_pos_secs, grain_read_pos_secs_unwrapped, grain_read_pos_secs,
             grain_trig, grain_pitch_ratio, grain_pan_pos, feedback_sig_in,
-            signal_to_write_to_buffer, phase, trig, partition, kr_impulse,
-            rms_input, rms_output; // All var declarations in one block
+            signal_to_write_to_buffer, mono_for_analysis;
 
         // --- Main Signal Input ---
         sig = In.ar(in_bus); // Process as mono for simplicity with TGrains panning
@@ -32,7 +31,7 @@
         signal_to_write_to_buffer = sig + (((feedback_sig_in[0] + feedback_sig_in[1]) * 0.5) * feedback);
         signal_to_write_to_buffer = signal_to_write_to_buffer.tanh; // Clip before writing to buffer to prevent runaway feedback
 
-        // --- Buffer Writing ---
+        // --- Buffer Writing (INTERNAL TO EFFECT LOGIC - THIS IS OK) ---
         // Phasor to drive the write head position in samples, wraps around the buffer
         write_head_samples = Phasor.ar(0, 1, 0, BufFrames.kr(buf));
         BufWr.ar(signal_to_write_to_buffer, buf, write_head_samples);
@@ -79,30 +78,11 @@
         // dry_sig is mono, wet_sig is stereo. Expand dry_sig to stereo for XFade2.
         final_sig = XFade2.ar([dry_sig, dry_sig], wet_sig, mix * 2.0 - 1.0);
 
-        // --- Standard Machinery for GUI ---
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60); // Standard rate for GUI updates
-
-        // RMS calculation
-        rms_input = RunningSum.rms(dry_sig, 1024); // RMS of mono input
-        // RMS of stereo output, average channels for a single value
-        rms_output = RunningSum.rms((final_sig[0] + final_sig[1]) * 0.5, 1024);
-
-        Out.kr(~rms_bus_input, rms_input);
-        Out.kr(~rms_bus_output, rms_output);
-
-        // Buffer writing for waveform display
-        BufWr.ar(dry_sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        // Write average of stereo output for waveform display
-        BufWr.ar((final_sig[0] + final_sig[1]) * 0.5, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
-        // Send notifications to GUI
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-        SendReply.kr(kr_impulse, '/rms');
+        // --- Prepare mono signal for analysis ---
+        mono_for_analysis = Mix.ar(final_sig);
 
         Out.ar(out, final_sig); // Output the final stereo signal
+        Out.ar(analysis_out_bus, mono_for_analysis);
     }).add;
 
     "ShimmeringGranularDelay SynthDef added".postln;
@@ -113,7 +93,16 @@
             ("Freeing existing " ++ ~effect.defName ++ " synth (" ++ ~effect.nodeID ++ ")").postln;
             ~effect.free;
         });
-        ~effect = Synth(\shimmering_granular_delay, [\in_bus, ~input_bus], ~effectGroup);
-        ("New " ++ ~effect.defName ++ " synth created (" ++ ~effect.nodeID ++ ")").postln;
+        ~effect = Synth(\shimmering_granular_delay, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis,
+            \grain_size, 0.05,
+            \density, 10,
+            \delay_time, 0.5,
+            \feedback, 0.5,
+            \pitch_shift_semitones, 7,
+            \mix, 0.5
+        ], ~effectGroup);
+        ("New shimmering_granular_delay synth created (" ++ ~effect.nodeID ++ ") with analysis output bus").postln;
     };
 )

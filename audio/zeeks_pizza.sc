@@ -2,7 +2,7 @@
 // Combines phaser with amplitude modulation for a "hungry to full" cycle effect
 (
 SynthDef(\zeeks_pizza, {
-    arg out=0, in_bus=0,
+    arg out=0, in_bus=0, analysis_out_bus,
     // Phaser parameters
     rate=0.5, // Speed of phaser oscillation
     depth=0.5, // Depth of phaser effect
@@ -12,20 +12,9 @@ SynthDef(\zeeks_pizza, {
     // Mix
     mix=0.5;
 
-    var input = In.ar(in_bus);
-    var numStages = 6;
-    var freq = 100;
-    var modPhase;
-    var phaser;
-    var output;
-    var analysis;
-    var chain_out;
-    var rms_input;
-    var rms_output;
-    var phase;
-    var trig;
-    var partition;
-    var kr_impulse;
+    var input, numStages = 6, freq = 100, modPhase, phaser, output, mono_for_analysis;
+    
+    input = In.ar(in_bus); // Assuming mono input
     
     // Create phaser effect
     modPhase = SinOsc.kr(rate, 0, depth * 800, 1000 + freq);
@@ -39,33 +28,13 @@ SynthDef(\zeeks_pizza, {
     
     // Mix dry and wet signals
     output = (input * (1 - mix)) + (output * mix);
-    output = output;
+
+    // Prepare mono signal for analysis
+    // Assuming 'output' is mono here
+    mono_for_analysis = output;
       
-    // MACHINERY FOR SAMPLING THE SIGNAL
-    phase = Phasor.ar(0, 1, 0, ~chunkSize);
-    trig = HPZ1.ar(phase) < 0;
-    partition = PulseCount.ar(trig) % ~numChunks;
-    kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
-
-    // Write to buffers for waveform data
-    BufWr.ar(input, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-    BufWr.ar(output, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
-    // FFT Analysis
-    //chain_out = FFT(~fft_buffer_out, input, wintype: 1);
-    //chain_out.do(~fft_buffer_out);
-
-    rms_input = RunningSum.rms(input, 1024);
-    rms_output = RunningSum.rms(output, 1024);
-
-    // Send RMS values to the control buses
-    Out.kr(~rms_bus_input, rms_input);
-    Out.kr(~rms_bus_output, rms_output);
-    SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-    //SendReply.kr(kr_impulse, '/fft_data');
-    SendReply.kr(kr_impulse, '/rms'); 
-
-    Out.ar(out, [output, output]);
+    Out.ar(out, [output, output]); // Output mono 'output' as stereo
+    Out.ar(analysis_out_bus, mono_for_analysis);
 }).add;
 
 // Add execution code
@@ -75,12 +44,20 @@ SynthDef(\zeeks_pizza, {
     fork {
         s.sync;
 
-        // Free existing synth if it exists
         if(~effect.notNil) {
             "Freeing existing effect synth".postln;
             ~effect.free;
         };
 
-        ~effect = Synth(\zeeks_pizza, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\zeeks_pizza, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis,
+            \rate, 0.5,
+            \depth, 0.5,
+            \modRate, 0.2,
+            \modDepth, 0.3,
+            \mix, 0.5
+        ], ~effectGroup);
+        ("New zeeks_pizza synth created with analysis output bus").postln;
     };
 ) 

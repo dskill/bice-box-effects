@@ -45,7 +45,14 @@
 
         if(~effect.notNil, { ~effect.free; });
 
-        ~effect = Synth(\phaser_2d, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\phaser_2d, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis,
+            \x, 0.5,
+            \y, 0.5,
+            \mix, 1.0
+        ], ~effectGroup);
+        ("New phaser_2d synth created with analysis output bus").postln;
 
         // OSC responder for phaser parameters
         OSCdef.new(
