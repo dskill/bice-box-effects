@@ -15,8 +15,8 @@
 #define NUM_OCTAVES_DISPLAY 6.0 // Total octaves the spiral will represent
 
 // Colors
-const vec3 DARK_CYAN = vec3(0.0, 0.545, 0.545);
-const vec3 BRIGHT_PURPLE = vec3(0.725, 0.404, 1.0);
+const vec3 DARK_CYAN = vec3(0.0, 0.145, 0.545);
+const vec3 BRIGHT_PURPLE = vec3(1.025, 0.704, 1.0);
 const vec3 BACKGROUND_COLOR = vec3(0.02, 0.02, 0.03);
 
 float midiToFreq(float midiNote) {
@@ -35,7 +35,7 @@ float getNormalizedFFTForMidiNote(float midiNote, float sc_bin_freq_step) {
         fft_mag_log10 = texture(iChannel0, vec2(u_tex_coord, 0.25)).x;
     }
     // Normalize the log10 magnitude (e.g., -2 to 1) to a 0-1 range
-    return clamp((fft_mag_log10 + 2.0) / 3.0, 0.0, 1.0);
+    return clamp((fft_mag_log10), 0.0, 1.0);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
@@ -113,7 +113,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
         float perturbed_radius = ideal_radius_at_t + (fft_intensity - 0.5) * 2.0 * displacement_scale;
                                          // (fft_intensity - 0.5)*2 makes range -1 to 1 from 0 to 1
 
-        float line_thickness = 0.006 + fft_intensity * 0.008; // Line gets thicker with more intensity
+        float line_thickness = 0.006 + fft_intensity * 0.01; // Line gets thicker with more intensity
         
         // Calculate distance from pixel's radius to the perturbed spiral radius
         float radial_distance_to_line = abs(pixel_radius - perturbed_radius);

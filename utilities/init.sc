@@ -10,7 +10,7 @@ s.waitForBoot{
 	~useTestLoop = false;  
 
 	~o = NetAddr.new("127.0.0.1", 57121);
-	~chunkSize = 512;
+	~chunkSize = 1024;
 	~chunkDownsample = 1;
 	~numChunks = 16;
 	"Network address and variables initialized".postln;
@@ -27,7 +27,7 @@ s.waitForBoot{
 	~relay_buffer_out = Buffer.alloc(s, ~chunkSize * ~numChunks);
 	"New relay buffers allocated".postln;
 
-	~fft_size = 2048;  // Set the FFT size
+	~fft_size = 2048 * 2;  // Increased from 2048 to get 1024 real FFT values after processing. Target 1024 bins.
 	~fft_buffer_out = Buffer.alloc(s, ~fft_size);
 	"FFT buffers allocated".postln;
 
@@ -137,25 +137,25 @@ s.waitForBoot{
 			~relay_buffer_out.getn(partition.asInteger * ~chunkSize, ~chunkSize, { |waveformData| // waveformData is an arg
 				// Variables for this waveformData callback scope
 
-				// Resample waveform data if needed, target 512 samples
-				if(waveformData.size != 512, {
-					waveformData = waveformData.resamp1(512);
+				// Resample waveform data if needed, target 1024 samples
+				if(waveformData.size != 1024, {
+					waveformData = waveformData.resamp1(1024);
 				});
 				
 				~fft_buffer_out.getn(0, ~fft_size, { |fftData| // fftData is an arg
 					// All local vars for this fftData callback scope must be declared FIRST
 
 					// THEN, initial assignments to those declared vars:
-					fftMagnitudes = Array.newClear(512); 
+					fftMagnitudes = Array.newClear(1024); // Increased from 512
 					i = 0;
-					numComplexBins = (~fft_size / 2).asInteger;
-					binsToProcess = min(512, numComplexBins);
+					numComplexBins = (~fft_size / 2).asInteger; // This will be 2048
+					binsToProcess = min(1024, numComplexBins); // Target 1024 bins
 					// dataIdx, dcMag, real, imag, mag, nyquistMag, combinedData will be initialized later, before use.
 
 					// THEN, the rest of the logic:
 					if(fftData.size < ~fft_size, {
 						"Warning: Insufficient FFT data for combinedData, got % samples, expected %".format(fftData.size, ~fft_size).postln;
-						fftMagnitudes = Array.fill(512, 0.0);
+						fftMagnitudes = Array.fill(1024, 0.0); // Fill 1024
 					}, {
 						// Bin 0: DC component
 						if (binsToProcess > 0 and: fftData.size > 0) {
@@ -165,8 +165,8 @@ s.waitForBoot{
 						};
 
 						// Initialize dataIdx just before the loop that uses it
-						dataIdx = 2;
-						while({i < (binsToProcess - 1)  and: (dataIdx + 1 < fftData.size)}) { 
+						dataIdx = 2; // Start from index 2 for complex pairs (real, imag)
+						while({i < (binsToProcess -1) and: (dataIdx + 1 < fftData.size)}) { // Ensure we stop before Nyquist if binsToProcess is 1024
 							real = fftData[dataIdx] ? 0;
 							imag = fftData[dataIdx+1] ? 0;
 							mag = (real.squared + imag.squared).sqrt;
@@ -175,20 +175,24 @@ s.waitForBoot{
 							dataIdx = dataIdx + 2;
 						};
 
-						// Bin N/2: Nyquist frequency (real)
+						// Bin N/2: Nyquist frequency (real part at index 1)
+						// For FFT size S, the packed format is:
+						// DC (real), Nyquist (real), Real1, Imag1, Real2, Imag2 ... Real(S/2-1), Imag(S/2-1)
+						// So fftData[1] is Nyquist.
 						if (i < binsToProcess and: fftData.size > 1) { 
 							nyquistMag = fftData[1].abs; 
 							fftMagnitudes[i] = (nyquistMag + 0.001).log / 10.log;
 							i = i + 1;
 						};
 						
-						while({i < 512}) {
-							fftMagnitudes[i] = 0.0;
+						// Fill remaining fftMagnitudes if any (e.g. if fftData was too short or binsToProcess was less than 1024)
+						while({i < 1024}) {
+							fftMagnitudes[i] = 0.0; // Ensure it's filled to 1024
 							i = i + 1;
 						};
 					});
 
-					if(waveformData.size == 512 and: fftMagnitudes.size == 512) {
+					if(waveformData.size == 1024 and: fftMagnitudes.size == 1024) { // Check for 1024
 						combinedData = waveformData ++ fftMagnitudes;
 						// Get RMS values synchronously
 						combinedData = combinedData.add(~rms_bus_input.getSynchronous);
