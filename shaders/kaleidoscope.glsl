@@ -1,116 +1,96 @@
-//Oscilloscope Shader
-//Visualizes waveform and FFT data from audio input
-//
-// iChannel0 texture layout (512x2 RGBA):
-// Row 0 (y=0.0): FFT magnitude data (pre-computed in SuperCollider, 512 frequency bins)
-// Row 1 (y=1.0): Waveform time-domain data (512 samples)
+#define PI 3.141592
+#define orbs 20.
 
-#define SAMPLES 15.0
-#define PI 3.14159265359
+// uniform sampler2D iChannel0; // Audio texture: FFT (y ~ 0.25), Waveform (y ~ 0.75)
+// uniform float iRMSOutput;    // Overall RMS amplitude of the audio output
 
-float sdBox( in vec2 p, in vec2 b ) {
-    vec2 d = abs(p)-b;
-    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+// Helper function to get a combined FFT value
+// Samples low, mid, and high frequency ranges from the FFT data in iChannel0
+float getCombinedFFT(sampler2D channel) {
+    float fft_low = texture(channel, vec2(0.1, 0.25)).x;  // Sample low frequencies
+    float fft_mid = texture(channel, vec2(0.3, 0.25)).x;  // Sample mid frequencies
+    float fft_high = texture(channel, vec2(0.6, 0.25)).x; // Sample high frequencies
+    // Average them, potentially weight them if desired
+    // The FFT data in iChannel0 is often log-scaled amplitude.
+    // We can normalize/scale it further if needed.
+    // For now, let's assume it's in a somewhat usable range (e.g. 0 to 1 after processing)
+    return (fft_low + fft_mid + fft_high) / 3.0;
 }
 
-float sdSound(vec2 uv) {
-    // Sample waveform data from iChannel0
-    // Based on the SuperCollider code, waveform data is in the texture
-    float waveformValue = (texture(iChannel0, vec2(uv.x, 0.75)).x - 0.5) * 2.0; // Normalize to -1 to 1
-    waveformValue *= .2;
-    waveformValue *= 1.0 - abs(pow(abs(uv.x - .5)*2.0, 2.5)); // Apply tapering
 
-    float lineOffset = uv.y - waveformValue;
-    lineOffset += .15; // Apply vertical offset
-    //lineOffset ;
-    float line = 1.0 - abs(lineOffset) * 1.0;
-    line = abs(line);
-    float milkyLine = pow(line, .2)*.2;
-    milkyLine += pow(line, 10.0)*.3;
-    milkyLine += pow(line, 2000.0)*30.0;
 
-    return milkyLine;
+
+vec2 kale(vec2 uv, vec2 offset, float sides) {
+  float angle = atan(uv.y, uv.x);
+  angle = ((angle / PI) + 1.0) * 0.5;
+  angle = mod(angle, 1.0 / sides) * sides;
+  angle = -abs(2.0 * angle - 1.0) + 1.0;
+  angle = angle;
+  float y = length(uv);
+  angle = angle * (y);
+  return vec2(angle, y) - offset;
 }
 
-float sdFFT(vec2 uv) {
-    // Sample FFT data from iChannel0 row 0
-    // FFT magnitude data has been pre-computed from complex FFT data
-    float fftValue = texture(iChannel0, vec2(abs(uv.x) * 0.25, 0.25)).x * 0.1; // Use full uv.x and scale by 0.2
-    
-    // FFT value is already normalized and logarithmically scaled
-    // Scale and position the FFT visualization
-    float lineOffset = (uv.y) - (fftValue);
-    lineOffset -= .15; // Adjust offset to match oscilloscope.js
-    float line = 1.0 - abs(lineOffset) * 1.0;
-    line = abs(line);
-    // Create a similar "milky" glow effect as the waveform
-    float milkyLine = pow(line, .2)*.2;
-    milkyLine += pow(line, 10.0)*.6;
-    milkyLine += pow(line, 2000.0)*30.0;
-
-    return milkyLine;
+vec4 orb(vec2 uv, float size, vec2 position, vec3 color, float contrast) {
+  return pow(vec4(size / length(uv + position) * color, 1.), vec4(contrast));
 }
 
-vec2 cube(vec2 uv) {
-    return mod((uv+.5)*8., vec2(1))-.5;
+mat2 rotate(float angle) {
+  return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-    vec2 uv = fragCoord.xy / iResolution.xy;
-    vec2 original_uv = uv;
-    uv = uv * 2.0 - 1.0; // Remap to -1 to 1
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 basic_uv = (fragCoord.xy / iResolution.xy) - 0.5;
+  vec2 polar_coords = vec2( (atan(basic_uv.y, basic_uv.x) + PI) / (2.0 * PI), length(basic_uv));
+  vec2 uv = 23.09 * (2. * fragCoord - iResolution.xy) / iResolution.y;
+  float dist = length(uv);
+  fragColor = vec4(0.);
 
-    // Kaleidoscope effect
-    uv = abs(uv); // Mirroring
-    float angle = atan(uv.y, uv.x);
-    float radius = length(uv);
-    angle = mod(angle, PI / 3.0); // 6 segments for kaleidoscope
-    uv.x = radius * cos(angle);
-    uv.y = radius * sin(angle);
-    
-    uv = uv * 0.5 + 0.5; // Remap back to 0 to 1 for texture sampling if needed, adjust as necessary
-    uv.y -= 0.5; // Original y offset
-    
-    vec3 col = vec3(0.0);
-    float rmsMultiplier = iRMSOutput + .5;
-    
-    // Add waveform effect (green)
-    float wave = sdSound(original_uv);
-    col += mix(col, vec3(0.404,0.984,0.396), 10.0 * wave * rmsMultiplier);
-    
-    // Add FFT effect (magenta)
-    float fft = sdFFT(uv);
-   // col += mix(col, vec3(0.984,0.404,0.796), fft * rmsMultiplier);
-    
-    // Add grid pattern
-    col += .1*mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));
+  uv.y += 10.0*(texture(iChannel0, vec2( abs(basic_uv.x - 0.5), 0.75)).x - 0.5) * 2.0; // Normalize to -1 to 1
 
-    // Add vignette
-    vec2 puv = fragCoord.xy / iResolution.xy;
-    puv *= 1.0 - puv.yx;
-    col *= pow(puv.x*puv.y*30.0, 0.5);
-    
-    // Apply blue tint
-    col *= vec3(0.0, 0.667, 1.0);
-    
-    // Add debug RMS bars
-    // puv is fragCoord.xy / iResolution.xy, used for vignette, so it's screen_uv [0,1]
-    float bar_width = 0.05; // Width of the debug bars (5% of screen width)
 
-    // Left bar for iRMSInput (red)
-    // Ensure iRMSInput is a float uniform, expected to be in [0,1] range for height
-    vec2 uv2 = fragCoord.xy / iResolution.xy;
-    float left_bar_height = clamp(iRMSInput, 0.0, 1.0); // Clamp to be safe
-    if (uv2.x < bar_width && uv2.y < left_bar_height) {
-        col = mix(col, vec3(.4, 0.5, 0.0), 0.1); // Mix Red with 0.25 intensity
-    }
+  // Get audio reactivity values
+  float combined_fft = getCombinedFFT(iChannel0); // Value typically 0.0 to 1.0 (approx)
+  float rms_normalized = clamp(iRMSOutput * 2.0, 0.0, 1.0); // Normalize RMS, assuming iRMSOutput is ~0-0.5
 
-    // Right bar for iRMSOutput (green)
-    // Ensure iRMSOutput is a float uniform, expected to be in [0,1] range for height
-    float right_bar_height = clamp(iRMSOutput, 0.0, 1.0); // Clamp to be safe
-    if (uv2.x > (1.0 - bar_width) && uv2.y < right_bar_height) {
-        col = mix(col, vec3(.4, 0.5, 0.0), 0.1); // Mix Green with 0.25 intensity
-    }
+  // Modulate rotation speeds with RMS
+  float rotation_speed_factor1 = 1.0 + rms_normalized * 2.0; // Increase speed with RMS
+  float rotation_speed_factor2 = 1.0 + rms_normalized * 1.5;
+  uv *= rotate(iTime / (20.0 / rotation_speed_factor1) + rms_normalized * 0.05 * iTime);
 
-    fragColor = vec4(col, 1.0);
+  // Modulate kaleidoscope sides with FFT
+  combined_fft = 1.0; 
+  float kale_sides = 3.0 + combined_fft * 7.0; // Modulate between 3 and 10 sides
+  uv = kale(uv, vec2(6.97 - combined_fft * 3.0), kale_sides); // Also modulate offset slightly
+
+  uv *= rotate(iTime / (5.0 / rotation_speed_factor2) - rms_normalized * 0.03 * iTime);
+
+  // Modulate displacement factors in the loop with RMS
+  float displacement_amount = 0.4 + rms_normalized * 0.6; // Modulate base factors (0.57, 0.63)
+
+  for (float i = 0.; i < orbs; i++) {
+    uv.x += (0.57 * displacement_amount) * sin(0.3 * uv.y + iTime + rms_normalized * 2.0);
+    uv.y -= (0.63 * displacement_amount) * cos(0.53 * uv.x + iTime - rms_normalized * 1.5);
+    float t = i * PI / orbs * 2.;
+    float x_pos_factor = 3.0 + combined_fft * 3.0; // Modulate orb positioning
+    float y_pos_factor = 3.0 + combined_fft * 3.0;
+    float x = x_pos_factor * tan(t + iTime / (10.0 - rms_normalized * 5.0));
+    float y = y_pos_factor * cos(t - iTime / (30.0 + rms_normalized * 10.0));
+    vec2 position = vec2(x, y);
+
+    // Modulate orb color based on FFT and i (iteration)
+    vec3 base_orb_color = cos(vec3(-2.0 + combined_fft * 1.5, 0.0, -1.0 - combined_fft*0.5) * PI * 2. / 3. + PI * (float(i) / (5.37 + combined_fft*2.0))) * 0.5 + 0.5;
+    vec3 audio_color_tint = vec3(0.8 + combined_fft * 0.2, 0.8 + rms_normalized * 0.2, 0.8 + (combined_fft + rms_normalized) * 0.1);
+    vec3 color = base_orb_color * audio_color_tint;
+
+    // Modulate orb size and contrast with FFT
+    float orb_base_size = 1.0 + combined_fft * 1.0; // Modulate base size (1.39)
+    float orb_contrast = 1.0 + combined_fft * 0.7;   // Modulate base contrast (1.37)
+    fragColor += orb(uv, 1.39 * orb_base_size, position, color, 1.37 * orb_contrast);
+  }
+
+  // Modulate final brightness/saturation with RMS
+  fragColor.rgb *= (0.6 + rms_normalized * 0.7); // Ensure it doesn't blow out too much
+  fragColor.rgb = mix(fragColor.rgb, fragColor.rgb * (0.5 + combined_fft * 0.8), 0.5); // Add some FFT based color boost
+  fragColor.a = 1.0;
 }
