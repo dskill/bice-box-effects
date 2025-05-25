@@ -39,12 +39,12 @@
         kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
 
         // Write to buffers for waveform data
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
+       // BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
         BufWr.ar(crushed, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
 
-         // FFT
-        //chain_out = FFT(~fft_buffer_out, distorted, wintype: 1);
-        //chain_out.do(~fft_buffer_out);
+         // FFT Analysis of the processed signal
+        chain_out = FFT(~fft_buffer_out, crushed, wintype: 1);
+        chain_out.do(~fft_buffer_out);
 
         rms_input = RunningSum.rms(sig, 1024);
         rms_output = RunningSum.rms(crushed, 1024);
@@ -52,9 +52,7 @@
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);
         Out.kr(~rms_bus_output, rms_output);
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
-        //SendReply.kr(kr_impulse, '/fft_data');
-        SendReply.kr(kr_impulse, '/rms'); 
+        SendReply.kr(kr_impulse, '/combined_data', partition);
 
         Out.ar(out, [crushed, crushed]);
     }).add;
