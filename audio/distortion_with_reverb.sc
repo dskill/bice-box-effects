@@ -1,8 +1,7 @@
 (
     SynthDef(\distortion_with_reverb, {
-        |out = 0, in_bus = 0, drive = 0.5, tone = 0.5, decay = 1, roomSize = 0.7, wetLevelDist = 0.5, wetLevelRev = 0.5|
-        // START USER EFFECT CODE
-        var sig, distorted, verb, dryDist, dryRev, phase, trig, partition, kr_impulse;
+        |out = 0, in_bus = 0, analysis_out_bus, drive = 0.5, tone = 0.5, decay = 1, roomSize = 0.7, wetLevelDist = 0.5, wetLevelRev = 0.5|
+        var sig, distorted, verb, dryDist, dryRev, mono_for_analysis;
         
         sig = In.ar(in_bus);
         
@@ -17,36 +16,32 @@
         dryRev = sig * (1 - wetLevelRev);
         sig = dryRev + (verb * wetLevelRev);
         
-        // END USER EFFECT CODE
-
-        // MACHINERY FOR SAMPLING THE SIGNAL
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
-
-        // write to buffers that will contain the waveform data we send via OSC
-        BufWr.ar(In.ar(in_bus), ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
-        // send data as soon as it's available
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
+        // Prepare mono signal for analysis
+        mono_for_analysis = sig;
 
         Out.ar(out, [sig,sig]);
+        Out.ar(analysis_out_bus, mono_for_analysis);
     }).add;
     "Effect SynthDef added".postln;
 
     fork {
         s.sync;
 
-        // Free existing synth if it exists
         if(~effect.notNil, {
             "Freeing existing effect synth".postln;
             ~effect.free;
         });
 
-        // Create new distortion_with_reverb synth in the effect group
-        ~effect = Synth(\distortion_with_reverb, [\in_bus, ~input_bus], ~effectGroup);
-        "New effect synth created".postln;
+        ~effect = Synth(\distortion_with_reverb, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis,
+            \drive, 0.5,
+            \tone, 0.5,
+            \decay, 1,
+            \roomSize, 0.7,
+            \wetLevelDist, 0.5,
+            \wetLevelRev, 0.5
+        ], ~effectGroup);
+        ("New distortion_with_reverb synth created with analysis output bus").postln;
     };
 )

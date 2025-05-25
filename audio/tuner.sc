@@ -1,16 +1,12 @@
 (
     SynthDef(\tuner, {
-        |out = 0, in_bus = 0|
-        var sig, normalized_sig, freq, hasFreq, differences, amplitudes;
-        var phase, trig, partition;
-        var rms_input, rms_output;
-        var kr_trig;
+        |out = 0, in_bus = 0, analysis_out_bus|
+        var sig, normalized_sig, freq, hasFreq, differences, amplitudes, mono_for_analysis;
         var guitarStringsHz = #[82.41, 110.00, 146.83, 196.00, 246.94, 329.63]; // Frequencies of E2, A2, D3, G3, B3, E4
 
         // Input signal
         sig = In.ar(in_bus);
         normalized_sig = Normalizer.ar(sig, level: 1, dur: 0.01);
-
 
         // Pitch detection 
         # freq, hasFreq = Pitch.kr(normalized_sig, 
@@ -34,28 +30,15 @@
             Amplitude.kr(band)
         };
 
-        // MACHINERY FOR SAMPLING THE SIGNAL
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_trig = Impulse.kr(60);  // Trigger 60 times per second
+        // Prepare mono signal for analysis
+        // If sig from In.ar can be stereo, Mix.ar ensures mono. If always mono, this is still safe.
+        mono_for_analysis = Mix.ar(sig);
 
-        rms_input = RunningSum.rms(sig, 1024);
-        rms_output = RunningSum.rms(sig, 1024);
-
-        // Write to buffers
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
-        // Send RMS values to the control buses
-        Out.kr(~rms_bus_input, rms_input);
-        Out.kr(~rms_bus_output, rms_output);
-
-        // Send tuner data to the client
-        SendReply.kr(kr_trig, '/buffer_refresh', partition);
+        // Kept effect-specific SendReply for /tuner_data
         SendReply.kr(Impulse.kr(10), '/tuner_data', [freq, hasFreq] ++ differences ++ amplitudes);
         
         Out.ar(out, sig);
+        Out.ar(analysis_out_bus, mono_for_analysis);
     }).add;
     "Tuner SynthDef added".postln;
 
@@ -69,7 +52,10 @@
         });
 
         // Create new tuner synth in the effect group
-        ~effect = Synth(\tuner, [\in_bus, ~input_bus], ~effectGroup);
-        "New tuner synth created".postln;
+        ~effect = Synth(\tuner, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis
+        ], ~effectGroup);
+        ("New tuner synth created with analysis output bus").postln;
     };
 )

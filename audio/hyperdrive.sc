@@ -1,5 +1,5 @@
 (
-    SynthDef(\\hyperdrive, {
+    SynthDef(\hyperdrive, {
         |out = 0, in_bus = 0, analysis_out_bus,
         gain = 1.0, tone = 0.1, res = 1.37, level = 0.75, mix = 0.5|  // Simplified parameters
         var sig, distorted, mono_for_analysis;
@@ -43,9 +43,9 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\\hyperdrive, [
-            \\in_bus, ~input_bus,
-            \\analysis_out_bus, ~effect_output_bus_for_analysis
+        ~effect = Synth(\hyperdrive, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis
             // Add other params if they had defaults changed or need to be set
         ], ~effectGroup);
         ("New hyperdrive synth created with analysis output bus").postln;
