@@ -1,12 +1,13 @@
 {
     "name": "Kaleidoscope",
     "description": "A dazzling kaleidoscopic effect with sparkly echoes and rainbow-like modulation",
-    "curated": false,
+    "curated": true,
     "audio": "audio/kaleidoscope.sc",
-    "visual": "visual/kaleidoscope.js",
+    "shader": "shaders/kaleidoscope.glsl",
+    
     "params": [
         {
-            "name": "sparkle",
+            "name": "sparkle",  
             "value": 0.5,
             "range": [0.0, 1.0]
         },

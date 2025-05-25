@@ -1,0 +1,106 @@
+---
+description: 
+globs: *.sc
+alwaysApply: false
+---
+# SuperCollider Effect SynthDef Guide for Master Analysis Integration
+
+This guide outlines the required structure for SuperCollider effect `SynthDefs` within the BICE-Box project to ensure proper integration with the centralized `masterAnalyser` node defined in [init.sc](mdc:bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box-effects/utilities/init.sc). The goal is to have `masterAnalyser` handle all waveform, FFT, and RMS analysis, as well as the sending of the `/combined_data` OSC message.
+
+Individual effect `SynthDefs` should focus *solely* on their unique audio processing.
+
+## 1. SynthDef Arguments
+
+All effect `SynthDefs` must include the following arguments in their definition:
+
+```supercollider
+SynthDef(\yourEffectName, {
+    |
+    out = 0,                 // Main audio output bus (e.g., to speakers)
+    in_bus,                  // Input audio bus (connected to ~input_bus from init.sc)
+    analysis_out_bus,        // Dedicated mono output bus for masterAnalyser
+    // ... your effect-specific parameters (e.g., mix, rate, depth) ...
+    |
+
+    // ... rest of your SynthDef code ...
+}).add;
+```
+
+## 2. Core Responsibilities
+
+### a. Audio Input
+- Read the incoming audio signal from the `in_bus`:
+  ```supercollider
+  var sig = In.ar(in_bus); // Or In.ar(in_bus, num_channels_expected)
+  ```
+
+### b. Audio Processing
+- Implement your effect's unique sound manipulation logic using the `sig` variable.
+
+### c. Output Signal Preparation
+- **Main Output:** Prepare your final processed signal (can be mono or stereo).
+  ```supercollider
+  var final_processed_signal = ... ; // Your processed audio
+  ```
+- **Analysis Output:** Create a **mono** version of your `final_processed_signal`. This is crucial for `masterAnalyser`.
+  ```supercollider
+  var mono_for_analysis;
+  if (final_processed_signal.isArray) { // Check if stereo
+      mono_for_analysis = Mix.ar(final_processed_signal); // Mix stereo to mono
+  } {
+      mono_for_analysis = final_processed_signal; // Already mono
+  };
+  ```
+  Alternatively, if your signal path naturally produces a mono sum at some point, you can use that.
+
+### d. Audio Output
+- Send the main processed signal to the `out` bus:
+  ```supercollider
+  Out.ar(out, final_processed_signal);
+  ```
+- Send the dedicated mono signal for analysis to the `analysis_out_bus`:
+  ```supercollider
+  Out.ar(analysis_out_bus, mono_for_analysis);
+  ```
+
+## 3. Forbidden Operations (for OSC Data Generation)
+
+Effect `SynthDefs` **MUST NOT** duplicate the analysis and OSC message generation handled by `masterAnalyser`. Specifically, avoid the following *for the purpose of sending data intended for the main UI visualization via `/combined_data` or similar primary OSC paths*:
+
+- `Phasor.ar` or `Sweep.ar` for buffer indexing *if its intent is to replicate `masterAnalyser`'s waveform segmentation for OSC*.
+- `BufWr.ar` for writing waveform data to global buffers like `~relay_buffer_out` or `~relay_buffer_in` *if this data is meant for the primary waveform display sent by `masterAnalyser`*.
+- `FFT.ar` for performing Fast Fourier Transform and writing to global FFT buffers *if this data is meant for the primary FFT display sent by `masterAnalyser`*.
+- `RunningSum.rms` or similar for RMS calculation *if the result is intended to be sent as the primary input/output RMS values for the UI*.
+- `SendReply.kr` for sending OSC messages that `masterAnalyser` is already responsible for (e.g., `/combined_data`, or older paths like `/buffer_refresh`, `/rms`, `/fft_data` that were part of the combined data package).
+- `Out.kr` for writing RMS values to global control buses like `~rms_bus_input` or `~rms_bus_output` *as these are now exclusively managed by `masterAnalyser`*.
+
+**Clarification:** Effects are free to use `BufWr.ar`, `FFT.ar`, `RunningSum.rms`, etc., for their *own internal audio processing needs* (e.g., creating a delay line, a spectral processing effect, an internal LFO based on amplitude). The restriction applies only to duplicating the specific analysis tasks and OSC message generation that `masterAnalyser` now centrally manages for the UI.
+
+## 4. Synth Instantiation (in the .sc file that loads the SynthDef)
+
+When the effect Synth is created (typically when its `.sc` file is evaluated), it must be instantiated with the correct bus arguments and target group:
+
+```supercollider
+// ... inside your effect's .sc file, after the SynthDef.add ...
+fork {
+    s.sync;
+    if(~effect.notNil, { ~effect.free; }); // Free previous effect
+
+    ~effect = Synth(\yourEffectName, [
+        \in_bus, ~input_bus, // ~input_bus is defined in init.sc
+        \analysis_out_bus, ~effect_output_bus_for_analysis, // This bus is defined in init.sc
+        // ... other parameters ...
+        \your_param_1, default_value_1,
+        \your_param_2, default_value_2
+    ], ~effectGroup); // ~effectGroup is defined in init.sc
+    ("New YourEffectName synth created with analysis output bus").postln;
+};
+```
+
+## 5. Examples
+
+Refer to the following refactored effects for practical examples:
+- [bypass.sc](mdc:bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box-effects/audio/bypass.sc)
+- [crackle_reverb.sc](mdc:bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box-effects/audio/crackle_reverb.sc)
+
+By adhering to this structure, effects will seamlessly integrate into the centralized analysis system, simplifying their individual code and ensuring consistent data for visualization.

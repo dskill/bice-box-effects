@@ -2,7 +2,7 @@
   "name": "Baxandall Distortion",
   "description": "A gritty distortion effect with Baxandall-style bass and treble tone controls, plus drive, level, and mix adjustments.",
   "audio": "audio/baxandall_distortion.sc",
-  "shader": "shaders/galaxy.glsl",
+  "shader": "shaders/radial_fft_line.glsl",
   "curated": true,
   "params": [
     {

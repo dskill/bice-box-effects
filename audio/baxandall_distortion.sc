@@ -1,12 +1,9 @@
 (
     SynthDef(\grittyBaxandallDistortion, {
-        |out = 0, in_bus = 0, drive = 10.0, bass = 0.0, treble = 0.0, level = 0.7, mix = 0.5|
+        |out = 0, in_bus = 0, analysis_out_bus, drive = 10.0, bass = 0.0, treble = 0.0, level = 0.7, mix = 0.5|
 
         var sig, dry, distortedSig, eqSig, wetSig, finalSig;
-        var monoDryForVisuals, monoFinalForVisuals; // For machinery
-        var phase, trig, partition, kr_impulse;    // Standard machinery vars
-        var rms_input, rms_output;                // RMS vars
-        var chain_out;                            // FFT var - FFT UGen writes to buffer, chain_out not strictly needed but good for consistency
+        var monoFinalForVisuals; // For masterAnalyser
 
         sig = In.ar(in_bus, 2); // Read stereo input
         dry = sig;
@@ -33,38 +30,11 @@
         finalSig = XFade2.ar(dry, wetSig, mix * 2 - 1); // Applies per channel
         // END USER EFFECT CODE
 
-        // Prepare mono versions of dry and final signals for standard machinery (visuals, RMS, FFT)
-        monoDryForVisuals = (dry[0] + dry[1]) * 0.5;       // Mix stereo dry to mono
+        // Prepare mono version of final signal for masterAnalyser
         monoFinalForVisuals = (finalSig[0] + finalSig[1]) * 0.5; // Mix stereo final to mono
 
-
-        // STANDARD MACHINERY (Waveform, RMS, FFT)
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(30);  // Trigger for SendReply
-
-        // Buffer writing for waveform display
-        //BufWr.ar(monoDryForVisuals, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(monoFinalForVisuals, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-        chain_out = FFT(~fft_buffer_out, monoFinalForVisuals, wintype: 1); // Hanning window by default (wintype: 1)
-        chain_out.do(~fft_buffer_out);
-        SendReply.kr(kr_impulse, '/combined_data', partition);
-
-        // RMS Calculation
-        //rms_input = RunningSum.rms(monoDryForVisuals, 1024);
-      //  rms_output = RunningSum.rms(monoFinalForVisuals, 1024);
-       // Out.kr(~rms_bus_input, rms_input);    // Send RMS input to control bus
-        //Out.kr(~rms_bus_output, rms_output);  // Send RMS output to control bus
-
-        // FFT Analysis (on mono version of the output signal)
-        // The FFT UGen writes directly to the ~fft_buffer_out
-
-
-        // SendReply for GUI updates
-        //SendReply.kr(kr_impulse, '/buffer_refresh', partition); // Notify GUI which buffer partition is ready
-        //SendReply.kr(kr_impulse, '/rms');                      // Notify GUI that RMS values are updated
-        //SendReply.kr(kr_impulse, '/fft_data');               // Notify GUI that FFT data in ~fft_buffer_out is ready
+        // Output for masterAnalyser
+        Out.ar(analysis_out_bus, monoFinalForVisuals);
 
         Out.ar(out, finalSig); // Output stereo (finalSig is already a stereo signal)
 
@@ -79,7 +49,10 @@
             ~effect.free;
         });
         // Create a new instance of the GrittyBaxandallDistortion synth
-        ~effect = Synth(\grittyBaxandallDistortion, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\grittyBaxandallDistortion, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis
+        ], ~effectGroup);
         "New GrittyBaxandallDistortion synth created".postln;
     };
 )

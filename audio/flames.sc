@@ -1,13 +1,11 @@
 (
     SynthDef(\flames, {
-        |out = 0, in_bus = 0, 
+        |out = 0, in_bus = 0, analysis_out_bus,
         gain = 1.0, tone = 0.1, res = 1.37, flameVol = 0.75, mix = 0.5|  // Simplified parameters
-        var sig, distorted, flameSig;
-        var rms_input, rms_output;
-        var phase, trig, partition, kr_impulse;
+        var sig, distorted, flameSig, mono_for_analysis;
         var freq, hasFreq;
 
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); // Assuming in_bus is stereo
         
         // Simplified distortion chain using soft_fuzz approach
         distorted = sig + sig * (gain + 0.1) * 40.0;  // Gain staging similar to soft_fuzz
@@ -25,11 +23,8 @@
         // ---------------------
         // Add a "burning flame" noise
         // ---------------------
-        // Calculate RMS values
-        rms_input = RunningSum.rms(sig, 1024);
-        rms_output = RunningSum.rms(distorted, 1024);
-
-
+        // RMS calculation for flameSig internal logic (not for global RMS reporting)
+        // This uses a local RMS of the input to modulate the flame effect, which is fine.
         # freq, hasFreq = Pitch.kr(
 					in: sig,
 					ampThreshold: 0.02,
@@ -46,7 +41,7 @@
                 LFSaw.ar(freq * 0.502) * 0.3 + // Slightly detuned saw for thickness
                 PinkNoise.ar(0.4) // Add some noise for crackling
             )
-        ]) * rms_input * 30.0;
+        ]) * RunningSum.rms(Mix.ar(sig), 256) * 30.0; // Using a local RMS for effect modulation
         
         // Multi-band filtering for a more complex flame character
         flameSig = BPF.ar(flameSig, [100, 400, 1200], [0.5, 0.7, 0.8]).sum;
@@ -65,53 +60,24 @@
         flameSig = flameSig * flameVol * 2.0;
         
         // Combine flame sound with distorted output
+        // If distorted is stereo and flameSig is mono, flameSig will be added to both channels.
         distorted =  distorted + flameSig;
 
         distorted = XFade2.ar(sig, distorted, mix*2.0-1.0);
 
-
         // END USER EFFECT CODE
 
+        // Prepare mono version of final signal for masterAnalyser
+        // Assuming 'distorted' is stereo at this point
+        mono_for_analysis = Mix.ar(distorted);
 
-        // MACHINERY FOR SAMPLING THE SIGNAL
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60);  // Trigger 60 times per second
+        // Output for masterAnalyser
+        Out.ar(analysis_out_bus, mono_for_analysis);
 
-        // Send RMS values to the control buses
-        Out.kr(~rms_bus_input, rms_input);
-        Out.kr(~rms_bus_output, rms_output);
+        Out.ar(out, distorted); // Output stereo
 
-      
-        // ... existing buffer writing and monitoring ...
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(distorted, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
-        // send data as soon as it's available
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-        SendReply.kr(kr_impulse, '/rms');
-
-        // send 
-        //SendReply.kr(Impulse.kr(30), '/flamesData', [delayTime, feedback]);
-
-        
-
-        Out.ar(out, [distorted,distorted]);
     }).add;
     "Effect SynthDef added".postln;
-
-    // OSC responder to send tuner data to the client
-    /*
-	OSCdef(\flamesData).free;
-	OSCdef(\flamesData, { |msg|
-		var a = msg[3];
-		var b = msg[4];
-		// Send the data to the client
-		~o.sendMsg(\flamesData, 
-			a, b
-    );  	}, '/flamesData', s.addr);
-    */
 
     fork {
         s.sync;
@@ -123,7 +89,11 @@
         });
 
         // Create new flames synth in the effect group
-        ~effect = Synth(\flames, [\in_bus, ~input_bus], ~effectGroup);
-        "New effect synth created".postln;
+        ~effect = Synth(\flames, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis // Corrected: use bus object
+            // Pass other params if needed, e.g., gain: 1.0 etc.
+        ], ~effectGroup);
+        "New flames effect synth created with analysis output bus".postln;
     };
 ) 
