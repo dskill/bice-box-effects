@@ -3,7 +3,7 @@
   "description": "a passthrough bypass",
   "audio": "audio/bypass.sc",
   "visual": null,
-  "shader": "shaders/test.glsl",
+  "shader": "shaders/radial_fft_line.glsl",
   "curated": true,
   "params": [
   ]
