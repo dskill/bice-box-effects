@@ -1,10 +1,8 @@
 (
-    SynthDef(\hyperdrive, {
-        |out = 0, in_bus = 0, 
+    SynthDef(\\hyperdrive, {
+        |out = 0, in_bus = 0, analysis_out_bus,
         gain = 1.0, tone = 0.1, res = 1.37, level = 0.75, mix = 0.5|  // Simplified parameters
-        var sig, distorted;
-        var rms_input, rms_output;
-        var phase, trig, partition, kr_impulse;
+        var sig, distorted, mono_for_analysis;
 
         sig = In.ar(in_bus);
         
@@ -23,24 +21,14 @@
         distorted = LeakDC.ar(distorted);  // Clean up DC offset
         distorted = XFade2.ar(sig, distorted, mix*2.0-1.0);
 
-        // ... existing monitoring code ...
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60);
+        // Prepare mono signal for analysis
+        if (distorted.isArray) { // Check if stereo (though current setup is mono)
+            mono_for_analysis = Mix.ar(distorted);
+        } {
+            mono_for_analysis = distorted;
+        };
 
-        // ... existing buffer writing and monitoring ...
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(distorted, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
-        rms_input = RunningSum.rms(sig, 1024);
-        rms_output = RunningSum.rms(distorted, 1024);
-        
-        Out.kr(~rms_bus_input, rms_input);
-        Out.kr(~rms_bus_output, rms_output);
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-        SendReply.kr(kr_impulse, '/rms'); 
-
+        Out.ar(analysis_out_bus, mono_for_analysis);
         Out.ar(out, [distorted, distorted]);
     }).add;
 
@@ -55,6 +43,11 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\hyperdrive, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\\hyperdrive, [
+            \\in_bus, ~input_bus,
+            \\analysis_out_bus, ~effect_output_bus_for_analysis
+            // Add other params if they had defaults changed or need to be set
+        ], ~effectGroup);
+        ("New hyperdrive synth created with analysis output bus").postln;
     };
 )
