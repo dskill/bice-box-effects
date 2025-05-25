@@ -1,11 +1,9 @@
 (
     SynthDef(\neon_love, {
-        |out = 0, in_bus = 0, decay = 1.0, roomSize = 0.7, intensity = 1.3, speed = -0.5, mix = 0.5|
+        |out = 0, in_bus = 0, analysis_out_bus, decay = 1.0, roomSize = 0.7, intensity = 1.3, speed = -0.5, mix = 0.5|
         var sig, verb, dry, finalSig,
             dampedSig,
-            phase, trig, partition, kr_impulse,
-            rms_input, rms_output,
-            chain_out,
+            mono_for_analysis,
             flanger, flangerTime, flangerDepth, flangerRate;
 
         sig = In.ar(in_bus);
@@ -84,37 +82,16 @@
         // Mix flanger in gently, no additional amplitude boost
         finalSig = finalSig + flanger;
 
-        //////////////////////////////////////////
-        // MACHINERY FOR SAMPLING / OSC REPORTING
-        //////////////////////////////////////////
-
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
-        kr_impulse = Impulse.kr(60); // 60 times per second
-
-        // Write to buffers for waveform data
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(finalSig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
-
-        // FFT Analysis
-        chain_out = FFT(~fft_buffer_out, finalSig, wintype: 1);
-        chain_out.do(~fft_buffer_out);
-
-        // RMS calculations
-        rms_input = RunningSum.rms(sig, 1024);
-        rms_output = RunningSum.rms(finalSig, 1024);
-
-        // Send analysis data (RMS, buffer refresh, FFT)
-        Out.kr(~rms_bus_input, rms_input);
-        Out.kr(~rms_bus_output, rms_output);
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition);
-        SendReply.kr(kr_impulse, '/fft_data');
-        SendReply.kr(kr_impulse, '/rms');
-
+        // Prepare mono signal for analysis
+        if (finalSig.isArray) {
+            mono_for_analysis = Mix.ar(finalSig);
+        } {
+            mono_for_analysis = finalSig;
+        };
 
         // Output the effect in stereo
         Out.ar(out, [finalSig, finalSig]);
+        Out.ar(analysis_out_bus, mono_for_analysis); // Output mono signal for analysis
     }).add;
 
     "Effect SynthDef added".postln;
@@ -132,6 +109,15 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\neon_love, [\in_bus, ~input_bus], ~effectGroup);
+        ~effect = Synth(\neon_love, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis,
+            \decay, 1.0,
+            \roomSize, 0.7,
+            \intensity, 1.3,
+            \speed, -0.5,
+            \mix, 0.5
+        ], ~effectGroup);
+        ("New neon_love synth created with analysis output bus").postln; // Updated postln message
     };
 ) 
