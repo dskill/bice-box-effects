@@ -4,12 +4,14 @@
         // START USER EFFECT CODE
 
         var sig, phase, trig, partition;
+        var mono_for_analysis; // ADDED for mono mix
         var rms_input, rms_output;
         var chain_in, chain_out, kr_impulse;
         var fft_output, fft_input;
         var freq; 
 
         sig = In.ar(in_bus);
+        mono_for_analysis = Mix.ar(sig); // ADDED: Create a mono mix for analysis
         //sig = SoundIn.ar(0);
         //freq = LFTri.kr(1/10, 0).range(82.41, 82.41*2);  // Triangle LFO from low E to E one octave up
         //sig = SinOsc.ar(freq, 0, 0.5);
@@ -23,17 +25,17 @@
 
         // write to buffers that will contain the waveform data we send via OSC
         //BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(sig, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
+        BufWr.ar(mono_for_analysis, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition)); // CHANGED to use mono_for_analysis
  
         // FFT Analysis
         kr_impulse = Impulse.kr(60);  
 
         // FFT
-        chain_out = FFT(~fft_buffer_out, sig, wintype: 1);
+        chain_out = FFT(~fft_buffer_out, mono_for_analysis, wintype: 1); // CHANGED to use mono_for_analysis
         chain_out.do(~fft_buffer_out);
 
-        rms_input = RunningSum.rms(sig, 1024);
-        rms_output = RunningSum.rms(sig, 1024);
+        rms_input = RunningSum.rms(mono_for_analysis, 1024); // CHANGED to use mono_for_analysis
+        rms_output = RunningSum.rms(mono_for_analysis, 1024); // CHANGED to use mono_for_analysis
 
         // Send RMS values to the control buses
         Out.kr(~rms_bus_input, rms_input);
@@ -43,7 +45,7 @@
         // SendReply.kr(kr_impulse, '/rms'); 
         SendReply.kr(kr_impulse, '/combined_data', partition);
 
-	    Out.ar(out, [sig, sig]);
+	    Out.ar(out, sig); // CHANGED for a more robust bypass
     }).add;
     "Effect SynthDef added".postln;
 
