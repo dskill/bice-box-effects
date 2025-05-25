@@ -1,8 +1,7 @@
 (
     SynthDef(\phaser_2d, {
-        |out = 0, in_bus = 0, x = 0.5, y = 0.5, mix = 1.0|
-        var sig, dry, processed, phase, trig, partition, kr_impulse;
-        var rms_input, rms_output;
+        |out = 0, in_bus = 0, analysis_out_bus, x = 0.5, y = 0.5, mix = 1.0|
+        var sig, dry, processed, mono_for_analysis;
         var numStages, freq, feedback;
 
         sig = In.ar(in_bus);
@@ -28,27 +27,16 @@
 
         // Mix the dry and processed signals
         processed = XFade2.ar(dry, processed, mix * 2 - 1);
-       
-        // MACHINERY FOR SAMPLING THE SIGNAL
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
 
-        // write to buffers that will contain the waveform data we send via OSC
-        BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(processed, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition));
+        // Prepare mono signal for analysis
+        if (processed.isArray) {
+            mono_for_analysis = Mix.ar(processed);
+        } {
+            mono_for_analysis = processed;
+        };
 
-        rms_input = RunningSum.rms(sig, 1024);
-        rms_output = RunningSum.rms(processed, 1024);
-        
-        Out.kr(~rms_bus_input, rms_input);
-        Out.kr(~rms_bus_output, rms_output);
-
-        kr_impulse = Impulse.kr(60);
-        SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
-        SendReply.kr(kr_impulse, '/rms'); 
-
-	    Out.ar(out, [processed, processed]);
+        Out.ar(out, [processed, processed]);
+        Out.ar(analysis_out_bus, mono_for_analysis);
     }).add;
     "Phaser 2D SynthDef added".postln;
 
