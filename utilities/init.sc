@@ -123,7 +123,7 @@ s.waitForBoot{
 
 	OSCdef(\buffer_refresh, { |msg|
 		var partition_index;
-		("OSCdef buffer_refresh received msg: " ++ msg).postln;
+		//("OSCdef buffer_refresh received msg: " ++ msg).postln;
 		partition_index = msg[3].asInteger; 
 
 		[~relay_buffer_in, ~relay_buffer_out].do { |buf, i|
