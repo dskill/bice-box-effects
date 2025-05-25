@@ -1,51 +1,30 @@
 (
     SynthDef(\bypass, {
-        |out = 0, in_bus = 0, test = 1|  // Add in_bus parameter
+        |out = 0, in_bus = 0, analysis_out_bus, test = 1|  // ADD analysis_out_bus argument
         // START USER EFFECT CODE
 
-        var sig, phase, trig, partition;
-        var mono_for_analysis; // ADDED for mono mix
-        var rms_input, rms_output;
-        var chain_in, chain_out, kr_impulse;
-        var fft_output, fft_input;
-        var freq; 
+        var sig, mono_for_analysis;
+        // var freq; // Uncomment if using test signal below
 
         sig = In.ar(in_bus);
-        mono_for_analysis = Mix.ar(sig); // ADDED: Create a mono mix for analysis
-        //sig = SoundIn.ar(0);
-        //freq = LFTri.kr(1/10, 0).range(82.41, 82.41*2);  // Triangle LFO from low E to E one octave up
-        //sig = SinOsc.ar(freq, 0, 0.5);
+        mono_for_analysis = Mix.ar(sig);
+        
+        // // Example test signal (ensure mono_for_analysis gets this if used)
+        // freq = LFTri.kr(1/10, 0).range(82.41, 82.41*2);  
+        // sig = SinOsc.ar(freq, 0, 0.5);
+        // mono_for_analysis = sig; // If using the sine wave for testing
 
         // END USER EFFECT CODE
 
-        // MACHINERY FOR SAMPLING THE SIGNAL
-        phase = Phasor.ar(0, 1, 0, ~chunkSize);
-        trig = HPZ1.ar(phase) < 0;
-        partition = PulseCount.ar(trig) % ~numChunks;
+        // Main audio output (can be stereo or mono depending on 'sig')
+	    Out.ar(out, sig);
 
-        // write to buffers that will contain the waveform data we send via OSC
-        //BufWr.ar(sig, ~relay_buffer_in.bufnum, phase + (~chunkSize * partition));
-        BufWr.ar(mono_for_analysis, ~relay_buffer_out.bufnum, phase + (~chunkSize * partition)); // CHANGED to use mono_for_analysis
- 
-        // FFT Analysis
-        kr_impulse = Impulse.kr(60);  
+        // Dedicated mono output for analysis by masterAnalyser
+        Out.ar(analysis_out_bus, mono_for_analysis);
 
-        // FFT
-        chain_out = FFT(~fft_buffer_out, mono_for_analysis, wintype: 1); // CHANGED to use mono_for_analysis
-        chain_out.do(~fft_buffer_out);
+        // All internal BufWr, FFT, RunningSum, SendReply for /combined_data are REMOVED.
+        // ~masterAnalyser in init.sc now handles all of that.
 
-        rms_input = RunningSum.rms(mono_for_analysis, 1024); // CHANGED to use mono_for_analysis
-        rms_output = RunningSum.rms(mono_for_analysis, 1024); // CHANGED to use mono_for_analysis
-
-        // Send RMS values to the control buses
-        Out.kr(~rms_bus_input, rms_input);
-        Out.kr(~rms_bus_output, rms_output);
-        // SendReply.kr(kr_impulse, '/buffer_refresh', partition); //trig if you want audio rate
-        // SendReply.kr(kr_impulse, '/fft_data');
-        // SendReply.kr(kr_impulse, '/rms'); 
-        SendReply.kr(kr_impulse, '/combined_data', partition);
-
-	    Out.ar(out, sig); // CHANGED for a more robust bypass
     }).add;
     "Effect SynthDef added".postln;
 
@@ -59,7 +38,11 @@
         });
 
         // Create new bypass synth in the effect group
-        ~effect = Synth(\bypass, [\in_bus, ~input_bus], ~effectGroup);
-        "New effect synth created".postln;
+        // Ensure analysis_out_bus argument is passed correctly from init.sc when this effect is chosen
+        ~effect = Synth(\bypass, [
+            \in_bus, ~input_bus, 
+            \analysis_out_bus, ~effect_output_bus_for_analysis.index // Ensure this global var is set in init.sc
+        ], ~effectGroup);
+        "New bypass effect synth created with analysis output bus".postln; // MODIFIED postln
     };
 )

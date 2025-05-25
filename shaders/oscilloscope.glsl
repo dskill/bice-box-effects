@@ -81,5 +81,24 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     // Apply blue tint
     col *= vec3(0.0, 0.667, 1.0);
     
+    // Add debug RMS bars
+    // puv is fragCoord.xy / iResolution.xy, used for vignette, so it's screen_uv [0,1]
+    float bar_width = 0.05; // Width of the debug bars (5% of screen width)
+
+    // Left bar for iRMSInput (red)
+    // Ensure iRMSInput is a float uniform, expected to be in [0,1] range for height
+    vec2 uv2 = fragCoord.xy / iResolution.xy;
+    float left_bar_height = clamp(iRMSInput, 0.0, 1.0); // Clamp to be safe
+    if (uv2.x < bar_width && uv2.y < left_bar_height) {
+        col = mix(col, vec3(.4, 0.5, 0.0), 0.1); // Mix Red with 0.25 intensity
+    }
+
+    // Right bar for iRMSOutput (green)
+    // Ensure iRMSOutput is a float uniform, expected to be in [0,1] range for height
+    float right_bar_height = clamp(iRMSOutput, 0.0, 1.0); // Clamp to be safe
+    if (uv2.x > (1.0 - bar_width) && uv2.y < right_bar_height) {
+        col = mix(col, vec3(.4, 0.5, 0.0), 0.1); // Mix Green with 0.25 intensity
+    }
+
     fragColor = vec4(col, 1.0);
 }

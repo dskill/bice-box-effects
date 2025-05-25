@@ -7,7 +7,7 @@ s.waitForBoot{
 	"Server booted, inside waitForBoot block - INITIALIZING...".postln;
 	Server.freeAll;
 
-	~useTestLoop = true;  
+	~useTestLoop = false;  
 
 	~o = NetAddr.new("127.0.0.1", 57121);
 	~chunkSize = 1024;
@@ -85,7 +85,8 @@ s.waitForBoot{
 		Out.kr(rms_bus_in_num, rms_input_val);
 		Out.kr(rms_bus_out_num, rms_output_val);
 
-		SendReply.kr(kr_impulse_for_sendreply, '/master_combined_data_trigger', latched_partition);
+		//SendReply.kr(kr_impulse_for_sendreply, '/master_combined_data_trigger', latched_partition); // OLD Trigger
+		SendReply.kr(kr_impulse_for_sendreply, '/combined_data', latched_partition); // NEW: Trigger main OSCdef
 
 		Silent.ar(1);
 	}).add;
@@ -162,13 +163,20 @@ s.waitForBoot{
 	OSCdef(\combinedData).free;
 	OSCdef(\combinedData, { |msg|
 		var fftMagnitudes, i, dataIdx, numComplexBins, binsToProcess, dcMag, real, imag, mag, nyquistMag, combinedData;
-		var partition_index;
-		("OSCdef combinedData received msg: " ++ msg).postln;
-		partition_index = msg[3].asInteger;
+		var received_partition_index, partition_to_read; // Variables for clarity
+		//("OSCdef combinedData received msg: " ++ msg).postln;
+		received_partition_index = msg[3].asInteger;
+
+		// Calculate the index of the partition that was *just completed* by masterAnalyser
+		// This is the partition that contains stable, fully written data.
+		partition_to_read = (received_partition_index - 1 + ~numChunks) % ~numChunks;
 
 		if(~relay_buffer_out.notNil and: ~fft_buffer_out.notNil, {
-			~relay_buffer_out.getn(partition_index * ~chunkSize, ~chunkSize, { |waveformData| 
+			// Read waveform data from the *previously completed* partition
+			~relay_buffer_out.getn(partition_to_read * ~chunkSize, ~chunkSize, { |waveformData| 
 				if(waveformData.size != 1024, {
+					// This case should ideally not happen if ~chunkSize is 1024 and reading is correct
+					"Warning: Waveform data size mismatch, expected 1024, got % samples. Resampling.".format(waveformData.size).postln;
 					waveformData = waveformData.resamp1(1024);
 				});
 				
@@ -226,13 +234,14 @@ s.waitForBoot{
 	}, '/combined_data');
 	"Combined waveform+FFT OSCdef created".postln;
 
-	OSCdef(\masterCombinedDataTriggerTest, { |msg|
-		var partition;
-		("OSCdef masterCombinedDataTriggerTest received msg: " ++ msg).postln;
-		partition = msg[3].asInteger; 
-		("Master Analyser triggered with partition: " ++ partition).postln;
-	}, '/master_combined_data_trigger', s.addr);
-	"Master Analyser trigger test OSCdef created".postln;
+	// OSCdef(\\masterCombinedDataTriggerTest, { |msg|
+	// 	var partition;
+	// 	("OSCdef masterCombinedDataTriggerTest received msg: " ++ msg).postln; // DEBUG: Print raw message
+	// 	partition = msg[3].asInteger; 
+	// 	("Master Analyser triggered with partition: " ++ partition).postln;
+	// }, '/master_combined_data_trigger', s.addr);
+	// "Master Analyser trigger test OSCdef created".postln;
+	// REMOVED: Temporary OSCdef for masterAnalyser trigger testing, masterAnalyser now triggers /combined_data directly
 
 	OSCdef(\tunerData).free;
 	OSCdef(\tunerData, { |msg|
