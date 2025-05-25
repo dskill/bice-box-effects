@@ -3,7 +3,7 @@
   "description": "A reverb effect where the tail increasingly distorts and crackles as it fades out.",
   "audio": "audio/crackle_reverb.sc",
   "visual": null,
-  "shader": "shaders/test.glsl",
+  "shader": "shaders/oscilloscope.glsl",
   "curated": true,
   "params": [
     {

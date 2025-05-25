@@ -35,7 +35,7 @@ float sdSound(vec2 uv) {
 float sdFFT(vec2 uv) {
     // Sample FFT data from iChannel0 row 0
     // FFT magnitude data has been pre-computed from complex FFT data
-    float fftValue = texture(iChannel0, vec2(abs(uv.x - .5), 0.25)).x * 0.1; // Use full uv.x and scale by 0.2
+    float fftValue = texture(iChannel0, vec2(abs(uv.x) * 0.25, 0.25)).x * 0.1; // Use full uv.x and scale by 0.2
     
     // FFT value is already normalized and logarithmically scaled
     // Scale and position the FFT visualization

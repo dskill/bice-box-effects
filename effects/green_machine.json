@@ -2,7 +2,7 @@
   "name": "Green Machine",
   "description": "a classic oscilloscope visualization",
   "audio": "audio/green_machine.sc",
-  "shader": "shaders/test.glsl",
+  "shader": "shaders/oscilloscope.glsl",
   "curated": true,
   "params": [
     {
