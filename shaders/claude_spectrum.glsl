@@ -56,7 +56,7 @@ float getFrequencySamplePosition(int barIndex) {
 float getFrequency(int barIndex) {
     float samplePos = getFrequencySamplePosition(barIndex);
     samplePos = clamp(samplePos, 0.0, 1.0);
-    return texture(iChannel0, vec2(samplePos, 0.0)).x;
+    return texture(iAudioTexture, vec2(samplePos, 0.0)).x;
 }
 
 // HSV to RGB conversion for rainbow colors

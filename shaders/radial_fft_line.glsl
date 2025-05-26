@@ -31,8 +31,8 @@ float getNormalizedFFTForMidiNote(float midiNote, float sc_bin_freq_step) {
 
     if (target_sc_bin_float >= 0.0 && target_sc_bin_float < NUM_FFT_BINS_IN_TEXTURE) {
         float u_tex_coord = target_sc_bin_float / NUM_FFT_BINS_IN_TEXTURE;
-        // FFT data in iChannel0 is already log10 scaled, typically in a range like -2 to 1
-        fft_mag_log10 = texture(iChannel0, vec2(u_tex_coord, 0.25)).x;
+        // FFT data in iAudioTexture is already log10 scaled, typically in a range like -2 to 1
+        fft_mag_log10 = texture(iAudioTexture, vec2(u_tex_coord, 0.25)).x;
     }
     // Normalize the log10 magnitude (e.g., -2 to 1) to a 0-1 range
     return clamp((fft_mag_log10), 0.0, 1.0);

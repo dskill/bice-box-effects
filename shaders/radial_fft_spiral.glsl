@@ -4,7 +4,7 @@
 #define PI 3.14159265359
 #define SAMPLERATE 48000.0
 #define FFT_ANALYSIS_SIZE_SC 2048.0 // FFT size used in SuperCollider for analysis
-#define NUM_FFT_BINS_IN_TEXTURE 512.0 // Number of FFT bins available in the iChannel0 texture
+#define NUM_FFT_BINS_IN_TEXTURE 512.0 // Number of FFT bins available in the iAudioTexture texture
 
 // Musical constants for frequency calculations
 #define A4_FREQ 440.0
@@ -52,12 +52,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
                 continue; // This frequency is outside our available FFT data
             }
             
-            // Normalized texture coordinate (u) to sample the FFT data in iChannel0
+            // Normalized texture coordinate (u) to sample the FFT data in iAudioTexture
             // target_sc_bin_float is the conceptual index into the 512 bins
             float u_tex_coord = target_sc_bin_float / NUM_FFT_BINS_IN_TEXTURE;
 
             // Fetch the log10-scaled FFT magnitude from the texture (first row, y-coordinate approx 0.25)
-            float log10_fft_magnitude = texture(iChannel0, vec2(u_tex_coord, 0.25)).x;
+            float log10_fft_magnitude = texture(iAudioTexture, vec2(u_tex_coord, 0.25)).x;
 
             // --- Calculate position for the dot on the spiral ---
             // Angle is determined by the semitone (0-11). 0 degrees = top (+Y).

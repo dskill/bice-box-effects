@@ -1,7 +1,7 @@
 //Oscilloscope Shader
 //Visualizes waveform and FFT data from audio input
 //
-// iChannel0 texture layout (512x2 RGBA):
+// iAudioTexture texture layout (512x2 RGBA):
 // Row 0 (y=0.0): FFT magnitude data (pre-computed in SuperCollider, 512 frequency bins)
 // Row 1 (y=1.0): Waveform time-domain data (512 samples)
 
@@ -14,9 +14,9 @@ float sdBox( in vec2 p, in vec2 b ) {
 }
 
 float sdSound(vec2 uv) {
-    // Sample waveform data from iChannel0
+    // Sample waveform data from iAudioTexture
     // Based on the SuperCollider code, waveform data is in the texture
-    float waveformValue = (texture(iChannel0, vec2(uv.x, 0.75)).x - 0.5) * 2.0; // Normalize to -1 to 1
+    float waveformValue = (texture(iAudioTexture, vec2(uv.x, 0.75)).x - 0.5) * 2.0; // Normalize to -1 to 1
     waveformValue *= .2;
     waveformValue *= 1.0 - abs(pow(abs(uv.x - .5)*2.0, 2.5)); // Apply tapering
 
@@ -33,9 +33,9 @@ float sdSound(vec2 uv) {
 }
 
 float sdFFT(vec2 uv) {
-    // Sample FFT data from iChannel0 row 0
+    // Sample FFT data from iAudioTexture row 0
     // FFT magnitude data has been pre-computed from complex FFT data
-    float fftValue = texture(iChannel0, vec2(abs(uv.x) * 0.25, 0.25)).x * 0.1; // Use full uv.x and scale by 0.2
+    float fftValue = texture(iAudioTexture, vec2(abs(uv.x) * 0.25, 0.25)).x * 0.1; // Use full uv.x and scale by 0.2
     
     // FFT value is already normalized and logarithmically scaled
     // Scale and position the FFT visualization

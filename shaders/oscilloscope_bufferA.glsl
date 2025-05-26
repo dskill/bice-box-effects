@@ -6,7 +6,7 @@
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = fragCoord/iResolution.xy;
-    vec3 col = texelFetch(iAudioTexture, ivec2(fragCoord), 0 ).rgb;
+    vec3 col = texelFetch(iChannel0, ivec2(fragCoord), 0 ).rgb;
     float xp = (mod(float(iTime*48.), SG))/SG;
     for(int i = 0; i<IP; i++){
         xp+=(1./(SG*float(IP)));
@@ -15,5 +15,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         float dist = distance(uv, vec2(xp,yp));
         col+=vec3(1./(dist*4096.));
     }
-    fragColor = vec4(col,1.0);
+    fragColor = vec4(col,1.);
 }

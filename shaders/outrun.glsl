@@ -86,7 +86,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         {
 
             uv.y = 3.0 / (abs(uv.y + 0.2) + 0.05);
-              uv.y += texture(iChannel0, vec2(abs(uv.x), 0.75)).x * 10.0;
+              uv.y += texture(iAudioTexture, vec2(abs(uv.x), 0.75)).x * 10.0;
 
             uv.x *= uv.y * 1.0;
 

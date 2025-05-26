@@ -1,17 +1,17 @@
 #define PI 3.141592
 #define orbs 20.
 
-// uniform sampler2D iChannel0; // Audio texture: FFT (y ~ 0.25), Waveform (y ~ 0.75)
+// uniform sampler2D iAudioTexture; // Audio texture: FFT (y ~ 0.25), Waveform (y ~ 0.75)
 // uniform float iRMSOutput;    // Overall RMS amplitude of the audio output
 
 // Helper function to get a combined FFT value
-// Samples low, mid, and high frequency ranges from the FFT data in iChannel0
+// Samples low, mid, and high frequency ranges from the FFT data in iAudioTexture
 float getCombinedFFT(sampler2D channel) {
     float fft_low = texture(channel, vec2(0.1, 0.25)).x;  // Sample low frequencies
     float fft_mid = texture(channel, vec2(0.3, 0.25)).x;  // Sample mid frequencies
     float fft_high = texture(channel, vec2(0.6, 0.25)).x; // Sample high frequencies
     // Average them, potentially weight them if desired
-    // The FFT data in iChannel0 is often log-scaled amplitude.
+    // The FFT data in iAudioTexture is often log-scaled amplitude.
     // We can normalize/scale it further if needed.
     // For now, let's assume it's in a somewhat usable range (e.g. 0 to 1 after processing)
     return (fft_low + fft_mid + fft_high) / 3.0;
@@ -46,11 +46,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float dist = length(uv);
   fragColor = vec4(0.);
 
-  uv.y += 10.0*(texture(iChannel0, vec2( abs(basic_uv.x - 0.5), 0.75)).x - 0.5) * 2.0; // Normalize to -1 to 1
+  uv.y += 10.0*(texture(iAudioTexture, vec2( abs(basic_uv.x - 0.5), 0.75)).x - 0.5) * 2.0; // Normalize to -1 to 1
 
 
   // Get audio reactivity values
-  float combined_fft = getCombinedFFT(iChannel0); // Value typically 0.0 to 1.0 (approx)
+  float combined_fft = getCombinedFFT(iAudioTexture); // Value typically 0.0 to 1.0 (approx)
   float rms_normalized = clamp(iRMSOutput * 2.0, 0.0, 1.0); // Normalize RMS, assuming iRMSOutput is ~0-0.5
 
   // Modulate rotation speeds with RMS
