@@ -1,3 +1,4 @@
+// resolution: 1.0
 // Fork of "Creation by Silexars" by Danguafer. https://shadertoy.com/view/XsXXDn
 // 2024-04-18 22:35:35
 
