@@ -1,3 +1,4 @@
+// resolution: 0.5
 // created by florian berger (flockaroo) - 2016
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 
