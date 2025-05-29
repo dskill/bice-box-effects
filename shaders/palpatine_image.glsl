@@ -8,7 +8,7 @@ float getWaveform(float uvx) {
     //int xCoord = int(uvx * float(audioTexSize.x));
     //xCoord = clamp(xCoord, 0, audioTexSize.x - 1); // Clamp to stay within texture bounds
     // Fetch from row 1 (y-coordinate 1 for waveform)
-    float waveVal = texture2D(iAudioTexture, vec2(uvx, 1.0)).r;
+    float waveVal = texture2D(iAudioTexture, vec2(uvx, 0.75)).r; // Standardized to y = 0.75 for waveform
     return (waveVal * 2.0) - 1.0; // Map 0-1 range to -1 to 1 range
 }
 
