@@ -1,6 +1,6 @@
 ---
 description: 
-globs: 
+globs: *.glsl
 alwaysApply: false
 ---
 # BICE Box ShaderToy GLSL Guide
