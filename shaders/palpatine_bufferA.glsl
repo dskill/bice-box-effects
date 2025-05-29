@@ -32,7 +32,7 @@ float sdSound(vec2 uv_sound) {
     line = clamp(line, 0.0, 1.0); // Ensure line intensity is positive
 
     float milkyLine = pow(line, 10.0) * 0.06;
-    milkyLine += pow(line, 2000.0) * 30.0; // Adds very sharp, bright highlights
+    milkyLine += pow(line, 200.0) * 5.0; // Adds very sharp, bright highlights
     milkyLine *= x_pos_factor;
     return milkyLine;
 }
@@ -81,7 +81,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     float vignette_factor = pow(puv_intermediate.x * puv_intermediate.y * 35.0, 1.0);
     vignette_factor = clamp(vignette_factor, 0.0, 1.0); // Ensure it's a multiplier between 0 and 1
 
-    col = 0.9 * col * vignette_factor; // Apply vignette and slight overall dimming
+    col = 0.98 * col;// * vignette_factor; // Apply vignette and slight overall dimming
 
     fragColor = vec4(col, 1.0);
 } 
