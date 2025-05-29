@@ -19,6 +19,9 @@
 #define angRnd 1.0
 #define posRnd 0.0
 
+// uniform sampler2D iAudioTexture; // For FFT/waveform data -- Removed, provided by ShaderToy environment
+// uniform float iRMSOutput;        // Overall loudness -- Removed, provided by ShaderToy environment
+
 #define Res  iChannelResolution[0]
 #define Res1 iChannelResolution[1]
 
@@ -87,10 +90,23 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     //v/=float(RotNum)/3.0;
     
-    fragColor=texture(iChannel0,fract(uv+v*3.0/Res.x));
+    // Modulate advection strength with iRMSOutput
+    float advection_strength = (3.0 + iRMSOutput * 4.0) / Res.x; // Make effect more pronounced
+    fragColor=texture(iChannel0,fract(uv+v*advection_strength));
     
-    // add a little "motor" in the center
-    fragColor.xy += (0.01*scr.xy / (dot(scr,scr)/0.1+0.3));
+    // Get a bass frequency from FFT (assuming FFT data is in the 0.25 y-coord of iAudioTexture)
+    float fft_bass = texture(iAudioTexture, vec2(0.05, 0.25)).x; // Sample low frequency bin
+    // Get a mid frequency for color modulation
+    float fft_mid = texture(iAudioTexture, vec2(0.3, 0.25)).x;
+
+
+    // add a little "motor" in the center, pulsed by bass
+    float motor_strength = 0.005 + fft_bass * 0.025; // Modulate base strength with bass
+    fragColor.xy += (motor_strength * scr.xy / (dot(scr,scr)/0.1+0.3));
     
+    // Add subtle color modulation based on mid frequencies and RMS
+    vec3 audio_color_tint = vec3(fft_mid * 0.2, fft_mid * 0.1, (0.5 + fft_bass * 0.5) * 0.15); // Example tint
+    fragColor.rgb += audio_color_tint * iRMSOutput;
+
     if(iFrame<=4 || KEY_I>0.5) init(fragColor,fragCoord);
 }

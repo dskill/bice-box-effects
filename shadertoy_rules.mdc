@@ -1,0 +1,26 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+## ShaderToy Uniforms Reminder
+
+When working with shaders in a ShaderToy-like environment (e.g., via `ShaderToyLite.js`):
+
+*   **Do NOT manually re-declare common ShaderToy uniforms.**
+*   The environment often pre-declares uniforms such as:
+    *   `iResolution`
+    *   `iTime`
+    *   `iTimeDelta`
+    *   `iFrame`
+    *   `iMouse`
+    *   `iChannel0` - `iChannel3`
+    *   `iChannelResolution`
+    *   `iDate`
+    *   `iSampleRate`
+    *   `iRMSInput`
+    *   `iRMSOutput`
+    *   `iAudioTexture` (if audio features are enabled)
+
+*   Check the framework's documentation or initialization code to confirm which uniforms are automatically provided.
+*   Redeclaring these will lead to compilation errors (e.g., `ERROR ... redefinition`).
