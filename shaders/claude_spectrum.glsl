@@ -20,7 +20,7 @@
 #define SINGLE_COLOR vec3(1.0, 1.0, 1.0)  // White for single color mode
 
 // SCALING CONFIGURATION
-#define USE_LOGARITHMIC_SCALE 1  // 1 = logarithmic, 0 = linear
+#define USE_LOGARITHMIC_SCALE 0  // 1 = logarithmic, 0 = linear
 #define LOG_SCALE_FACTOR 0.5     // Higher = more emphasis on low frequencies
 
 // Center line settings
@@ -56,7 +56,7 @@ float getFrequencySamplePosition(int barIndex) {
 float getFrequency(int barIndex) {
     float samplePos = getFrequencySamplePosition(barIndex);
     samplePos = clamp(samplePos, 0.0, 1.0);
-    return texture(iAudioTexture, vec2(samplePos, 0.0)).x;
+    return texture(iAudioTexture, vec2(samplePos, 0.25)).x;
 }
 
 // HSV to RGB conversion for rainbow colors
