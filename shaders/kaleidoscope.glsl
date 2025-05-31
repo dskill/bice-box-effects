@@ -1,3 +1,4 @@
+// resolution: 0.5
 #define PI 3.141592
 #define orbs 20.
 
