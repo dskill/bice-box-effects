@@ -40,6 +40,7 @@ uniform vec3      iChannelResolution[4]; // Channel resolution (in pixels) - rar
 // Audio-Reactive Uniforms
 uniform float     iRMSInput;           // Input RMS (Root Mean Square) audio level (0.0 to 1.0+).
 uniform float     iRMSOutput;          // Output RMS audio level (0.0 to 1.0+).
+uniform float     iRMSTIme;            // Accumulated iRMSOutput value over time. Can be used as an alternative to iTime for audio-driven animation timing.
 uniform sampler2D iAudioTexture;       // Texture containing audio data (see details below).
 ```
 
