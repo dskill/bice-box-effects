@@ -25,7 +25,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         // Adjust yp based on the signed waveform value
         // Centering at 0.5, and scaling. You might need to adjust the scaling factor (e.g., 0.25)
-        float yp = 0.5 + waveValSigned * 0.25;
+        float yp = 0.5 + waveValSigned * 1.0;
 
         col *= vec3(0.98,0.995,0.99);
         float dist = distance(uv, vec2(xp,yp));
