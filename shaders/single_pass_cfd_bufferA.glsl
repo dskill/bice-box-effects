@@ -64,10 +64,13 @@ void init( out vec4 fragColor, in vec2 fragCoord )
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = fragCoord.xy / Res.xy;
-    vec2 scr=uv*2.0-vec2(1.0);
-    
+    float waveform_strength = texture(iAudioTexture, vec2(uv.x, 0.75)).x*.5-.5;
+    vec2 scr= uv*2.0;
+    scr -= vec2(1.0);
     float sc=1.0/max(Res.x,Res.y);
+
     vec2 v=vec2(0);
+    //v.x += waveform_strength*10.1;
     for(int level=0;level<20;level++)
     {
         if ( sc > 0.7 ) break;
@@ -91,7 +94,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //v/=float(RotNum)/3.0;
     
     // Modulate advection strength with iRMSOutput
-    float advection_strength = (3.0 + iRMSOutput * 4.0) / Res.x; // Make effect more pronounced
+    float advection_strength = (0.0 +  0.001); // Make effect more pronounced
     fragColor=texture(iChannel0,fract(uv+v*advection_strength));
     
     // Get a bass frequency from FFT (assuming FFT data is in the 0.25 y-coord of iAudioTexture)
@@ -101,12 +104,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 
     // add a little "motor" in the center, pulsed by bass
-    float motor_strength = 0.005 + fft_bass * 0.025; // Modulate base strength with bass
-    fragColor.xy += (motor_strength * scr.xy / (dot(scr,scr)/0.1+0.3));
+    float motor_strength = 0.05 + fft_bass * 1.025; // Modulate base strength with bass
+    fragColor.xy += motor_strength *  ( scr.xy / (dot(scr,scr)/0.001+0.03));
+    if (abs(uv.y - .5)<0.01) {
+      // fragColor.xy += abs(waveform_strength)*0.2;
+    }
+    
     
     // Add subtle color modulation based on mid frequencies and RMS
     vec3 audio_color_tint = vec3(fft_mid * 0.2, fft_mid * 0.1, (0.5 + fft_bass * 0.5) * 0.15); // Example tint
-    fragColor.rgb += audio_color_tint * iRMSOutput;
+    //fragColor.rgb += audio_color_tint * iRMSOutput;
 
     if(iFrame<=4 || KEY_I>0.5) init(fragColor,fragCoord);
 }
