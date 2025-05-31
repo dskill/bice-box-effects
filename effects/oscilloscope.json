@@ -1,8 +1,0 @@
-{
-  "name": "Oscilloscope",
-  "description": "a classic oscilloscope visualization with waveform and FFT display",
-  "audio": "audio/oscilloscope.sc",
-  "shader": "shaders/oscilloscope",
-  "curated": true,
-  "params": []
-}
