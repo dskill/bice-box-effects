@@ -56,26 +56,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Modulate rotation speeds with RMS
   float rotation_speed_factor1 = 1.0 ; // Increase speed with RMS
   float rotation_speed_factor2 = 2.0;
-  uv *= rotate(iTime / (20.0 / rotation_speed_factor1) + iRMSTIme * 1.05);
+  uv *= rotate(iTime / (20.0 / rotation_speed_factor1) + iRMSTime * 1.05);
 
   // Modulate kaleidoscope sides with FFT
   combined_fft = 1.0; 
   float kale_sides = 3.0 + combined_fft * 7.0; // Modulate between 3 and 10 sides
   uv = kale(uv, vec2(6.97 - combined_fft * 3.0), kale_sides); // Also modulate offset slightly
 
-  uv *= rotate(iRMSTIme / (5.0 / rotation_speed_factor2) - rms_normalized * 0.03 * iRMSTIme);
+  uv *= rotate(iRMSTime / (5.0 / rotation_speed_factor2) - rms_normalized * 0.03 * iRMSTime);
 
   // Modulate displacement factors in the loop with RMS
   float displacement_amount = 0.4 + rms_normalized * 0.6; // Modulate base factors (0.57, 0.63)
 
   for (float i = 0.; i < orbs; i++) {
-    uv.x += (0.57 * displacement_amount) * sin(0.3 * uv.y + iRMSTIme + rms_normalized * 2.0);
-    uv.y -= (0.63 * displacement_amount) * cos(0.53 * uv.x + iRMSTIme - rms_normalized * 1.5);
+    uv.x += (0.57 * displacement_amount) * sin(0.3 * uv.y + iRMSTime + rms_normalized * 2.0);
+    uv.y -= (0.63 * displacement_amount) * cos(0.53 * uv.x + iRMSTime - rms_normalized * 1.5);
     float t = i * PI / orbs * 2.;
     float x_pos_factor = 3.0 + combined_fft * 3.0; // Modulate orb positioning
     float y_pos_factor = 3.0 + combined_fft * 3.0;
-    float x = x_pos_factor * tan(t + iRMSTIme / (10.0 - rms_normalized * 5.0));
-    float y = y_pos_factor * cos(t - iRMSTIme / (30.0 + rms_normalized * 10.0));
+    float x = x_pos_factor * tan(t + iRMSTime / (10.0 - rms_normalized * 5.0));
+    float y = y_pos_factor * cos(t - iRMSTime / (30.0 + rms_normalized * 10.0));
     vec2 position = vec2(x, y);
 
     // Modulate orb color based on FFT and i (iteration)

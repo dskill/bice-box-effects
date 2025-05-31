@@ -95,8 +95,7 @@ vec3 getColor(vec2 p, float current_iTime, float currentWaveformScreenY){
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     float audioFactor = 1.0 + iRMSOutput * 2.0;
-    time = (iTime / 3.0) * audioFactor;
-    float dynamic_iTime = iTime * audioFactor;
+    float dynamic_iTime = iRMSTime;
 
     vec2 p = fragCoord / iResolution.xy;
 

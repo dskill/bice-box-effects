@@ -83,7 +83,7 @@ float snoise(vec3 v) {
 // http://www.pouet.net/prod.php?which=57245
 // If you intend to reuse this shader, please add credits to 'Danilo Guanabara'
 
-#define t iTime
+#define t iRMSTime
 #define r iResolution.xy
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
@@ -98,7 +98,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     float noiseScale = 0.001;
     
     float speed = 0.1;
-    float noiseTime = iTime * speed;
+    float noiseTime = iRMSTime * speed;
 
     float noise = snoise(vec3(
         (fragCoord.x - iResolution.x/2.) * noiseScale,

@@ -12,7 +12,7 @@ float sun(vec2 uv, float battery)
 float grid(vec2 uv, float battery)
 {
     vec2 size = vec2(uv.y, uv.y * uv.y * 0.2) * 0.01;
-    uv += vec2(0.0, iRMSTIme * 4.0 * (battery + 0.05));
+    uv += vec2(0.0, iRMSTime * 4.0 * (battery + 0.05));
     uv = abs(fract(uv) - 0.5);
  	vec2 lines = smoothstep(size, vec2(0.0), uv);
  	lines += smoothstep(size * 5.0, vec2(0.0), uv) * 0.4 * battery;
@@ -132,7 +132,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             
             // cloud
             vec2 cloudUV = uv;
-            cloudUV.x = mod(cloudUV.x + iRMSTIme * 0.1, 4.0) - 2.0;
+            cloudUV.x = mod(cloudUV.x + iRMSTime * 0.1, 4.0) - 2.0;
             float cloudTime = iTime * 0.5;
             float cloudY = -0.5;
             float cloudVal1 = sdCloud(cloudUV, 
