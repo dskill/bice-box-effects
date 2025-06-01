@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # SuperCollider Effect SynthDef Guide for Master Analysis Integration
 
-This guide outlines the required structure for SuperCollider effect `SynthDefs` within the BICE-Box project to ensure proper integration with the centralized `masterAnalyser` node defined in [init.sc](mdc:bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box-effects/utilities/init.sc). The goal is to have `masterAnalyser` handle all waveform, FFT, and RMS analysis, as well as the sending of the `/combined_data` OSC message.
+This guide outlines the required structure for SuperCollider effect `SynthDefs` within the BICE-Box project to ensure proper integration with the centralized `masterAnalyser` node defined in [init.sc]. The goal is to have `masterAnalyser` handle all waveform, FFT, and RMS analysis, as well as the sending of the `/combined_data` OSC message.
 
 Individual effect `SynthDefs` should focus *solely* on their unique audio processing.
 
@@ -100,8 +100,8 @@ fork {
 ## 5. Examples
 
 Refer to the following refactored effects for practical examples:
-- [bypass.sc](mdc:bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box-effects/audio/bypass.sc)
-- [crackle_reverb.sc](mdc:bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box/bice-box-effects/audio/crackle_reverb.sc)
+- [bypass.sc](mdc:bice-box/bice-box/bice-box-effects/audio/bypass.sc)
+- [crackle_reverb.sc](mdc:bice-box/bice-box/bice-box-effects/audio/crackle_reverb.sc)
 
 By adhering to this structure, effects will seamlessly integrate into the centralized analysis system, simplifying their individual code and ensuring consistent data for visualization.
 
@@ -127,3 +127,78 @@ If the code generation process involves creating string literals that are then w
 
 **Guideline for Automated Tools:**
 When providing code to an editing tool (like specifying a `code_edit` string), ensure the string *itself* represents the exact, correct SuperCollider syntax that should appear in the file. For example, if an intermediate programming language requires backslashes to be escaped within its own string literals (e.g., a Python string `SynthDef(\\\\myEffect, ...)` to represent the SuperCollider code `SynthDef(\myEffect, ...)`), the tool using this string must correctly unescape it before writing to the `.sc` file, or the initial string must be crafted such that the final output is `SynthDef(\myEffect, ...)`. The primary goal is that the `.sc` file contains clean, standard SuperCollider syntax with single backslashes for symbols.
+
+## 6. JSON Metadata File (.json)
+
+Alongside each SuperCollider effect (`.sc` file), a corresponding JSON metadata file (`.json`) must be created. This file describes the effect and its parameters for the user interface.
+
+**File Naming:** The JSON filename must exactly match the SuperCollider filename, but with a `.json` extension (e.g., `my_effect.sc` and `my_effect.json`).
+Prefer `lowercase_snake_case` for actual filenames. This `lowercase_snake_case` base filename is also critical for the `SynthDef` name and the `audio` path within the JSON.
+
+**Structure:**
+
+```json
+{
+  "name": "User Friendly Effect Name", // e.g., "Gritty Distortion", "Shimmering Reverb"
+  "description": "A brief description of what the effect does.",
+  "audio": "audio/effect_filename.sc", // Path to the SuperCollider audio file
+  "visual": "visual/oscilloscope.js", // Default for general audio effects
+  "shader": "shaders/your_shader.glsl", // Optional: Path to a GLSL shader file or a JSON config for a multipass shader
+  "params": [
+    // Parameters array
+  ]
+}
+```
+
+-   **`name` (string):**
+    -   This should be a user-friendly, "pretty" name for the effect, suitable for display in the UI (e.g., "Green Machine", "Crackle Reverb").
+    -   This is distinct from the `SynthDef` name and the filename, which must be `lowercase_snake_case`.
+-   **`description` (string):**
+    -   A short (1-2 sentences) description of the effect's sound or behavior.
+-   **`audio` (string):**
+    -   The relative path to the SuperCollider audio effect file. This MUST follow the format `audio/FILENAME.sc`, where `FILENAME.sc` is the `lowercase_snake_case` name of the generated SuperCollider file (e.g., if the file is `gritty_baxandall_distortion.sc`, this field is `"audio/gritty_baxandall_distortion.sc"`).
+-   **`visual` (string):**
+    -   Path to a JavaScript visualization file. For all new audio effects primarily driven by SuperCollider, this field **MUST** be set to `"visual/oscilloscope.js"`. If the effect is primarily shader-based, this might be null or point to a different visualizer.
+-   **`shader` (string, optional):**
+    -   The relative path to a GLSL shader file (e.g., `"shaders/my_shader.glsl"`).
+    -   Alternatively, this can be a path to a JSON file that defines a multi-pass shader pipeline (e.g., `"shaders/my_multipass_config.json"`).
+    -   If the effect does not use a custom shader, this field can be omitted or set to `null`.
+-   **`params` (array of objects):**
+    -   This array defines the controllable parameters of the effect that will be exposed to the UI.
+    -   Each object in the array represents one parameter and corresponds to an argument in the `SynthDef` (excluding standard arguments like `out`, `in_bus`).
+    -   The order of parameters in this array should ideally match their declaration order in the `SynthDef` for consistency.
+
+    **Parameter Object Structure:**
+    ```json
+    {
+      "name": "paramName",   // Exact match to SynthDef argument name (e.g., "drive", "bass")
+      "value": 0.5,          // Initial/default value (must match SynthDef default)
+      "range": [0.0, 1.0]    // Array with two numbers: [minimumValue, maximumValue]
+      // "type": "float",    // Type is implicitly float/numeric for ParamFader
+      // "step": 0.01,       // (Future UI enhancement) Value increment step
+      // "unit": "Hz",         // (Future UI enhancement) Unit label
+    }
+    ```
+    -   **`name` (string):** The exact name of the argument as defined in the `SynthDef` (e.g., `delayTime`, `feedbackGain`, `mix`).
+    -   **`value` (number):** The initial (default) value for the parameter. This **MUST** match the default value specified in the `SynthDef` arguments.
+    -   **`range` (array of two numbers):** An array specifying `[minimumValue, maximumValue]` for the parameter.
+
+    **Standard Parameters:**
+    -   If the `SynthDef` includes a `mix = 0.5` argument (for wet/dry control), it should be last in the list of parameters and its corresponding entry in the `params` array should be:
+        ```json
+        {
+          "name": "mix",
+          "value": 0.5,
+          "range": [0.0, 1.0]
+        }
+        ```
+    -   Standard arguments like `out` and `in_bus` should **NOT** be included in the `params` array.
+
+**Example `params` entry for a `rate` argument in a `SynthDef` like `rate = 1.0` (assuming it ranges from 0.1 to 20 Hz):**
+```json
+{
+  "name": "rate",
+  "value": 1.0,
+  "range": [0.1, 20.0]
+}
+```
