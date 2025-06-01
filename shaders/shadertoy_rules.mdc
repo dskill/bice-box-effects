@@ -231,7 +231,9 @@ The files `palpatine_bufferA.glsl` and `palpatine_image.glsl` follow this conven
 
 ## Custom Uniforms
 
-If your shader requires custom parameters (e.g., knobs, sliders), these need to be:
+**Important**: The standard uniforms listed above (like `iResolution`, `iTime`, `iMouse`, `iChannel0-3`, `iRMSOutput`, etc.) are provided by the BICE Box environment and should be used directly without redeclaration. You should generally **not** add new `uniform` declarations to your GLSL shader files for these types of inputs, as the environment manages them. This section on "Custom Uniforms" primarily refers to parameters that are exposed and controlled via the effect's `.json` configuration file, allowing for dynamic adjustments from the application.
+
+If your shader requires custom parameters (e.g., knobs, sliders) that are meant to be controlled via the effect's JSON definition, these need to be:
 1.  Defined in the effect's `.json` file (in the `params` array).
 2.  Declared as `uniform` in your GLSL shader.
 3.  The application (`App.js` and `VisualizationCanvas.js`) needs to be aware of how to send these values to the shader. Currently, `paramValuesRef.current` is passed to p5.js sketches. For ShaderToyLite, a mechanism to update arbitrary uniforms from the `params` array would need to be ensured or implemented if not already generic. `ShaderToyLite.js` has locations for standard uniforms; custom ones would need their locations fetched and updated in the render loop if they change.

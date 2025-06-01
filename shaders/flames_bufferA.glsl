@@ -1,5 +1,3 @@
-
-
 /////////// spicy noise
 float fbm (vec3 seed)
 {
@@ -69,17 +67,30 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     ////////// forces field
     vec2 offset = vec2(0);
             
-    // turbulence                     
+    
+    // Audio-reactive forces using iAudioTexture and iRMSOutput.
+    // Waveform data is in iAudioTexture, y-coordinate 0.75.
+    // iRMSOutput is the audio level.
+    // We assume iAudioTexture is available if iRMSOutput is being used.
+    float raw_waveform = texture(iAudioTexture, vec2(uv.x, 0.75)).r;
+    float waveform = raw_waveform * 2.0 - 1.0; // Normalize to [-1,1]
+
+    // Focus the effect at the bottom, fading out by uv.y = 0.3
+    float bottomFocus = smoothstep(0.6, 0.0, uv.y);
+    
+     // turbulence                     
     offset -= vec2(cos(a),sin(a)) * fbm(seed+.195) * (1.-mask.y);
 
     // slope
-    offset -= normal.xy * mask.y;
-    
+    offset -= normal.xy * mask;// * audioGeneratedOffset.y;
+
+    //offset += audioGeneratedOffset;
+
     // mouse
     vec2 velocity = vec2(0);
     p -= (2.*iMouse.xy-R)/R.y;
     float mouseArea = ss(.3,.0,length(p)-.1);
-    offset -= clic * normalize(p) * mouseArea * 0.2;
+    //offset -= clic * normalize(p) * mouseArea * 0.2;
     velocity += (texture(iChannel0, vec2(0)).yz - mouse);
     if (length(velocity) > .001) velocity = clic * normalize(velocity) * mouseArea;
     
@@ -90,10 +101,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     offset -= vec2(0,1) * (1.-mask.y);
     
     // inertia
-    offset += velocity;
+    offset += velocity;// * iRMSOutput * 1000.0;
     
     // apply
-    uv += .015 * offset * mask.x;
+    uv += .005 * offset * mask.x + offset * abs(waveform) * 0.1 * bottomFocus;
     
     
     

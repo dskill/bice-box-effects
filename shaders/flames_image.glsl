@@ -23,7 +23,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                                  unit.y));
     
     // light
-    float light = dot(normal, N(vec3(0,-4,1)))*.5+.5;
+    float light = dot(normal, N(vec3(0,-4,1)))*.25+.25;
     color += light;
     
     // shadow
