@@ -5,7 +5,7 @@
 
         var sig, mono_for_analysis;
         // var freq; // Uncomment if using test signal below
-
+ 
         sig = In.ar(in_bus);
         mono_for_analysis = Mix.ar(sig);
         
