@@ -1,7 +1,7 @@
 (
     SynthDef(\monarch_synth, {
         |out = 0, in_bus = 0, analysis_out_bus, synthOctave = 0, synthFilterCutoff = 5000, synthFilterResonance = 0.2, synthDrive = 0.1, mix = 0.5|
-        var sig, dry, freq, hasFreq, synthSig, filteredSig, distortedSig, finalSig, mono_for_analysis;
+        var sig, dry, freq, hasFreq, synthSig, filteredSig, distortedSig, finalSig, mono_for_analysis, inputAmp;
 
         sig = In.ar(in_bus);
         dry = sig;
@@ -12,8 +12,12 @@
             ampThreshold: 0.02,
             median: 3);
 
+        // Get amplitude of input signal
+        inputAmp = Amplitude.kr(sig);
+
         // Sawtooth oscillator driven by detected pitch, transposable by octaves
-        synthSig = Saw.ar(freq * (2.pow(synthOctave)));
+        // Modulate by input amplitude and only play if frequency is detected
+        synthSig = Saw.ar(freq * (2.pow(synthOctave))) * hasFreq * inputAmp;
 
         // Low-pass filter
         filteredSig = MoogFF.ar(
