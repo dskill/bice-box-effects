@@ -41,7 +41,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     offset -= normalize(p) * sin(iTime*2.-length(p)*6.);
 
     // displace buffer sampler coordinates
-    uv += (.0005) * offset*vec2(R.y/R.x, 1);
+    uv += (.0005 + iRMSOutput * 0.05) * offset*vec2(R.y/R.x, 1);
 
     float waveform = texture(iAudioTexture, vec2(uv.x, 0.75)).x * 2.0-1.0;
 

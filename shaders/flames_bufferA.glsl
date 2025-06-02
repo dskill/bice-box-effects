@@ -76,7 +76,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float waveform = raw_waveform * 2.0 - 1.0; // Normalize to [-1,1]
 
     // Focus the effect at the bottom, fading out by uv.y = 0.3
-    float bottomFocus = smoothstep(0.6, 0.0, uv.y);
+    float bottomFocus = smoothstep(1.0, .5, uv.y);
     
      // turbulence                     
     offset -= vec2(cos(a),sin(a)) * fbm(seed+.195) * (1.-mask.y);
