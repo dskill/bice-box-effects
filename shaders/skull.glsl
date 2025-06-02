@@ -8,8 +8,11 @@ float Rectangle(vec2 uv,vec2 p,float width,float height,float blur){
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = 5.* ( fragCoord - .5*iResolution.xy ) /iResolution.y;
+
+    uv.y *= 1.0 - iRMSOutput;
     uv.x = abs(uv.x);
     vec3 col  = vec3(Rectangle(uv,vec2( 0     ,0.075 ),0.27   ,0.22 ,0.01));
          col -= vec3(Rectangle(uv,vec2( 0     ,-0.2 ),0.13   ,0.13 ,0.01));
