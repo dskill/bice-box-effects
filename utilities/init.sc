@@ -182,6 +182,62 @@ s.waitForBoot{
 	}, '/effect/param/set');
 	"OSCdef for /effect/param/set created".postln;
 
+	// Initialize the global specs dictionary (if not already done by an effect file)
+	~effectParameterSpecs ?? { ~effectParameterSpecs = IdentityDictionary.new; };
+	"~effectParameterSpecs initialized or confirmed existing.".postln;
+
+	// OSC Handler for getting effect parameter specifications
+	OSCdef(\getEffectSpecs, { |msg, time, addr|
+		var effectName, specs, specsForJSON, jsonString, paramCount;
+		// msg[0] is the address, e.g. '/effect/get_specs'
+		// msg[1] should be the effect name (Symbol or String)
+		if(msg.size >= 2, {
+			effectName = msg[1].asSymbol; // Ensure it's a symbol for dictionary lookup
+			"OSCdef getEffectSpecs: Received request for specs of %".format(effectName).postln;
+			specs = ~effectParameterSpecs[effectName];
+			if(specs.notNil, {
+				// Convert ControlSpec objects to JSON-serializable format
+				specsForJSON = ();
+				specs.keysValuesDo({ |key, spec|
+					specsForJSON.put(key, (
+						minval: spec.minval,
+						maxval: spec.maxval,
+						warp: spec.warp.asSpecifier.asString,
+						step: spec.step,
+						default: spec.default,
+						units: spec.units.asString
+					));
+				});
+				
+				// Manually build JSON string since asJSON doesn't work reliably with nested Events
+				jsonString = "{";
+				paramCount = 0;
+				specsForJSON.keysValuesDo({ |key, paramData|
+					if(paramCount > 0, { jsonString = jsonString ++ "," });
+					jsonString = jsonString ++ "\"" ++ key.asString ++ "\":{";
+					jsonString = jsonString ++ "\"minval\":" ++ paramData.minval.asString;
+					jsonString = jsonString ++ ",\"maxval\":" ++ paramData.maxval.asString;
+					jsonString = jsonString ++ ",\"warp\":\"" ++ paramData.warp.asString ++ "\"";
+					jsonString = jsonString ++ ",\"step\":" ++ paramData.step.asString;
+					jsonString = jsonString ++ ",\"default\":" ++ paramData.default.asString;
+					jsonString = jsonString ++ ",\"units\":\"" ++ paramData.units.asString ++ "\"";
+					jsonString = jsonString ++ "}";
+					paramCount = paramCount + 1;
+				});
+				jsonString = jsonString ++ "}";
+				
+				"Sending specs for % to %: %".format(effectName, addr, jsonString).postln;
+				addr.sendMsg('/effect/specs_reply', effectName.asString, jsonString);
+			}, {
+				"No specs found for effect: %".format(effectName).postln;
+				addr.sendMsg('/effect/specs_reply', effectName.asString, "{}"); // Send empty JSON object
+			});
+		}, {
+			"OSCdef getEffectSpecs: insufficient arguments in message %".format(msg).postln;
+		});
+	}, '/effect/get_specs');
+	"OSCdef for /effect/get_specs created".postln;
+
 
 	OSCdef(\combinedData).free;
 	OSCdef(\combinedData, { |msg|
