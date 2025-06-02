@@ -2,7 +2,7 @@
   "name": "Palpatine",
   "description": "A force lightning inspired fuzz effect with electric visual feedback",
   "audio": "audio/palpatine.sc",
-  "visual": "visual/palpatine.js",
+  "shader": "shaders/palpatine.glsl",
   "curated": true,
   "params": [
     {
