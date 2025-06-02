@@ -7,21 +7,23 @@
 //
 // https://www.shadertoy.com/view/tcyGDz
 
+//resolution: 0.4
+
 // CONFIGURABLE SETTINGS
 #define BAR_WIDTH 0.008       // Width of each bar
 #define BAR_SPACING 0.014     // Fixed spacing between bars
-#define MAX_BAR_HEaIGHT 0.7    // Maximum bar height
-#define BLOOM_SIZE 12.0       // Bloom/glow size
-#define BLOOM_INTENSITY 0.3   // Bloom intensity
+#define MAX_BAR_HEIGHT 0.7    // Maximum bar height
+#define BLOOM_SIZE 8.0       // Bloom/glow size
+#define BLOOM_INTENSITY 0.1   // Bloom intensity
 #define BLOOM_FALLOFF 2.0     // Bloom falloff rate
 #define MAX_BAR_HEIGHT 0.7
 // COLOR SCHEME CONFIGURATION
-#define COLOR_SCHEME 0        // 0=current, 1=single, 2=rainbow, 3=purple, 4=green, 5=blue
+#define COLOR_SCHEME 2        // 0=current, 1=single, 2=rainbow, 3=purple, 4=green, 5=blue
 #define SINGLE_COLOR vec3(1.0, 1.0, 1.0)  // White for single color mode
 
 // SCALING CONFIGURATION
-#define USE_LOGARITHMIC_SCALE 0  // 1 = logarithmic, 0 = linear
-#define LOG_SCALE_FACTOR 0.5     // Higher = more emphasis on low frequencies
+#define USE_LOGARITHMIC_SCALE 1  // 1 = logarithmic, 0 = linear
+#define LOG_SCALE_FACTOR 1.5    // Higher = more emphasis on low frequencies
 
 // Center line settings
 #define CENTER_LINE_THICKNESS 0.006  // Thickness of center line
@@ -29,7 +31,7 @@
 #define CENTER_LINE_COLOR vec3(0.6, 0.6, 0.6)  // Gray color for center line
 
 // Visual settings
-#define NUM_BARS 48           // Number of frequency bars
+#define NUM_BARS 24           // Number of frequency bars
 #define CENTER_Y 0.5          // Vertical center position
 #define WAVEFORM_WIDTH 0.8    // Total width of waveform (1.0 = full screen width)
 
@@ -40,7 +42,14 @@
 
 // Convert bar index to frequency sampling position
 float getFrequencySamplePosition(int barIndex) {
-    float t = float(barIndex) / float(NUM_BARS - 1); // 0.0 to 1.0
+    // New t calculation for symmetrical frequency mapping:
+    // `normalizedBarOverallPosition` goes from 0.0 (leftmost bar) to 1.0 (rightmost bar).
+    // `abs(normalizedBarOverallPosition - 0.5)` gives distance from center, from 0.0 (center) to 0.5 (edges).
+    // Multiplying by 2.0 scales this to 0.0 (center) to 1.0 (edges).
+    // This means `t=0.0` (lowest frequency) will be sampled by center bars,
+    // and `t=1.0` (highest frequency) by outermost bars.
+    float normalizedBarOverallPosition = float(barIndex) / float(NUM_BARS - 1);
+    float t = abs(normalizedBarOverallPosition - 0.5) * 2.0;
     
     if (USE_LOGARITHMIC_SCALE == 1) {
         // Logarithmic scaling - exponential curve
