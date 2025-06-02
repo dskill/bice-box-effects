@@ -5,6 +5,7 @@
 
 // from Pete Werner article:
 // http://petewerner.blogspot.com/2015/02/intro-to-curl-noise.html
+// resolution: 0.5
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
