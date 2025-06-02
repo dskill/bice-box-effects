@@ -1,6 +1,15 @@
 (
-    SynthDef(\grittyBaxandallDistortion, {
-        |out = 0, in_bus = 0, analysis_out_bus, drive = 10.0, bass = 0.0, treble = 0.0, level = 0.7, mix = 0.5|
+    var defName = \baxandall_distortion;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var drive = \drive.kr(10.0);
+        var bass = \bass.kr(0.0);
+        var treble = \treble.kr(0.0);
+        var level = \level.kr(0.7);
+        var mix = \mix.kr(0.5);
 
         var sig, dry, distortedSig, eqSig, wetSig, finalSig;
         var monoFinalForVisuals; // For masterAnalyser
@@ -37,22 +46,32 @@
         Out.ar(analysis_out_bus, monoFinalForVisuals);
 
         Out.ar(out, finalSig); // Output stereo (finalSig is already a stereo signal)
+    });
+    def.add;
+    "Effect SynthDef 'grittyBaxandallDistortion' added".postln;
 
-    }).add;
-    "GrittyBaxandallDistortion SynthDef added".postln;
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        drive: ControlSpec(1.0, 100.0, 'exp', 0, 10.0, "x"),
+        bass: ControlSpec(-12.0, 12.0, 'lin', 0, 0.0, "dB"),
+        treble: ControlSpec(-12.0, 12.0, 'lin', 0, 0.0, "dB"),
+        level: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
+    // Existing logic to create the synth instance
     fork {
-        s.sync; // Wait for server readiness
-        // Free any existing synth stored in ~effect
+        s.sync;
+
         if(~effect.notNil, {
-            "Freeing existing GrittyBaxandallDistortion synth".postln;
+            "Freeing existing effect synth".postln;
             ~effect.free;
         });
-        // Create a new instance of the GrittyBaxandallDistortion synth
-        ~effect = Synth(\grittyBaxandallDistortion, [
+
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
             \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        "New GrittyBaxandallDistortion synth created".postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )
