@@ -7,7 +7,7 @@ s.waitForBoot{
 	"Server booted, inside waitForBoot block - INITIALIZING...".postln;
 	Server.freeAll;
 
-	~useTestLoop = false;  
+	~useTestLoop = true;  
 
 	~o = NetAddr.new("127.0.0.1", 57121);
 	~chunkSize = 1024;

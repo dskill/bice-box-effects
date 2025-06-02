@@ -3,7 +3,7 @@ float sun(vec2 uv, float battery)
 {
  	float val = smoothstep(0.3, 0.29, length(uv));
  	float bloom = smoothstep(0.7, 0.0, length(uv));
-    float cut = 3.0 * sin((uv.y + iTime * 0.2 * (battery + 0.02)) * 100.0) 
+    float cut = 3.0 * sin((uv.y + iRMSTime * 0.2 * (battery + 0.02)) * 100.0) 
 				+ clamp(uv.y * 14.0 + 1.0, -6.0, 6.0);
     cut = clamp(cut, 0.0, 1.0);
     return clamp(val * cut, 0.0, 1.0) + bloom * 0.6;
@@ -115,7 +115,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             
             // fuji
             float fujiVal = sdTrapezoid( uv  + vec2(-0.75+sunUV.y * 0.0, 0.5), 1.75 + pow(uv.y * uv.y, 2.1), 0.2, 0.5);
-            float waveVal = uv.y + sin(uv.x * 20.0 + iTime * 2.0) * 0.05 + 0.2;
+            float waveVal = uv.y + sin(uv.x * 20.0 + iRMSTime * 2.0) * 0.05 + 0.2;
             float wave_width = smoothstep(0.0,0.01,(waveVal));
             
             // fuji color
@@ -133,7 +133,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             // cloud
             vec2 cloudUV = uv;
             cloudUV.x = mod(cloudUV.x + iRMSTime * 0.1, 4.0) - 2.0;
-            float cloudTime = iTime * 0.5;
+            float cloudTime = iRMSTime * 0.5;
             float cloudY = -0.5;
             float cloudVal1 = sdCloud(cloudUV, 
                                      vec2(0.1 + sin(cloudTime + 140.5)*0.1,cloudY), 
