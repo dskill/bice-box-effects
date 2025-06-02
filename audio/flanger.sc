@@ -32,7 +32,7 @@
     
     // Register parameter specifications using the helper function
     ~registerEffectSpecs.value(defName, (
-        rate: ControlSpec(0.01, 10, 'exp', 0, 0.5, "Hz"),
+        rate: ControlSpec(0.01, 0.1, 'exp', 0, 0.5, "Hz"),
         depth: ControlSpec(0.0001, 0.01, 'lin', 0, 0.002, "s"),
         feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.5, "%"),
         center: ControlSpec(0.0001, 0.02, 'lin', 0, 0.005, "s"),

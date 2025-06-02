@@ -1,6 +1,14 @@
 (
-    SynthDef(\electremolo, {
-        |out = 0, in_bus = 0, analysis_out_bus, rate = 2, depth = 0.5, mix = 1.0|
+    var defName = \electremolo;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var rate = \rate.kr(2);
+        var depth = \depth.kr(0.5);
+        var mix = \mix.kr(1.0);
+        
         var sig, trem, dry, wet, finalSig, tremMult, mono_for_analysis;
         var kr_impulse; // kr_impulse is kept for /electremoloData SendReply
         // Removed: phase, trig, partition, chain_out, rms_input, rms_output
@@ -26,8 +34,16 @@
 
         Out.ar(out, [finalSig,finalSig]); // Output mono finalSig as stereo
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'electremolo' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        rate: ControlSpec(0.1, 20, 'exp', 0, 2, "Hz"),
+        depth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
+    ));
 
     // OSC responder for electremolo specific data - THIS IS OK TO KEEP
 	OSCdef(\electremoloData).free;
@@ -47,13 +63,10 @@
             ~effect.free;
         });
 
-        ~effect = Synth(\electremolo, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \rate, 2,
-            \depth, 0.5,
-            \mix, 1.0
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New electremolo synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )
