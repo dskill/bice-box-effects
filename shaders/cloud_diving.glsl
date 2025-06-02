@@ -3,7 +3,7 @@
 // alternative background of my shader from Revision24 showdown final
 // original version:
 // https://livecode.demozoo.org/event/2024_03_29_shader_showdown_revision_2024.html
-
+// resolution: 0.5
 float gyroid (vec3 p) { return dot(cos(p),sin(p.yzx)); }
 
 float fbm(vec3 p)
