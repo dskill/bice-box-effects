@@ -5,23 +5,23 @@
   "visual": "visual/oscilloscope.js",
   "params": [
     {
-      "name": "synthOctave",
-      "value": 0,
-      "range": [-2, 2]
-    },
-    {
       "name": "synthFilterCutoff",
-      "value": 100,
+      "value": 1802,
       "range": [20, 2000]
     },
     {
       "name": "synthFilterResonance",
-      "value": 0.2,
+      "value": 0.75,
       "range": [0, 1]
     },
     {
       "name": "synthDrive",
-      "value": 0.1,
+      "value": 0.7,
+      "range": [0, 1]
+    },
+    {
+      "name": "subOctaveMix",
+      "value": 0.5,
       "range": [0, 1]
     },
     {
