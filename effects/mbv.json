@@ -2,7 +2,7 @@
   "name": "MBV",
   "description": "A My Bloody Valentine inspired Blues Driver with pink mirrored visuals",
   "audio": "audio/mbv.sc",
-  "visual": "visual/mbv.js",
+  "shader": "shaders/oscilloscope.glsl",
   "curated": true,
   "params": [
     {
