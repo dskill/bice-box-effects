@@ -160,6 +160,29 @@ s.waitForBoot{
 
 
 
+	// OSC Handler for setting effect parameters
+	OSCdef(\setEffectParam, { |msg|
+		var paramName, value;
+		// msg[0] is the address, e.g. '/effect/param/set'
+		// msg[1] should be the parameter name (symbol or string)
+		// msg[2] should be the value
+		if(msg.size >= 3, {
+			paramName = msg[1];
+			value = msg[2];
+			if(~effect.notNil, {
+				// Ensure paramName is a symbol for .set
+				// "~effect.set(paramName: %, value: %);".format(paramName.asSymbol, value).postln; // For debugging
+				~effect.set(paramName.asSymbol, value);
+			}, {
+				"OSCdef setEffectParam: ~effect is nil, cannot set % to %".format(paramName, value).postln;
+			});
+		}, {
+			"OSCdef setEffectParam: insufficient arguments in message %".format(msg).postln;
+		});
+	}, '/effect/param/set');
+	"OSCdef for /effect/param/set created".postln;
+
+
 	OSCdef(\combinedData).free;
 	OSCdef(\combinedData, { |msg|
 		var fftMagnitudes, i, dataIdx, numComplexBins, binsToProcess, dcMag, real, imag, mag, nyquistMag, combinedData;
