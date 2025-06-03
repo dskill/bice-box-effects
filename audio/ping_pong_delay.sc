@@ -1,6 +1,15 @@
 (
-    SynthDef(\ping_pong_delay, {
-        |out = 0, in_bus = 0, analysis_out_bus, delayTime = 0.4, feedback = 0.5, wetLevel = 0.5, gain = 1|
+    var defName = \ping_pong_delay;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var delayTime = \delayTime.kr(0.4);
+        var feedback = \feedback.kr(0.5);
+        var wetLevel = \wetLevel.kr(0.5);
+        var gain = \gain.kr(1);
+        
         var sig, leftDelay, rightDelay, delaySig, dry, fbNode, finalSig, mono_for_analysis;
 
         sig = In.ar(in_bus, 2);
@@ -21,8 +30,17 @@
 
         Out.ar(out, finalSig);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'ping_pong_delay' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        delayTime: ControlSpec(0.01, 2.0, 'lin', 0, 0.4, "s"),
+        feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.5, "%"),
+        wetLevel: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        gain: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "x")
+    ));
 
     OSCdef(\pingPongData).free;
 	OSCdef(\pingPongData, { |msg|
@@ -40,14 +58,10 @@
             ~effect.free;
         });
 
-        ~effect = Synth(\ping_pong_delay, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \delayTime, 0.4,
-            \feedback, 0.5,
-            \wetLevel, 0.5,
-            \gain, 1
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New ping_pong_delay synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

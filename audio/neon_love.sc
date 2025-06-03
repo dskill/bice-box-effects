@@ -1,6 +1,16 @@
 (
-    SynthDef(\neon_love, {
-        |out = 0, in_bus = 0, analysis_out_bus, decay = 1.0, roomSize = 0.7, intensity = 1.3, speed = -0.5, mix = 0.5|
+    var defName = \neon_love;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var decay = \decay.kr(1.0);
+        var roomSize = \roomSize.kr(0.7);
+        var intensity = \intensity.kr(1.3);
+        var speed = \speed.kr(-0.5);
+        var mix = \mix.kr(0.5);
+        
         var sig, verb, dry, finalSig,
             dampedSig,
             mono_for_analysis,
@@ -92,12 +102,18 @@
         // Output the effect in stereo
         Out.ar(out, [finalSig, finalSig]);
         Out.ar(analysis_out_bus, mono_for_analysis); // Output mono signal for analysis
-    }).add;
+    });
+    def.add;
+    "Effect SynthDef 'neon_love' added".postln;
 
-    "Effect SynthDef added".postln;
-
- 
-    
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        decay: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "s"),
+        roomSize: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        intensity: ControlSpec(0.0, 3.0, 'lin', 0, 1.3, "x"),
+        speed: ControlSpec(-2.0, 2.0, 'lin', 0, -0.5, "Hz"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     // Launch the effect
     fork {
@@ -109,15 +125,10 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\neon_love, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \decay, 1.0,
-            \roomSize, 0.7,
-            \intensity, 1.3,
-            \speed, -0.5,
-            \mix, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New neon_love synth created with analysis output bus").postln; // Updated postln message
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 ) 

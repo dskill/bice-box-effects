@@ -1,7 +1,20 @@
 (
-    SynthDef(\triangle_distortion, {
-        |out = 0, in_bus = 0, analysis_out_bus, drive = 10, tone = 0.5, midBoost = 0.7, presence = 0.5, reverbAmount = 0.2,
-        feedbackAmount = 0.1, bitCrushAmount = 0.2, stereoWidth = 0.5, pitchShiftRatio = 1.0|
+    var defName = \triangle_distortion;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var drive = \drive.kr(10);
+        var tone = \tone.kr(0.5);
+        var midBoost = \midBoost.kr(0.7);
+        var presence = \presence.kr(0.5);
+        var reverbAmount = \reverbAmount.kr(0.2);
+        var feedbackAmount = \feedbackAmount.kr(0.1);
+        var bitCrushAmount = \bitCrushAmount.kr(0.2);
+        var stereoWidth = \stereoWidth.kr(0.5);
+        var pitchShiftRatio = \pitchShiftRatio.kr(1.0);
+        
         var sig, distorted, midFreq, presenceEnhance, reverb, mono_for_analysis;
         var feedback_sig, bitCrushed, stereoSig, pitchShifted;
 
@@ -33,8 +46,22 @@
 
         Out.ar(out, [distorted, distorted]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'triangle_distortion' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        drive: ControlSpec(1.0, 50.0, 'exp', 0, 10, "x"),
+        tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        midBoost: ControlSpec(0.0, 2.0, 'lin', 0, 0.7, "x"),
+        presence: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        reverbAmount: ControlSpec(0.0, 1.0, 'lin', 0, 0.2, "%"),
+        feedbackAmount: ControlSpec(0.0, 0.5, 'lin', 0, 0.1, "%"),
+        bitCrushAmount: ControlSpec(0.0, 1.0, 'lin', 0, 0.2, "%"),
+        stereoWidth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        pitchShiftRatio: ControlSpec(0.5, 2.0, 'exp', 0, 1.0, "x")
+    ));
 
     fork {
         s.sync;
@@ -44,19 +71,10 @@
             ~effect.free;
         });
 
-        ~effect = Synth(\triangle_distortion, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \drive, 10,
-            \tone, 0.5,
-            \midBoost, 0.7,
-            \presence, 0.5,
-            \reverbAmount, 0.2,
-            \feedbackAmount, 0.1,
-            \bitCrushAmount, 0.2,
-            \stereoWidth, 0.5,
-            \pitchShiftRatio, 1.0
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New triangle_distortion synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

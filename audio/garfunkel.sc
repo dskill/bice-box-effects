@@ -1,6 +1,15 @@
 (
-    SynthDef(\simple_reverb, {
-        |out = 0, in_bus = 0, analysis_out_bus, decay = 1, roomSize = 0.7, wetLevel = 0.5, gain = 1|
+    var defName = \garfunkel;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var decay = \decay.kr(1);
+        var roomSize = \roomSize.kr(0.7);
+        var wetLevel = \wetLevel.kr(0.5);
+        var gain = \gain.kr(1);
+        
         var sig, verb, dry, finalSig, mono_for_analysis;
         var predelay, dampedSig;
         var doubled, detune, modulation;
@@ -38,8 +47,17 @@
 
         Out.ar(out, [finalSig,finalSig]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added (simple_reverb from garfunkel.sc)".postln;
+    });
+    def.add;
+    "Effect SynthDef 'garfunkel' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        decay: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "s"),
+        roomSize: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        wetLevel: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        gain: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "x")
+    ));
 
     fork {
         s.sync;
@@ -49,14 +67,10 @@
             ~effect.free;
         });
 
-        ~effect = Synth(\simple_reverb, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \decay, 1,
-            \roomSize, 0.7,
-            \wetLevel, 0.5,
-            \gain, 1
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New simple_reverb (from garfunkel.sc) synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

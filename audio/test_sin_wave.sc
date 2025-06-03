@@ -1,6 +1,12 @@
 (
-    SynthDef(\test_sin_wave, {
-        |out = 0, in_bus = 0, analysis_out_bus, freq = 50|
+    var defName = \test_sin_wave;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var freq = \freq.kr(50);
+        
         // START USER EFFECT CODE
         var sig, final_sig, mono_for_analysis;
 
@@ -14,8 +20,14 @@
 
         Out.ar(out, [final_sig, final_sig]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'test_sin_wave' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        freq: ControlSpec(20, 2000, 'exp', 0, 50, "Hz")
+    ));
 
     fork {
         s.sync;
@@ -27,11 +39,10 @@
         });
 
         // Create new test_sin_wave synth in the effect group
-        ~effect = Synth(\test_sin_wave, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \freq, 50
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New test_sin_wave synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

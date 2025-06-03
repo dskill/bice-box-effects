@@ -1,6 +1,17 @@
 (
-    SynthDef(\kaleidoscope, {
-        |out = 0, in_bus, analysis_out_bus, sparkle = 0.5, delayTime = 0.3, feedback = 0.6, shimmer = 0.4, rotation = 0.5, mix = 0.5|
+    var defName = \kaleidoscope;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var sparkle = \sparkle.kr(0.5);
+        var delayTime = \delayTime.kr(0.3);
+        var feedback = \feedback.kr(0.6);
+        var shimmer = \shimmer.kr(0.4);
+        var rotation = \rotation.kr(0.5);
+        var mix = \mix.kr(0.5);
+        
         var sig, wet, dry, delayedSig, shiftedSig, sparkles;
         var mono_for_analysis;
 
@@ -35,9 +46,19 @@
         Out.ar(out, sig); // Output main signal (can be stereo)
         Out.ar(analysis_out_bus, mono_for_analysis); // Output mono signal for analysis
 
-    }).add;
+    });
+    def.add;
+    "Effect SynthDef 'kaleidoscope' added".postln;
 
-    "Effect SynthDef added".postln;
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        sparkle: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        delayTime: ControlSpec(0.01, 1.0, 'exp', 0, 0.3, "s"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.6, "%"),
+        shimmer: ControlSpec(0.0, 1.0, 'lin', 0, 0.4, "%"),
+        rotation: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
@@ -48,18 +69,10 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\kaleidoscope, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            // Add any other effect-specific parameters here if they have defaults different from SynthDef
-            // For example:
-            // \sparkle, 0.5,
-            // \delayTime, 0.3,
-            // \feedback, 0.6,
-            // \shimmer, 0.4,
-            // \rotation, 0.5,
-            // \mix, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New kaleidoscope synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 ) 

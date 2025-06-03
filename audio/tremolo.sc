@@ -1,21 +1,27 @@
 (
-    SynthDef(\tremolo, {
-        |out = 0, in_bus = 0, analysis_out_bus, rate = 2, depth = 0.5, mix = 0.5|
+    var defName = \tremolo;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var rate = \rate.kr(2);
+        var depth = \depth.kr(0.5);
+        var mix = \mix.kr(0.5);
+        
         var sig, trem, dry, wet, finalSig, tremMult, mono_for_analysis;
         var kr_impulse; // kr_impulse is kept for /tremoloData SendReply
         // Removed: phase, trig, partition, chain_out, rms_input, rms_output
 
-        // sig = In.ar(in_bus); // Currently using a test SinOsc instead of in_bus
-        sig = SinOsc.ar(800, 0, 0.2);
+        sig = In.ar(in_bus); // Use actual input instead of test SinOsc
         tremMult = depth * SinOsc.kr(rate, 0, 1.0) + (1 - depth) + 0.5;
         trem = sig * tremMult; 
 
-        dry = sig * (1.0 - mix); // mix is used here, though it might always be a fully wet signal if sig is just for tremolo effect
+        dry = sig * (1.0 - mix);
         wet = trem * mix;
         finalSig =  dry + wet;
 
         // Prepare mono signal for analysis
-        // finalSig is mono as sig is mono
         mono_for_analysis = finalSig;
 
         // Removed old analysis machinery (BufWr, RMS for global, Out.kr for RMS, SendReply for /buffer_refresh, /rms)
@@ -25,8 +31,16 @@
 
         Out.ar(out, [finalSig,finalSig]); // Output mono finalSig as stereo
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'tremolo' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        rate: ControlSpec(0.1, 20, 'exp', 0, 2, "Hz"),
+        depth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     // OSC responder for tremolo specific data - THIS IS OK TO KEEP
 	OSCdef(\tremoloData).free;
@@ -45,13 +59,10 @@
             ~effect.free;
         });
 
-        ~effect = Synth(\tremolo, [
-            \in_bus, ~input_bus, // in_bus is an arg but not used by current SynthDef audio path
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \rate, 2,
-            \depth, 0.5,
-            \mix, 0.5 // mix is an arg but its effect might be nullified if dry path is always from test SinOsc
+        ~effect = Synth(defName, [
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New tremolo synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

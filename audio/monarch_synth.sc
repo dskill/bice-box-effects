@@ -1,6 +1,16 @@
 (
-    SynthDef(\monarch_synth, {
-        |out = 0, in_bus = 0, analysis_out_bus, synthFilterCutoff = 1802, synthFilterResonance = 0.75, synthDrive = 0.7, mix = 0.5, subOctaveMix = 0.5|
+    var defName = \monarch_synth;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var synthFilterCutoff = \synthFilterCutoff.kr(1802);
+        var synthFilterResonance = \synthFilterResonance.kr(0.75);
+        var synthDrive = \synthDrive.kr(0.7);
+        var mix = \mix.kr(0.5);
+        var subOctaveMix = \subOctaveMix.kr(0.5);
+        
         var sig, dry, freq, hasFreq, mainSynthSig, subOctaveSynthSig, synthSig, filteredSig, distortedSig, finalSig, mono_for_analysis, inputAmp;
 
         sig = In.ar(in_bus);
@@ -44,8 +54,18 @@
 
         Out.ar(out, [finalSig, finalSig]); // Output mono finalSig as stereo
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'monarch_synth' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        synthFilterCutoff: ControlSpec(100, 8000, 'exp', 0, 1802, "Hz"),
+        synthFilterResonance: ControlSpec(0.0, 4.0, 'lin', 0, 0.75, "Q"),
+        synthDrive: ControlSpec(0.0, 2.0, 'lin', 0, 0.7, "x"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        subOctaveMix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
@@ -57,15 +77,10 @@
         });
 
         // Create new monarch_synth synth in the effect group
-        ~effect = Synth(\monarch_synth, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \synthFilterCutoff, 1802,
-            \synthFilterResonance, 0.75,
-            \synthDrive, 0.7,
-            \mix, 0.5,
-            \subOctaveMix, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New monarch_synth synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

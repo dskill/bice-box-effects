@@ -1,6 +1,16 @@
 (
-    SynthDef(\spectral_freezing_delay, {
-        |out = 0, in_bus = 0, analysis_out_bus, delayTime = 0.5, feedback = 0.5, freezeTrig = 0, freezeMix = 0.5, mix = 0.5|
+    var defName = \spectral_freezing_delay;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var delayTime = \delayTime.kr(0.5);
+        var feedback = \feedback.kr(0.5);
+        var freezeTrig = \freezeTrig.kr(0);
+        var freezeMix = \freezeMix.kr(0.5);
+        var mix = \mix.kr(0.5);
+        
         var sig, delayed, frozen, fbNode, buf, freezePhase, mono_for_analysis;
 
         // Allocate a buffer for the frozen sound
@@ -30,22 +40,26 @@
 
         Out.ar(out, sig);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
+    });
+    def.add;
+    "Effect SynthDef 'spectral_freezing_delay' added".postln;
 
-    "SpectralFreezingDelay added".postln;
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        delayTime: ControlSpec(0.01, 2.0, 'exp', 0, 0.5, "s"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.5, "%"),
+        freezeTrig: ControlSpec(0, 1, 'lin', 1, 0, ""),
+        freezeMix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
         if(~effect.notNil, { ~effect.free; });
-        ~effect = Synth(\spectral_freezing_delay, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \delayTime, 0.5,
-            \feedback, 0.5,
-            \freezeTrig, 0,
-            \freezeMix, 0.5,
-            \mix, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New spectral_freezing_delay synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

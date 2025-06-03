@@ -1,6 +1,17 @@
 (
-    SynthDef(\distortion_with_reverb, {
-        |out = 0, in_bus = 0, analysis_out_bus, drive = 0.5, tone = 0.5, decay = 1, roomSize = 0.7, wetLevelDist = 0.5, wetLevelRev = 0.5|
+    var defName = \distortion_with_reverb;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var drive = \drive.kr(0.5);
+        var tone = \tone.kr(0.5);
+        var decay = \decay.kr(1);
+        var roomSize = \roomSize.kr(0.7);
+        var wetLevelDist = \wetLevelDist.kr(0.5);
+        var wetLevelRev = \wetLevelRev.kr(0.5);
+        
         var sig, distorted, verb, dryDist, dryRev, mono_for_analysis;
         
         sig = In.ar(in_bus);
@@ -21,8 +32,19 @@
 
         Out.ar(out, [sig,sig]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'distortion_with_reverb' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        drive: ControlSpec(0.1, 10.0, 'exp', 0, 0.5, "x"),
+        tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        decay: ControlSpec(0.0, 2.0, 'lin', 0, 1.0, "s"),
+        roomSize: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        wetLevelDist: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        wetLevelRev: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
@@ -32,16 +54,10 @@
             ~effect.free;
         });
 
-        ~effect = Synth(\distortion_with_reverb, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \drive, 0.5,
-            \tone, 0.5,
-            \decay, 1,
-            \roomSize, 0.7,
-            \wetLevelDist, 0.5,
-            \wetLevelRev, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New distortion_with_reverb synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

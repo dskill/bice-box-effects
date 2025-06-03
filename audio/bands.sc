@@ -1,6 +1,14 @@
 (
-    SynthDef(\bands, {
-        |out = 0, in_bus = 0, analysis_out_bus, drive = 10, tone = 0.5, mix = 1.0|
+    var defName = \bands;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var drive = \drive.kr(10);
+        var tone = \tone.kr(0.5);
+        var mix = \mix.kr(1.0);
+        
         var sig, distorted, mono_for_analysis;
 
         sig = In.ar(in_bus);
@@ -27,9 +35,16 @@
 
         Out.ar(out, [distorted, distorted]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
+    });
+    def.add;
+    "Effect SynthDef 'bands' added".postln;
 
-    "Effect SynthDef added".postln;
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        drive: ControlSpec(1.0, 50.0, 'exp', 0, 10, "x"),
+        tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
+    ));
 
     fork {
         s.sync;
@@ -40,13 +55,10 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\bands, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \drive, 10,
-            \tone, 0.5,
-            \mix, 1.0
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New bands synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 ) 

@@ -1,7 +1,18 @@
 (
-    SynthDef(\palpatine, {
-        |out = 0, in_bus = 0, analysis_out_bus, drive = 50, tone = 2000, mix = 1.0, 
-        reverb = 0.3, delay = 0.25, delay_mix = 0.2, feedback = 0.5|
+    var defName = \palpatine;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var drive = \drive.kr(50);
+        var tone = \tone.kr(2000);
+        var mix = \mix.kr(1.0);
+        var reverb = \reverb.kr(0.3);
+        var delay = \delay.kr(0.25);
+        var delay_mix = \delay_mix.kr(0.2);
+        var feedback = \feedback.kr(0.5);
+        
         var sig, distorted, filtered, wet, delayed, mono_for_analysis;
         var mod_freq = LFNoise1.kr(0.5).range(4, 8);
         var mod = SinOsc.ar(mod_freq) * 0.3;
@@ -36,9 +47,20 @@
         
         Out.ar(out, [distorted, distorted]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
+    });
+    def.add;
+    "Effect SynthDef 'palpatine' added".postln;
 
-    "Effect SynthDef added".postln;
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        drive: ControlSpec(1.0, 100.0, 'exp', 0, 50, "x"),
+        tone: ControlSpec(100, 8000, 'exp', 0, 2000, "Hz"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%"),
+        reverb: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
+        delay: ControlSpec(0.01, 1.0, 'exp', 0, 0.25, "s"),
+        delay_mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.2, "%"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
@@ -48,17 +70,10 @@
             ~effect.free;
         };
 
-        ~effect = Synth(\palpatine, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \drive, 50,
-            \tone, 2000,
-            \mix, 1.0,
-            \reverb, 0.3,
-            \delay, 0.25,
-            \delay_mix, 0.2,
-            \feedback, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New palpatine synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 ) 

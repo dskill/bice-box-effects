@@ -1,6 +1,14 @@
 (
-    SynthDef(\phaser_2d, {
-        |out = 0, in_bus = 0, analysis_out_bus, x = 0.5, y = 0.5, mix = 1.0|
+    var defName = \phaser_2d;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var x = \x.kr(0.5);
+        var y = \y.kr(0.5);
+        var mix = \mix.kr(1.0);
+        
         var sig, dry, processed, mono_for_analysis;
         var numStages, freq, feedback;
 
@@ -15,7 +23,7 @@
 
         // Create the phaser effect
         processed = sig; // Start with dry signal
-        1.do({ arg i; // Do this 'numStages' times
+        numStages.do({ arg i; // Do this 'numStages' times
             processed = AllpassN.ar(
                 in: processed,
                 delaytime: LFNoise1.kr(freq / (i + 1), 0.01, 0.02), // Varying delay times for each stage
@@ -23,7 +31,6 @@
                 mul: 0.99 // Prevent runaway feedback
             );
         });
-
 
         // Mix the dry and processed signals
         processed = XFade2.ar(dry, processed, mix * 2 - 1);
@@ -37,22 +44,27 @@
 
         Out.ar(out, [processed, processed]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
-    "Phaser 2D SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'phaser_2d' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        x: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "stages"),
+        y: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "freq"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
+    ));
 
     fork {
         s.sync;
 
         if(~effect.notNil, { ~effect.free; });
 
-        ~effect = Synth(\phaser_2d, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \x, 0.5,
-            \y, 0.5,
-            \mix, 1.0
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New phaser_2d synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
 
         // OSC responder for phaser parameters
         OSCdef.new(

@@ -1,8 +1,13 @@
 (
-    SynthDef(\bypass, {
-        |out = 0, in_bus = 0, analysis_out_bus, test = 1|  // ADD analysis_out_bus argument
+    var defName = \bypass;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var test = \test.kr(1);
+        
         // START USER EFFECT CODE
-
         var sig, mono_for_analysis;
         // var freq; // Uncomment if using test signal below
  
@@ -25,8 +30,14 @@
         // All internal BufWr, FFT, RunningSum, SendReply for /combined_data are REMOVED.
         // ~masterAnalyser in init.sc now handles all of that.
 
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'bypass' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        test: ControlSpec(0.0, 1.0, 'lin', 0, 1, "")
+    ));
 
     fork {
         s.sync;
@@ -39,10 +50,10 @@
 
         // Create new bypass synth in the effect group
         // Ensure analysis_out_bus argument is passed correctly from init.sc when this effect is chosen
-        ~effect = Synth(\bypass, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus, 
             \analysis_out_bus, ~effect_output_bus_for_analysis.index // Ensure this global var is set in init.sc
         ], ~effectGroup);
-        "New bypass effect synth created with analysis output bus".postln; // MODIFIED postln
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

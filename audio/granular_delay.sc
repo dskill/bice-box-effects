@@ -1,12 +1,16 @@
 (
-    SynthDef(\shimmering_granular_delay, {
-        |out = 0, in_bus = 0, analysis_out_bus,
-         grain_size = 0.05, /* Grain duration in seconds (10ms to 200ms) */
-         density = 10,    /* Grains per second (1 to 50) */
-         delay_time = 0.5,  /* Delay time in seconds (0ms to 2000ms) */
-         feedback = 0.5,    /* Feedback amount (0 to 0.95) */
-         pitch_shift_semitones = 7, /* Max random pitch shift in semitones (0 to 12) */
-         mix = 0.5          /* Wet/Dry mix (0 to 1.0) */|
+    var defName = \granular_delay;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var grain_size = \grain_size.kr(0.05); /* Grain duration in seconds (10ms to 200ms) */
+        var density = \density.kr(10);    /* Grains per second (1 to 50) */
+        var delay_time = \delay_time.kr(0.5);  /* Delay time in seconds (0ms to 2000ms) */
+        var feedback = \feedback.kr(0.5);    /* Feedback amount (0 to 0.95) */
+        var pitch_shift_semitones = \pitch_shift_semitones.kr(7); /* Max random pitch shift in semitones (0 to 12) */
+        var mix = \mix.kr(0.5);          /* Wet/Dry mix (0 to 1.0) */
 
         var sig, dry_sig, wet_sig, final_sig, buf, max_delay_time, write_head_samples,
             current_write_pos_secs, grain_read_pos_secs_unwrapped, grain_read_pos_secs,
@@ -83,9 +87,19 @@
 
         Out.ar(out, final_sig); // Output the final stereo signal
         Out.ar(analysis_out_bus, mono_for_analysis);
-    }).add;
+    });
+    def.add;
+    "Effect SynthDef 'granular_delay' added".postln;
 
-    "ShimmeringGranularDelay SynthDef added".postln;
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        grain_size: ControlSpec(0.01, 0.2, 'exp', 0, 0.05, "s"),
+        density: ControlSpec(1, 50, 'exp', 0, 10, "Hz"),
+        delay_time: ControlSpec(0.01, 2.0, 'lin', 0, 0.5, "s"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.5, "%"),
+        pitch_shift_semitones: ControlSpec(0, 12, 'lin', 0, 7, "st"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
@@ -93,16 +107,10 @@
             ("Freeing existing " ++ ~effect.defName ++ " synth (" ++ ~effect.nodeID ++ ")").postln;
             ~effect.free;
         });
-        ~effect = Synth(\shimmering_granular_delay, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \grain_size, 0.05,
-            \density, 10,
-            \delay_time, 0.5,
-            \feedback, 0.5,
-            \pitch_shift_semitones, 7,
-            \mix, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New shimmering_granular_delay synth created (" ++ ~effect.nodeID ++ ") with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 )

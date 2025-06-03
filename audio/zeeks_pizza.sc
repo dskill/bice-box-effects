@@ -1,45 +1,56 @@
 // Pizza Phaser Effect
 // Combines phaser with amplitude modulation for a "hungry to full" cycle effect
 (
-SynthDef(\zeeks_pizza, {
-    arg out=0, in_bus=0, analysis_out_bus,
-    // Phaser parameters
-    rate=0.5, // Speed of phaser oscillation
-    depth=0.5, // Depth of phaser effect
-    // Amplitude modulation
-    modRate=0.2, // Speed of AM
-    modDepth=0.3, // Depth of AM
-    // Mix
-    mix=0.5;
+    var defName = \zeeks_pizza;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        // Phaser parameters
+        var rate = \rate.kr(0.5); // Speed of phaser oscillation
+        var depth = \depth.kr(0.5); // Depth of phaser effect
+        // Amplitude modulation
+        var modRate = \modRate.kr(0.2); // Speed of AM
+        var modDepth = \modDepth.kr(0.3); // Depth of AM
+        // Mix
+        var mix = \mix.kr(0.5);
 
-    var input, numStages = 6, freq = 100, modPhase, phaser, output, mono_for_analysis;
-    
-    input = In.ar(in_bus); // Assuming mono input
-    
-    // Create phaser effect
-    modPhase = SinOsc.kr(rate, 0, depth * 800, 1000 + freq);
-    phaser = input;
-    numStages.do {
-        phaser = AllpassL.ar(phaser, 0.1, modPhase.reciprocal, 0);
-    };
-    
-    // Add amplitude modulation
-    output = phaser * (1 - (modDepth * SinOsc.kr(modRate)));
-    
-    // Mix dry and wet signals
-    output = (input * (1 - mix)) + (output * mix);
+        var input, numStages = 6, freq = 100, modPhase, phaser, output, mono_for_analysis;
+        
+        input = In.ar(in_bus); // Assuming mono input
+        
+        // Create phaser effect
+        modPhase = SinOsc.kr(rate, 0, depth * 800, 1000 + freq);
+        phaser = input;
+        numStages.do {
+            phaser = AllpassL.ar(phaser, 0.1, modPhase.reciprocal, 0);
+        };
+        
+        // Add amplitude modulation
+        output = phaser * (1 - (modDepth * SinOsc.kr(modRate)));
+        
+        // Mix dry and wet signals
+        output = (input * (1 - mix)) + (output * mix);
 
-    // Prepare mono signal for analysis
-    // Assuming 'output' is mono here
-    mono_for_analysis = output;
-      
-    Out.ar(out, [output, output]); // Output mono 'output' as stereo
-    Out.ar(analysis_out_bus, mono_for_analysis);
-}).add;
+        // Prepare mono signal for analysis
+        // Assuming 'output' is mono here
+        mono_for_analysis = output;
+          
+        Out.ar(out, [output, output]); // Output mono 'output' as stereo
+        Out.ar(analysis_out_bus, mono_for_analysis);
+    });
+    def.add;
+    "Effect SynthDef 'zeeks_pizza' added".postln;
 
-// Add execution code
-
-    "Effect SynthDef added".postln;
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        rate: ControlSpec(0.01, 5.0, 'exp', 0, 0.5, "Hz"),
+        depth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        modRate: ControlSpec(0.01, 2.0, 'exp', 0, 0.2, "Hz"),
+        modDepth: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
@@ -49,15 +60,10 @@ SynthDef(\zeeks_pizza, {
             ~effect.free;
         };
 
-        ~effect = Synth(\zeeks_pizza, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis,
-            \rate, 0.5,
-            \depth, 0.5,
-            \modRate, 0.2,
-            \modDepth, 0.3,
-            \mix, 0.5
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        ("New zeeks_pizza synth created with analysis output bus").postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 ) 

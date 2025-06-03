@@ -1,7 +1,16 @@
 (
-    SynthDef(\flames, {
-        |out = 0, in_bus = 0, analysis_out_bus,
-        gain = 1.0, tone = 0.1, res = 1.37, flameVol = 0.75, mix = 0.5|  // Simplified parameters
+    var defName = \flames;
+    var def = SynthDef(defName, {
+        // Use NamedControl style instead of traditional arguments
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var gain = \gain.kr(1.0);
+        var tone = \tone.kr(0.1);
+        var res = \res.kr(1.37);
+        var flameVol = \flameVol.kr(0.75);
+        var mix = \mix.kr(0.5);
+        
         var sig, distorted, flameSig, mono_for_analysis;
         var freq, hasFreq;
 
@@ -76,8 +85,18 @@
 
         Out.ar(out, distorted); // Output stereo
 
-    }).add;
-    "Effect SynthDef added".postln;
+    });
+    def.add;
+    "Effect SynthDef 'flames' added".postln;
+
+    // Register parameter specifications using the helper function
+    ~registerEffectSpecs.value(defName, (
+        gain: ControlSpec(0.1, 5.0, 'exp', 0, 1.0, "x"),
+        tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.1, "%"),
+        res: ControlSpec(0.1, 4.0, 'exp', 0, 1.37, "x"),
+        flameVol: ControlSpec(0.0, 2.0, 'lin', 0, 0.75, "x"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    ));
 
     fork {
         s.sync;
@@ -89,11 +108,10 @@
         });
 
         // Create new flames synth in the effect group
-        ~effect = Synth(\flames, [
+        ~effect = Synth(defName, [
             \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis // Corrected: use bus object
-            // Pass other params if needed, e.g., gain: 1.0 etc.
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
-        "New flames effect synth created with analysis output bus".postln;
+        ("New % synth created with analysis output bus").format(defName).postln;
     };
 ) 
