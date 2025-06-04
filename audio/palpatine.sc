@@ -1,3 +1,4 @@
+// shader: palpatine
 (
     var defName = \palpatine;
     var def = SynthDef(defName, {

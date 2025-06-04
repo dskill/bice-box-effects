@@ -1,3 +1,4 @@
+// shader: oscilloscope
 (
     var defName = \bypass;
     var def = SynthDef(defName, {

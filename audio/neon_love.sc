@@ -1,3 +1,4 @@
+// shader: neon_love
 (
     var defName = \neon_love;
     var def = SynthDef(defName, {

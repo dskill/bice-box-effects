@@ -1,3 +1,5 @@
+// shader: moebius
+
 (
     var defName = \bands;
     var def = SynthDef(defName, {
