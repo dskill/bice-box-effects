@@ -1,7 +1,7 @@
 // shader: oscilloscope
 
 (
-    var defName = \test_sin_wave;
+    var defName = \synthtoy;
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
