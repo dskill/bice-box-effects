@@ -1,3 +1,5 @@
+// shader: skull
+
 (
     var defName = \baxandall_distortion;
     var def = SynthDef(defName, {
