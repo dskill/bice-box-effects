@@ -133,12 +133,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     pos.y /= widthHeightRatio;
     //Shift upwards to centre heart
     pos.y += 0.03;
-	pos.xy *= -iRMSOutput*10.0 + 1.0;
+	pos.xy *= -iRMSOutput*1.0 + 1.0;
     float t = iRMSTime * 10.0;
     
     //Get first segment
     float dist = getSegment(t, pos, 0.0);
-    float glow = getGlow(dist, radius, -intensity * iRMSOutput*10.0 + 1.0);
+    float glow = getGlow(dist, radius, -intensity * iRMSOutput*1.0 + 1.0);
     
     vec3 col = vec3(0.0);
     
@@ -149,7 +149,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     
     //Get second segment
     dist = getSegment(t, pos, 3.4);
-    glow = getGlow(dist, radius,-intensity * iRMSOutput*10.0 + 1.0);
+    glow = getGlow(dist, radius,-intensity * iRMSOutput*1.0 + 1.0);
     
     //White core
     //col += 10.0*vec3(smoothstep(0.006, 0.003, dist));
