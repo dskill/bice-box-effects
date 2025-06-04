@@ -1,4 +1,4 @@
-// shader: skull
+// shader: fire3d
 
 (
     var defName = \triangle_distortion;
