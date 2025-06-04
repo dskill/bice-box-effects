@@ -1,3 +1,4 @@
+// shader: oscilloscope
 (
     var defName = \vocorotator;
     var def = SynthDef(defName, {

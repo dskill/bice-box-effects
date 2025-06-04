@@ -1,3 +1,5 @@
+// shader: skull
+
 (
     var defName = \distortion_with_reverb;
     var def = SynthDef(defName, {

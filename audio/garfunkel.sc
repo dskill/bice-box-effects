@@ -1,3 +1,4 @@
+// shader: scope
 (
     var defName = \garfunkel;
     var def = SynthDef(defName, {

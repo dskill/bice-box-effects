@@ -1,3 +1,4 @@
+// shader: oscilloscope
 (
     var defName = \tremolo;
     var def = SynthDef(defName, {

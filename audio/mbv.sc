@@ -1,3 +1,4 @@
+// shader: outrun
 (
     var defName = \mbv;
     var def = SynthDef(defName, {

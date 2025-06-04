@@ -1,3 +1,4 @@
+// shader: oscilloscope
 (
     var defName = \granular_delay;
     var def = SynthDef(defName, {

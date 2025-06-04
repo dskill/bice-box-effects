@@ -1,3 +1,4 @@
+// shader: oscilloscope
 (
     var defName = \tuner;
     var def = SynthDef(defName, {

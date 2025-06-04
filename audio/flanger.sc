@@ -1,3 +1,4 @@
+// shader: scope
 (
     var defName = \flanger;
     var def = SynthDef(defName, {

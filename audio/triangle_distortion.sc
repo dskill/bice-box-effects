@@ -1,3 +1,5 @@
+// shader: skull
+
 (
     var defName = \triangle_distortion;
     var def = SynthDef(defName, {

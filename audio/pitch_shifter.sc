@@ -1,3 +1,4 @@
+// shader: oscilloscope
 (
     var defName = \pitch_shifter;
     var def = SynthDef(defName, {

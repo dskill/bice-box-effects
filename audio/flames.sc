@@ -1,3 +1,4 @@
+// shader: curling_smoke
 (
     var defName = \flames;
     var def = SynthDef(defName, {

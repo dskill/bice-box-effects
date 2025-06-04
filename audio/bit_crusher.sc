@@ -1,3 +1,5 @@
+// shader: skull
+
 (
     var defName = \bit_crusher;
     var def = SynthDef(defName, {

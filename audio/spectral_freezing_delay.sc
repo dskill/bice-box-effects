@@ -1,3 +1,4 @@
+// shader: oscilloscope
 (
     var defName = \spectral_freezing_delay;
     var def = SynthDef(defName, {

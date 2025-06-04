@@ -1,3 +1,5 @@
+// shader: skull
+
 (
     var defName = \overdrive;
     var def = SynthDef(defName, {

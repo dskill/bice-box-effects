@@ -1,3 +1,5 @@
+// shader: oscilloscope
+
 (
     var defName = \test_sin_wave;
     var def = SynthDef(defName, {

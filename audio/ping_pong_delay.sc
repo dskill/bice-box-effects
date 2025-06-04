@@ -1,3 +1,4 @@
+// shader: radial_fft_line
 (
     var defName = \ping_pong_delay;
     var def = SynthDef(defName, {

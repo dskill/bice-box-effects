@@ -1,3 +1,4 @@
+// shader: outrun
 (
     var defName = \crackle_reverb;
     var def = SynthDef(defName, {

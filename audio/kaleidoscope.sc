@@ -1,3 +1,4 @@
+// shader: kaleidoscope
 (
     var defName = \kaleidoscope;
     var def = SynthDef(defName, {

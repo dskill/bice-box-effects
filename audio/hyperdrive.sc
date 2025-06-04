@@ -1,3 +1,4 @@
+// shader: silexar_ascii
 (
     var defName = \hyperdrive;
     var def = SynthDef(defName, {
