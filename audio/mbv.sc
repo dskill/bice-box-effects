@@ -20,7 +20,7 @@
         var pitch_mod;
         var dry_processed;
 
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); // Sums stereo to mono
         
         // Add slow pitch oscillation
         pitch_mod = SinOsc.kr(pitch_rate).range(1 - pitch_depth, 1 + pitch_depth);
@@ -58,19 +58,21 @@
         reverse_verb_sig = FreeVerb.ar(reverse_sig, mix: 1, room: 1.25, damp: 0.5);
 
         // Mix dry and reverse signals based on reverse_verb parameter
+        // LinXFade2 will correctly fade between the mono dry_processed and stereo reverse_verb_sig
         processed = LinXFade2.ar(dry_processed, reverse_verb_sig, reverse_verb);
 
         // Level control and final shaping
         processed = processed * level * 0.8;
         processed = LeakDC.ar(processed);
 
-        // Final mix between original input (post-pitch shift and pre-emphasis) and the processed signal
+        // Final mix between original input and the processed signal
+        // XFade2 will correctly fade between the mono sig and stereo processed signal
         processed = XFade2.ar(sig, processed, mix*2.0-1.0);
 
         // Prepare mono signal for analysis
         mono_for_analysis = Mix.ar(processed);
 
-        Out.ar(out, [processed,processed]);
+        Out.ar(out, processed); // 'processed' is now stereo
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

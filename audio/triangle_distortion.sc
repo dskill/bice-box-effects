@@ -20,7 +20,7 @@
         var sig, distorted, midFreq, presenceEnhance, reverb, mono_for_analysis;
         var feedback_sig, bitCrushed, stereoSig, pitchShifted;
 
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); // Sums stereo to mono
  
         // Feedback loop with limiter
         feedback_sig = LocalIn.ar(1, 0.0);
@@ -43,10 +43,10 @@
 
         distorted = Limiter.ar(distorted, 0.95, 0.01);
 
-        // Prepare mono signal for analysis
-        mono_for_analysis = Mix.ar(distorted);
+        // Prepare mono signal for analysis - already mono
+        mono_for_analysis = distorted;
 
-        Out.ar(out, [distorted,distorted]);
+        Out.ar(out, [distorted, distorted]);
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

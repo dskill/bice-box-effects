@@ -11,16 +11,17 @@
         
         var sig, shifted, dry, finalSig, mono_for_analysis;
         
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); // Sums stereo to mono
         
         shifted = PitchShift.ar(sig, pitchRatio: pitchShift);
         
         dry = sig * (1 - wetLevel);
         finalSig = dry + (shifted * wetLevel);
         
-        mono_for_analysis = Mix.ar(finalSig);
+        // Signal is already mono
+        mono_for_analysis = finalSig;
 
-        Out.ar(out, [finalSig,finalSig]);
+        Out.ar(out, [finalSig, finalSig]);
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

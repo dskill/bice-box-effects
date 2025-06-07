@@ -49,8 +49,11 @@ s.waitForBoot{
 
 	SynthDef(\audioIn, {
 		var sig; 
-		sig = SoundIn.ar([0, 1]);
-		Out.ar(~audio_input_bus, sig);
+		// Mix the stereo hardware input down to a single mono channel.
+		// This handles a mono source plugged into either L or R of a stereo jack.
+		sig = Mix.ar(SoundIn.ar([0, 1]));
+		// Output the resulting mono signal to BOTH channels of our main input bus.
+		Out.ar(~audio_input_bus, [sig, sig]);
 	}).add;
 	s.sync;
 	"SynthDef(audioIn) added".postln;

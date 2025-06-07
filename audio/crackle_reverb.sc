@@ -17,21 +17,19 @@
         var mono_for_analysis;
 
         // Get input signal
-        sig = In.ar(in_bus); // Input is stereo
+        sig = In.ar(in_bus); // Sums stereo to mono
         dry = sig;
 
         // --- Start Effect Processing ---
 
         // 1. Reverb
-        // FreeVerb outputs stereo. We want full wet signal here for processing.
-        // 'room' (0..1) controls room size, 'damp' (0..1) controls high-frequency damping.
+        // FreeVerb outputs stereo.
         reverb_sig = FreeVerb.ar(sig, 1.0, room, 0.5);
 
         // 2. Create distortion ramp based on reverb amplitude
-        // Get amplitude of the reverb tail (it's stereo, so take average of channels' absolute values for Amplitude.kr)
+        // Get amplitude of the reverb tail (it's stereo, so we mix to mono first)
         reverb_amp = Amplitude.kr(Mix.ar(reverb_sig).abs);
         // Normalize reverb_amp to roughly 0..1 range.
-        // Amplitude.kr output depends on input signal level. Clipping ensures it's within 0..1.
         norm_reverb_amp = reverb_amp.clip(0, 1.0);
 
         // As norm_reverb_amp (reverb loudness) decreases, (1 - norm_reverb_amp) increases.
@@ -56,8 +54,7 @@
         wet_sig = wet_sig.clip(-1,1); // Clip final wet signal to prevent extreme levels if crackle sum is too high
 
         // 5. Mix dry signal with processed wet signal
-        // XFade2.ar(inA, inB, pan) where pan is -1 (A) through 0 (A+B) to 1 (B)
-        // dry and wet_sig are both stereo.
+        // dry is mono, wet_sig is stereo. XFade2 expands dry to stereo automatically.
         final_sig = XFade2.ar(dry, wet_sig, mix * 2.0 - 1.0);
 
         // --- End Effect Processing ---

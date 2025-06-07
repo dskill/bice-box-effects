@@ -12,9 +12,10 @@
         var level = \level.kr(0.75);
         var mix = \mix.kr(0.5);
         
-        var sig, distorted, mono_for_analysis;
+        var sig, dry, distorted, mono_for_analysis;
 
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); // Sums stereo to mono
+        dry = sig;
         
         // Simplified distortion chain using soft_fuzz approach
         distorted = sig + sig * gain * 10.0;  // Gain staging similar to soft_fuzz
@@ -29,12 +30,12 @@
         
         distorted = distorted * level;  // Output level control
         distorted = LeakDC.ar(distorted);  // Clean up DC offset
-        distorted = XFade2.ar(sig, distorted, mix*2.0-1.0);
+        distorted = XFade2.ar(dry, distorted, mix*2.0-1.0);
 
-        // Prepare mono signal for analysis
-        mono_for_analysis = Mix.ar(distorted);
+        // Prepare mono signal for analysis - already mono
+        mono_for_analysis = distorted;
 
-        Out.ar(out, [distorted,distorted]);
+        Out.ar(out, [distorted, distorted]);
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

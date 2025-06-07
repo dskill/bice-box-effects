@@ -28,7 +28,7 @@
         mono_for_analysis = Mix.ar(output_sig);
 
         // Main audio output
-	    Out.ar(out, output_sig);
+	    Out.ar(out, right);
 
         // Dedicated mono output for analysis
         Out.ar(analysis_out_bus, mono_for_analysis);

@@ -15,10 +15,10 @@
         var sig, distorted, flameSig, mono_for_analysis;
         var freq, hasFreq;
 
-        sig = In.ar(in_bus); // Assuming in_bus is stereo
+        sig = In.ar(in_bus); // Sums stereo to mono
         
         // Simplified distortion chain using soft_fuzz approach
-        distorted = sig + sig * (gain + 0.1) * 40.0;  // Gain staging similar to soft_fuzz
+        distorted = sig + sig * (gain + 0.1) * 40.0;
         distorted = distorted.softclip;  // Simple softclip instead of complex distortion
         
         // MoogFF filter for tone shaping (replacing previous EQ setup)
@@ -36,7 +36,7 @@
         // RMS calculation for flameSig internal logic (not for global RMS reporting)
         // This uses a local RMS of the input to modulate the flame effect, which is fine.
         # freq, hasFreq = Pitch.kr(
-					in: sig,
+					in: sig, // sig is mono here
 					ampThreshold: 0.02,
 					median: 2);
 
@@ -51,26 +51,26 @@
                 LFSaw.ar(freq * 0.502) * 0.3 + // Slightly detuned saw for thickness
                 PinkNoise.ar(0.4) // Add some noise for crackling
             )
-        ]) * RunningSum.rms(Mix.ar(sig), 256) * 30.0; // Using a local RMS for effect modulation
+        ]) * RunningSum.rms(sig, 256) * 30.0; // Using a local RMS for effect modulation
         
         // Multi-band filtering for a more complex flame character
         flameSig = BPF.ar(flameSig, [100, 400, 1200], [0.5, 0.7, 0.8]).sum;
         // Add some random amplitude modulation for crackling
         flameSig = flameSig * (LFNoise2.kr(5).range(0.1, 1.0));
 
-        // Add reverb to the flame sound
+        // Add reverb to the flame sound - FreeVerb creates a stereo signal
         flameSig = flameSig * 0.5 + FreeVerb.ar(
             in: flameSig,
-            mix: 0.7,        // 40% wet signal
-            room: 2.6,       // Medium room size
-            damp: 0.9        // Light dampening
+            mix: 0.7,
+            room: 2.6,
+            damp: 0.9
         );
         
         // Adjust overall flame volume
         flameSig = flameSig * flameVol * 2.0;
         
         // Combine flame sound with distorted output
-        // If distorted is stereo and flameSig is mono, flameSig will be added to both channels.
+        // distorted is mono, flameSig is now stereo. SuperCollider handles the expansion.
         distorted =  distorted + flameSig;
 
         distorted = XFade2.ar(sig, distorted, mix*2.0-1.0);
@@ -78,7 +78,6 @@
         // END USER EFFECT CODE
 
         // Prepare mono version of final signal for masterAnalyser
-        // Assuming 'distorted' is stereo at this point
         mono_for_analysis = Mix.ar(distorted);
 
         // Output for masterAnalyser

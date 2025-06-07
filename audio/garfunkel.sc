@@ -15,7 +15,7 @@
         var predelay, dampedSig;
         var doubled, detune, modulation;
 
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); // Sums stereo to mono
         
         detune = SinOsc.kr(0.5).range(0.99, 1.01);
         modulation = SinOsc.kr(0.2).range(0.005, 0.012);
@@ -27,6 +27,7 @@
         predelay = DelayN.ar(sig, 0.05, 0.04);
         dampedSig = BHiShelf.ar(predelay, 8000, 1, 2);
         
+        // FreeVerb creates a stereo signal from the mono dampedSig
         verb = FreeVerb.ar(dampedSig, 
             mul: decay * 1.5,
             room: roomSize * 1.4,
@@ -39,6 +40,7 @@
         ) * 0.4);
         verb = CompanderD.ar(verb, 0.4, 1, 1/2);
         
+        // dry signal is mono, verb is stereo. SuperCollider expands dry to stereo automatically.
         dry = sig * (1 - wetLevel);
         finalSig = (dry + (verb * wetLevel)) * gain;
         finalSig = finalSig + (LPF.ar(finalSig, 300) * 0.15) + (HPF.ar(finalSig, 8000) * 0.1);
@@ -46,7 +48,7 @@
         // Prepare mono signal for analysis
         mono_for_analysis = Mix.ar(finalSig);
 
-        Out.ar(out, [finalSig,finalSig]);
+        Out.ar(out, finalSig); // finalSig is already stereo
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

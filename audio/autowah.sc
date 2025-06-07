@@ -20,16 +20,18 @@
         var mix = \mix.kr(0.8);
         
         // Variables (MUST be declared here!)
-        var sig, driven_sig, envelope, filter_freq, lfo_mod, filtered, saturated, mono_for_analysis;
+        var sig, dry, driven_sig, envelope, filter_freq, lfo_mod, filtered, saturated, mono_for_analysis;
 
         // Signal processing
+        // In.ar on a stereo bus with a single argument sums to mono, which is what we want for performance.
         sig = In.ar(in_bus);
+        dry = sig;
         
         // Drive the input signal for more dramatic envelope response
         driven_sig = sig * drive;
         
         // Envelope follower - tracks amplitude of driven signal
-        envelope = Amplitude.ar(Mix.ar(driven_sig), 
+        envelope = Amplitude.ar(driven_sig, 
             attackTime: attack, 
             releaseTime: decay
         );
@@ -56,13 +58,13 @@
         ]);
         
         // Mix control between dry and wet signal
-        saturated = XFade2.ar(sig, saturated, mix * 2 - 1);
+        saturated = XFade2.ar(dry, saturated, mix * 2 - 1);
         
-        // Analysis output
-        mono_for_analysis = Mix.ar(saturated);
+        // Analysis output - the signal is already mono, so no Mix.ar needed
+        mono_for_analysis = saturated;
         Out.ar(analysis_out_bus, mono_for_analysis);
         
-        // Main output
+        // Main output - duplicate the mono signal to create a stereo pair
         Out.ar(out, [saturated, saturated]);
     });
     def.add;

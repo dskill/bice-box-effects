@@ -16,17 +16,17 @@
         var sig, wet, dry, delayedSig, shiftedSig, sparkles;
         var mono_for_analysis;
 
-        sig = In.ar(in_bus);
+        sig = In.ar(in_bus); // Sums stereo to mono
         dry = sig;
 
-        // Create sparkles using resonant filters and noise
+        // Create sparkles using resonant filters and noise - this part is mono
         sparkles = Mix.fill(8, {
             var freq = TRand.kr(2000, 12000, Dust.kr(sparkle * 10 + 0.1));
             var amp = LFNoise1.kr(rotation * 2).range(0, sparkle);
             Ringz.ar(Dust.ar(sparkle * 20 + 1) * 0.04, freq, 0.05) * amp;
         });
 
-        // Shimmer delay with pitch shifting
+        // Shimmer delay with pitch shifting - all mono processing
         delayedSig = CombL.ar(sig + (sparkles * 0.3), 1.0, delayTime, feedback * 4);
         shiftedSig = PitchShift.ar(delayedSig, 0.2,
             LFNoise1.kr(rotation).range(1.0, 1.5 + (shimmer * 0.5)),
@@ -37,11 +37,11 @@
         wet = Mix([delayedSig, shiftedSig * shimmer]) * 0.5;
         sig = XFade2.ar(dry, wet, mix * 2 - 1);
 
-        // Prepare mono signal for analysis
-        mono_for_analysis = Mix.ar(sig);
+        // Prepare mono signal for analysis - already mono
+        mono_for_analysis = sig;
 
-        Out.ar(out, [sig,sig]); // Output main signal (can be stereo)
-        Out.ar(analysis_out_bus, mono_for_analysis); // Output mono signal for analysis
+        Out.ar(out, [sig, sig]); // Duplicate mono signal for stereo output
+        Out.ar(analysis_out_bus, mono_for_analysis);
 
     });
     def.add;
