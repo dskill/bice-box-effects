@@ -63,7 +63,7 @@
         Out.ar(analysis_out_bus, mono_for_analysis);
         
         // Main output
-        Out.ar(out, saturated);
+        Out.ar(out, [saturated, saturated]);
     });
     def.add;
     "Effect SynthDef 'autowah' added".postln;
