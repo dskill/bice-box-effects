@@ -32,14 +32,10 @@
         distorted = XFade2.ar(sig, distorted, mix*2.0-1.0);
 
         // Prepare mono signal for analysis
-        if (distorted.isArray) { // Check if stereo (though current setup is mono)
-            mono_for_analysis = Mix.ar(distorted);
-        } {
-            mono_for_analysis = distorted;
-        };
+        mono_for_analysis = Mix.ar(distorted);
 
+        Out.ar(out, [distorted,distorted]);
         Out.ar(analysis_out_bus, mono_for_analysis);
-        Out.ar(out, [distorted, distorted]);
     });
     def.add;
     "Effect SynthDef 'hyperdrive' added".postln;

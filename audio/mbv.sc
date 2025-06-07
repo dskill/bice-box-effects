@@ -68,9 +68,9 @@
         processed = XFade2.ar(sig, processed, mix*2.0-1.0);
 
         // Prepare mono signal for analysis
-        mono_for_analysis = processed;
+        mono_for_analysis = Mix.ar(processed);
 
-        Out.ar(out, [processed, processed]);
+        Out.ar(out, [processed,processed]);
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

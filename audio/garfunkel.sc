@@ -44,7 +44,7 @@
         finalSig = finalSig + (LPF.ar(finalSig, 300) * 0.15) + (HPF.ar(finalSig, 8000) * 0.1);
 
         // Prepare mono signal for analysis
-        mono_for_analysis = finalSig;
+        mono_for_analysis = Mix.ar(finalSig);
 
         Out.ar(out, [finalSig,finalSig]);
         Out.ar(analysis_out_bus, mono_for_analysis);

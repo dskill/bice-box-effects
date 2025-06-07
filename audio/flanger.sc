@@ -23,7 +23,7 @@
         wet = flange;
         final_sig = XFade2.ar(sig, wet, mix * 2 - 1);
 
-        mono_for_analysis = final_sig;
+        mono_for_analysis = Mix.ar(final_sig);
                 
         Out.ar(out, [final_sig,final_sig]);
         Out.ar(analysis_out_bus, mono_for_analysis);

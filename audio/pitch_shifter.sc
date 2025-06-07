@@ -18,7 +18,7 @@
         dry = sig * (1 - wetLevel);
         finalSig = dry + (shifted * wetLevel);
         
-        mono_for_analysis = finalSig;
+        mono_for_analysis = Mix.ar(finalSig);
 
         Out.ar(out, [finalSig,finalSig]);
         Out.ar(analysis_out_bus, mono_for_analysis);

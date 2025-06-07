@@ -38,13 +38,9 @@
         sig = XFade2.ar(dry, wet, mix * 2 - 1);
 
         // Prepare mono signal for analysis
-        if (sig.isArray) { // Check if stereo
-            mono_for_analysis = Mix.ar(sig); // Mix stereo to mono
-        } {
-            mono_for_analysis = sig; // Already mono
-        };
+        mono_for_analysis = Mix.ar(sig);
 
-        Out.ar(out, sig); // Output main signal (can be stereo)
+        Out.ar(out, [sig,sig]); // Output main signal (can be stereo)
         Out.ar(analysis_out_bus, mono_for_analysis); // Output mono signal for analysis
 
     });

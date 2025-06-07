@@ -19,7 +19,7 @@
             signal_to_write_to_buffer, mono_for_analysis;
 
         // --- Main Signal Input ---
-        sig = In.ar(in_bus); // Process as mono for simplicity with TGrains panning
+        sig = In.ar([in_bus,in_bus]); // sig is stereo. It will be mixed down for the mono buffer.
         dry_sig = sig;
 
         // --- Buffer Setup ---
@@ -80,8 +80,8 @@
         LocalOut.ar(wet_sig); // Send the wet_sig (output of TGrains) to the LocalIn for the feedback loop
 
         // --- Wet/Dry Mix ---
-        // dry_sig is mono, wet_sig is stereo. Expand dry_sig to stereo for XFade2.
-        final_sig = XFade2.ar([dry_sig, dry_sig], wet_sig, mix * 2.0 - 1.0);
+        // dry_sig is stereo, wet_sig is stereo.
+        final_sig = XFade2.ar(dry_sig, wet_sig, mix * 2.0 - 1.0);
 
         // --- Prepare mono signal for analysis ---
         mono_for_analysis = Mix.ar(final_sig);

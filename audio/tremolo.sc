@@ -23,14 +23,14 @@
         finalSig =  dry + wet;
 
         // Prepare mono signal for analysis
-        mono_for_analysis = finalSig;
+        mono_for_analysis = Mix.ar(finalSig);
 
         // Removed old analysis machinery (BufWr, RMS for global, Out.kr for RMS, SendReply for /buffer_refresh, /rms)
         // Kept kr_impulse and SendReply for /tremoloData as it's effect-specific data
         kr_impulse = Impulse.kr(30); // Original was 30Hz, keeping that for this specific SendReply
         SendReply.kr(kr_impulse, '/tremoloData', [tremMult, depth]);
 
-        Out.ar(out, [finalSig,finalSig]); // Output mono finalSig as stereo
+        Out.ar(out, [finalSig,finalSig]); // Output stereo finalSig
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

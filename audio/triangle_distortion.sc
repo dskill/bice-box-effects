@@ -44,9 +44,9 @@
         distorted = Limiter.ar(distorted, 0.95, 0.01);
 
         // Prepare mono signal for analysis
-        mono_for_analysis = distorted;
+        mono_for_analysis = Mix.ar(distorted);
 
-        Out.ar(out, [distorted, distorted]);
+        Out.ar(out, [distorted,distorted]);
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;

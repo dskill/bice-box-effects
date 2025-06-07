@@ -17,7 +17,7 @@
         var mono_for_analysis;
 
         // Get input signal
-        sig = In.ar(in_bus); // Assumes mono input, or stereo summed to mono by In.ar
+        sig = In.ar(in_bus); // Input is stereo
         dry = sig;
 
         // --- Start Effect Processing ---
@@ -26,11 +26,10 @@
         // FreeVerb outputs stereo. We want full wet signal here for processing.
         // 'room' (0..1) controls room size, 'damp' (0..1) controls high-frequency damping.
         reverb_sig = FreeVerb.ar(sig, 1.0, room, 0.5);
-        reverb_channels = Pan2.ar(reverb_sig); // Split stereo UGen into an array of [L, R] channels
 
         // 2. Create distortion ramp based on reverb amplitude
         // Get amplitude of the reverb tail (it's stereo, so take average of channels' absolute values for Amplitude.kr)
-        reverb_amp = Amplitude.kr((reverb_channels[0].abs + reverb_channels[1].abs) * 0.5);
+        reverb_amp = Amplitude.kr(Mix.ar(reverb_sig).abs);
         // Normalize reverb_amp to roughly 0..1 range.
         // Amplitude.kr output depends on input signal level. Clipping ensures it's within 0..1.
         norm_reverb_amp = reverb_amp.clip(0, 1.0);
@@ -58,8 +57,8 @@
 
         // 5. Mix dry signal with processed wet signal
         // XFade2.ar(inA, inB, pan) where pan is -1 (A) through 0 (A+B) to 1 (B)
-        // dry is mono, wet_sig is stereo. Expand dry to stereo for XFade2.
-        final_sig = XFade2.ar([dry, dry], wet_sig, mix * 2.0 - 1.0);
+        // dry and wet_sig are both stereo.
+        final_sig = XFade2.ar(dry, wet_sig, mix * 2.0 - 1.0);
 
         // --- End Effect Processing ---
 
