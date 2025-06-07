@@ -6,29 +6,19 @@
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var channel_mode = \channel_mode.kr(0); // 0: Stereo, 1: Left, 2: Right, 3: Swap
+        var gain = \gain.kr(0); // 0: Stereo, 1: Left, 2: Right, 3: Swap
 
         // Variables
-        var sig, left, right, output_sig, mono_for_analysis;
+        var sig, output_sig, mono_for_analysis;
 
         // Read input as stereo
         sig = In.ar(in_bus, 2);
-        left = sig[0];
-        right = sig[1];
-
-        // Select output based on channel_mode
-        output_sig = Select.ar(channel_mode, [
-            [left, right],   // 0: Normal Stereo
-            [left, left],    // 1: Left channel on both outputs
-            [right, right],  // 2: Right channel on both outputs
-            [right, left]    // 3: Swapped channels
-        ]);
+        output_sig = sig * gain;
 
         // Analysis output is always a mono mix of the final output
         mono_for_analysis = Mix.ar(output_sig);
-
         // Main audio output
-	    Out.ar(out, right);
+	    Out.ar(out, output_sig);
 
         // Dedicated mono output for analysis
         Out.ar(analysis_out_bus, mono_for_analysis);
@@ -38,7 +28,7 @@
 
     // Register parameter specifications
     ~registerEffectSpecs.value(defName, (
-        channel_mode: ControlSpec(0, 3, 'lin', 1, 0, "mode")
+        gain: ControlSpec(0, 3, 'lin', 0.1, 1, "gain")
     ));
 
     fork {
