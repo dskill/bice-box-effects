@@ -2,42 +2,43 @@
 (
     var defName = \bypass;
     var def = SynthDef(defName, {
-        // Use NamedControl style instead of traditional arguments
+        // Parameters
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var test = \test.kr(1);
-        
-        // START USER EFFECT CODE
-        var sig, mono_for_analysis;
-        // var freq; // Uncomment if using test signal below
- 
-        sig = In.ar(in_bus);
-        mono_for_analysis = Mix.ar(sig);
-        
-        // // Example test signal (ensure mono_for_analysis gets this if used)
-        // freq = LFTri.kr(1/10, 0).range(82.41, 82.41*2);  
-        // sig = SinOsc.ar(freq, 0, 0.5);
-        // mono_for_analysis = sig; // If using the sine wave for testing
+        var channel_mode = \channel_mode.kr(0); // 0: Stereo, 1: Left, 2: Right, 3: Swap
 
-        // END USER EFFECT CODE
+        // Variables
+        var sig, left, right, output_sig, mono_for_analysis;
 
-        // Main audio output (can be stereo or mono depending on 'sig')
-	    Out.ar(out, sig);
+        // Read input as stereo
+        sig = In.ar(in_bus, 2);
+        left = sig[0];
+        right = sig[1];
 
-        // Dedicated mono output for analysis by masterAnalyser
+        // Select output based on channel_mode
+        output_sig = Select.ar(channel_mode, [
+            [left, right],   // 0: Normal Stereo
+            [left, left],    // 1: Left channel on both outputs
+            [right, right],  // 2: Right channel on both outputs
+            [right, left]    // 3: Swapped channels
+        ]);
+
+        // Analysis output is always a mono mix of the final output
+        mono_for_analysis = Mix.ar(output_sig);
+
+        // Main audio output
+	    Out.ar(out, output_sig);
+
+        // Dedicated mono output for analysis
         Out.ar(analysis_out_bus, mono_for_analysis);
-
-        // All internal BufWr, FFT, RunningSum, SendReply for /combined_data are REMOVED.
-        // ~masterAnalyser in init.sc now handles all of that.
-
     });
     def.add;
-    "Effect SynthDef 'bypass' added".postln;
+    "Effect SynthDef 'bypass' (Stereo Test) added".postln;
 
-    // Register parameter specifications using the helper function
+    // Register parameter specifications
     ~registerEffectSpecs.value(defName, (
-        test: ControlSpec(0.0, 1.0, 'lin', 0, 1, "")
+        channel_mode: ControlSpec(0, 3, 'lin', 1, 0, "mode")
     ));
 
     fork {
@@ -50,10 +51,9 @@
         });
 
         // Create new bypass synth in the effect group
-        // Ensure analysis_out_bus argument is passed correctly from init.sc when this effect is chosen
         ~effect = Synth(defName, [
-            \in_bus, ~input_bus, 
-            \analysis_out_bus, ~effect_output_bus_for_analysis.index // Ensure this global var is set in init.sc
+            \in_bus, ~input_bus,
+            \analysis_out_bus, ~effect_output_bus_for_analysis
         ], ~effectGroup);
         ("New % synth created with analysis output bus").format(defName).postln;
     };

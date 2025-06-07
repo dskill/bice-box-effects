@@ -49,7 +49,7 @@ s.waitForBoot{
 
 	SynthDef(\audioIn, {
 		var sig; 
-		sig = SoundIn.ar([0]);
+		sig = SoundIn.ar([0, 1]);
 		Out.ar(~audio_input_bus, sig);
 	}).add;
 	s.sync;

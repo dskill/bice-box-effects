@@ -28,12 +28,17 @@ These guidelines aim to maintain consistency and readability across the SuperCol
         -   The value of these parameters can then be controlled externally via `.set` messages to the Synth.
 -   **Variable Declaration (`var`):**
     -   **CRITICAL:** Declare *all* local variables using `var varName1, varName2, ...;` in a single block *immediately* after the parameter declarations. **Do not declare variables anywhere else within the function.** This is a common mistake that causes compilation errors.
--   **Signal Input:** Start the processing chain by getting the input signal: `sig = In.ar(in_bus);`. Store the original dry signal if needed for mixing later (e.g., `dry = sig;`).
+-   **Signal Input:**
+    -   For effects with a "true stereo" signal path (where left and right channels are processed independently or interact in a stereo-aware way), read the stereo input explicitly: `var sig = In.ar(in_bus, 2);`
+    -   For effects with a mono signal path, you can read the input as mono. SuperCollider's `In.ar(in_bus)` will automatically mix a stereo input down to a mono signal. `var sig = In.ar(in_bus);`
+    -   Keep a copy of the original dry signal if you need it for mixing later: `var dry = sig;`. Note that if your effect processes in mono, `dry` will also be mono unless you capture it before any mixdown.
 -   **Signal Processing:** Arrange UGen code logically, reflecting the intended signal flow.
     -   For complex effects with distinct stages, consider storing intermediate processed signals in local variables for clarity and correct routing before further processing or mixing.
--   **Mix Control:** If a `mix` parameter is present, use `XFade2.ar(drySignal, wetSignal, mix * 2 - 1)` for linear crossfading between the original and processed signals.
--   **Analysis Output:** Prepare a mono signal for analysis: `mono_for_analysis = Mix.ar(finalSignal);` and output it with `Out.ar(analysis_out_bus, mono_for_analysis);`
--   **Signal Output:** End the main processing chain with `Out.ar(out, outputSignal);`. Ensure `outputSignal` is stereo if needed, often `[finalSig, finalSig]` or similar.
+-   **Mix Control:** Use `XFade2.ar(drySignal, wetSignal, mix * 2 - 1)` for linear crossfading. SuperCollider will automatically handle channel expansion if one signal is mono and the other is stereo (e.g., crossfading a mono dry signal with a stereo reverb).
+-   **Analysis Output:** The analysis output bus `analysis_out_bus` **MUST** receive a mono signal. If your final processed signal is stereo, you must mix it down: `var mono_for_analysis = Mix.ar(finalSignal);`.
+-   **Signal Output:** The main output bus `out` **MUST** receive a stereo signal.
+    -   If your effect produces a true stereo signal (`final_stereo_sig`), output it directly: `Out.ar(out, final_stereo_sig);`
+    -   If your effect produces a mono signal (`final_mono_sig`), you **MUST** duplicate it to create a stereo pair for the output: `Out.ar(out, [final_mono_sig, final_mono_sig]);`
 
 ## 3. Analysis Integration
 
@@ -110,16 +115,17 @@ Here's a basic template for a new audio effect:
         var mix = \mix.kr(0.5);
         
         // Variables (MUST be declared here!)
-        var sig, processed, mono_for_analysis;
+        var sig, dry, processed, mono_for_analysis;
 
         // Signal processing
         sig = In.ar(in_bus);
+        dry = sig;
         
         // Your effect processing here...
-        processed = sig; // Replace with actual processing
+        processed = sig; // Replace with your actual mono processing chain
         
         // Mix control
-        processed = XFade2.ar(sig, processed, mix * 2 - 1);
+        processed = XFade2.ar(dry, processed, mix * 2 - 1);
         
         // Analysis output
         mono_for_analysis = Mix.ar(processed);
@@ -189,14 +195,15 @@ synth_sig = Select.ar(hasFreq, [
 ```supercollider
 // In SynthDef: Send custom data to visualizations
 SendReply.kr(Impulse.kr(30), '/customData', [param1, param2]);
-
+```
 
 ## 8. Common Mistakes to Avoid
 
--   **Variable Declaration:** Always declare ALL variables at the start of the SynthDef function with `var varName1, varName2, ...;`. Not doing this causes compilation errors.
--   **Parameter Matching:** Ensure ControlSpec defaults match NamedControl defaults exactly.
--   **Analysis Output:** Don't forget the `analysis_out_bus` parameter and mono output.
--   **Shader Comment:** Include the `// shader: shader_name` comment at the top.
--   **Self-Contained:** Everything must be in the `.sc` file - no separate JSON files.
--   **Feedback Stability:** When using LocalIn/LocalOut, always multiply feedback by a value < 1.0 to prevent runaway feedback.
--   **Buffer Management:** Use LocalBuf for temporary buffers rather than global buffers that need allocation.
+-   **Variable Declaration:** Always declare ALL local variables at the start of the SynthDef function with `var varName1, varName2, ...;`. Not doing this causes compilation errors.
+-   **Parameter Matching:** Ensure `ControlSpec` defaults match `NamedControl` defaults exactly.
+-   **Analysis Output:** Don't forget the `analysis_out_bus` parameter and its required mono output (`Mix.ar(stereoSignal)` if necessary).
+-   **Stereo Output:** Ensure the main `out` bus always receives a stereo signal. If your effect's processing is mono, duplicate the output: `[monoSignal, monoSignal]`.
+-   **Shader Comment:** Include the `// shader: shader_name` comment at the top of the file.
+-   **Self-Contained:** All definition and registration logic must be in the `.sc` file.
+-   **Feedback Stability:** When using `LocalIn`/`LocalOut` for feedback, always multiply the feedback signal by a value < 1.0 to prevent runaway gain.
+-   **Buffer Management:** Use `LocalBuf` for temporary buffers internal to an effect, rather than global buffers that need explicit allocation and management.
