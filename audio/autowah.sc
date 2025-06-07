@@ -1,23 +1,38 @@
 // shader: fft_tunnel
 (
     var defName = \autowah;
+    var specs = (
+        sensitivity: ControlSpec(0.1, 5.0, 'exp', 0, 0.7, "x"),
+        drive: ControlSpec(0.5, 8.0, 'exp', 0, 1.5, "x"),
+        min_freq: ControlSpec(50, 1000, 'exp', 0, 200, "Hz"),
+        max_freq: ControlSpec(500, 8000, 'exp', 0, 2000, "Hz"),
+        octave_mult: ControlSpec(0.25, 4.0, 'exp', 0, 1.0, "x"),
+        resonance: ControlSpec(0.1, 0.98, 'lin', 0, 0.7, "%"),
+        attack: ControlSpec(0.001, 0.2, 'exp', 0, 0.01, "s"),
+        decay: ControlSpec(0.05, 4.0, 'exp', 0, 0.3, "s"),
+        lfo_rate: ControlSpec(0.0, 10.0, 'exp', 0, 0.0, "Hz"),
+        lfo_depth: ControlSpec(0.0, 0.5, 'lin', 0, 0.0, "%"),
+        saturation: ControlSpec(0.0, 2.0, 'lin', 0, 0.0, "x"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.8, "%")
+    );
+
     var def = SynthDef(defName, {
         // Parameters (NamedControl style)
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var sensitivity = \sensitivity.kr(0.7);
-        var drive = \drive.kr(1.5);
-        var min_freq = \min_freq.kr(200);
-        var max_freq = \max_freq.kr(2000);
-        var octave_mult = \octave_mult.kr(1.0);
-        var resonance = \resonance.kr(0.7);
-        var attack = \attack.kr(0.01);
-        var decay = \decay.kr(0.3);
-        var lfo_rate = \lfo_rate.kr(0.0);
-        var lfo_depth = \lfo_depth.kr(0.0);
-        var saturation = \saturation.kr(0.0);
-        var mix = \mix.kr(0.8);
+        var sensitivity = \sensitivity.kr(specs[\sensitivity].default);
+        var drive = \drive.kr(specs[\drive].default);
+        var min_freq = \min_freq.kr(specs[\min_freq].default);
+        var max_freq = \max_freq.kr(specs[\max_freq].default);
+        var octave_mult = \octave_mult.kr(specs[\octave_mult].default);
+        var resonance = \resonance.kr(specs[\resonance].default);
+        var attack = \attack.kr(specs[\attack].default);
+        var decay = \decay.kr(specs[\decay].default);
+        var lfo_rate = \lfo_rate.kr(specs[\lfo_rate].default);
+        var lfo_depth = \lfo_depth.kr(specs[\lfo_depth].default);
+        var saturation = \saturation.kr(specs[\saturation].default);
+        var mix = \mix.kr(specs[\mix].default);
         
         // Variables (MUST be declared here!)
         var sig, dry, driven_sig, envelope, filter_freq, lfo_mod, filtered, saturated, mono_for_analysis;
@@ -70,33 +85,6 @@
     def.add;
     "Effect SynthDef 'autowah' added".postln;
 
-    // Parameter registration
-    ~registerEffectSpecs.value(defName, (
-        sensitivity: ControlSpec(0.1, 5.0, 'exp', 0, 0.7, "x"),
-        drive: ControlSpec(0.5, 8.0, 'exp', 0, 1.5, "x"),
-        min_freq: ControlSpec(50, 1000, 'exp', 0, 200, "Hz"),
-        max_freq: ControlSpec(500, 8000, 'exp', 0, 2000, "Hz"),
-        octave_mult: ControlSpec(0.25, 4.0, 'exp', 0, 1.0, "x"),
-        resonance: ControlSpec(0.1, 0.98, 'lin', 0, 0.7, "%"),
-        attack: ControlSpec(0.001, 0.2, 'exp', 0, 0.01, "s"),
-        decay: ControlSpec(0.05, 4.0, 'exp', 0, 0.3, "s"),
-        lfo_rate: ControlSpec(0.0, 10.0, 'exp', 0, 0.0, "Hz"),
-        lfo_depth: ControlSpec(0.0, 0.5, 'lin', 0, 0.0, "%"),
-        saturation: ControlSpec(0.0, 2.0, 'lin', 0, 0.0, "x"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.8, "%")
-    ));
-
-    // Synth creation
-    fork {
-        s.sync;
-        if(~effect.notNil, {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        });
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 ) 

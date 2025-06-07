@@ -250,6 +250,35 @@ s.waitForBoot{
 	};
 	"~registerEffectSpecs helper function defined.".postln;
 
+	~setupEffect = { |defName, specs, additionalArgs = #[]|
+		var finalArgs;
+
+		// First, register the parameter specifications
+		~registerEffectSpecs.value(defName, specs);
+
+		// Then, create or replace the synth instance
+		finalArgs = [
+			\in_bus, ~input_bus,
+			\analysis_out_bus, ~effect_output_bus_for_analysis
+		] ++ additionalArgs;
+
+		fork {
+			s.sync;
+
+			// Free existing synth if it exists
+			if(~effect.notNil, {
+				"Freeing existing effect synth".postln;
+				~effect.free;
+				s.sync;
+			});
+
+			// Create new synth in the effect group
+			~effect = Synth(defName, finalArgs, ~effectGroup);
+			("New '%' synth created with args: %").format(defName, finalArgs).postln;
+		};
+	};
+	"~setupEffect helper function defined.".postln;
+
 	// OSC Handler for getting effect parameter specifications
 	OSCdef(\getEffectSpecs, { |msg, time, addr|
 		var effectName, specs, specsForJSON, jsonString, paramCount;
