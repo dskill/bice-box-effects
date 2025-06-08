@@ -1,17 +1,26 @@
 // shader: oscilloscope
 (
     var defName = \granular_delay;
+    var specs = (
+        grain_size: ControlSpec(0.01, 0.2, 'exp', 0, 0.05, "s"),
+        density: ControlSpec(1, 50, 'exp', 0, 10, "Hz"),
+        delay_time: ControlSpec(0.01, 2.0, 'lin', 0, 0.5, "s"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.5, "%"),
+        pitch_shift_semitones: ControlSpec(0, 12, 'lin', 0, 7, "st"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var grain_size = \grain_size.kr(0.05); /* Grain duration in seconds (10ms to 200ms) */
-        var density = \density.kr(10);    /* Grains per second (1 to 50) */
-        var delay_time = \delay_time.kr(0.5);  /* Delay time in seconds (0ms to 2000ms) */
-        var feedback = \feedback.kr(0.5);    /* Feedback amount (0 to 0.95) */
-        var pitch_shift_semitones = \pitch_shift_semitones.kr(7); /* Max random pitch shift in semitones (0 to 12) */
-        var mix = \mix.kr(0.5);          /* Wet/Dry mix (0 to 1.0) */
+        var grain_size = \grain_size.kr(specs[\grain_size].default); /* Grain duration in seconds (10ms to 200ms) */
+        var density = \density.kr(specs[\density].default);    /* Grains per second (1 to 50) */
+        var delay_time = \delay_time.kr(specs[\delay_time].default);  /* Delay time in seconds (0ms to 2000ms) */
+        var feedback = \feedback.kr(specs[\feedback].default);    /* Feedback amount (0 to 0.95) */
+        var pitch_shift_semitones = \pitch_shift_semitones.kr(specs[\pitch_shift_semitones].default); /* Max random pitch shift in semitones (0 to 12) */
+        var mix = \mix.kr(specs[\mix].default);          /* Wet/Dry mix (0 to 1.0) */
 
         var sig, dry_sig, wet_sig, final_sig, buf, max_delay_time, write_head_samples,
             current_write_pos_secs, grain_read_pos_secs_unwrapped, grain_read_pos_secs,
@@ -92,26 +101,6 @@
     def.add;
     "Effect SynthDef 'granular_delay' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        grain_size: ControlSpec(0.01, 0.2, 'exp', 0, 0.05, "s"),
-        density: ControlSpec(1, 50, 'exp', 0, 10, "Hz"),
-        delay_time: ControlSpec(0.01, 2.0, 'lin', 0, 0.5, "s"),
-        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.5, "%"),
-        pitch_shift_semitones: ControlSpec(0, 12, 'lin', 0, 7, "st"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
-    ));
-
-    fork {
-        s.sync;
-        if(~effect.notNil, {
-            ("Freeing existing " ++ ~effect.defName ++ " synth (" ++ ~effect.nodeID ++ ")").postln;
-            ~effect.free;
-        });
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )

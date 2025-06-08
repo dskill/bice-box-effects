@@ -2,14 +2,20 @@
 
 (
     var defName = \overdrive;
+    var specs = (
+        drive: ControlSpec(1.0, 50.0, 'exp', 0, 10, "x"),
+        tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var drive = \drive.kr(10);
-        var tone = \tone.kr(0.5);
-        var mix = \mix.kr(1.0);
+        var drive = \drive.kr(specs[\drive].default);
+        var tone = \tone.kr(specs[\tone].default);
+        var mix = \mix.kr(specs[\mix].default);
         
         var sig, distorted, mono_for_analysis;
 
@@ -42,26 +48,6 @@
     def.add;
     "Effect SynthDef 'overdrive' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        drive: ControlSpec(1.0, 50.0, 'exp', 0, 10, "x"),
-        tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
-    ));
-
-    fork {
-        s.sync;
-
-        // Free existing synth if it exists
-        if(~effect.notNil) {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        };
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )

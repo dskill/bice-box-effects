@@ -2,23 +2,38 @@
 
 (
     var defName = \synthtoy;
+    var specs = (
+        freq: ControlSpec(20, 2000, 'exp', 0, 440, "Hz"),
+        amp: ControlSpec(0, 1, 'lin', 0, 0.2, ""),
+        wave_mix: ControlSpec(0, 1, 'lin', 0, 0, ""),
+        filter_freq: ControlSpec(100, 8000, 'exp', 0, 2000, "Hz"),
+        filter_res: ControlSpec(0.1, 2, 'lin', 0, 0.1, ""),
+        vibrato_rate: ControlSpec(0.1, 20, 'exp', 0, 5, "Hz"),
+        vibrato_depth: ControlSpec(0, 100, 'lin', 0, 0, "Hz"),
+        pulse_width: ControlSpec(0, 1, 'lin', 0, 0.5, ""),
+        tremolo_rate: ControlSpec(0.1, 20, 'exp', 0, 3, "Hz"),
+        ring_mod_freq: ControlSpec(0, 2000, 'exp', 0, 0, "Hz"),
+        noise_level: ControlSpec(0, 1, 'lin', 0, 0, ""),
+        sub_level: ControlSpec(0, 1, 'lin', 0, 0, "")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var freq = \freq.kr(440);
-        var amp = \amp.kr(0.2);
-        var wave_mix = \wave_mix.kr(0);
-        var filter_freq = \filter_freq.kr(2000);
-        var filter_res = \filter_res.kr(0.1);
-        var vibrato_rate = \vibrato_rate.kr(5);
-        var vibrato_depth = \vibrato_depth.kr(10);
-        var pulse_width = \pulse_width.kr(0.5);
-        var tremolo_rate = \tremolo_rate.kr(3);
-        var ring_mod_freq = \ring_mod_freq.kr(0);
-        var noise_level = \noise_level.kr(0);
-        var sub_level = \sub_level.kr(0);
+        var freq = \freq.kr(specs[\freq].default);
+        var amp = \amp.kr(specs[\amp].default);
+        var wave_mix = \wave_mix.kr(specs[\wave_mix].default);
+        var filter_freq = \filter_freq.kr(specs[\filter_freq].default);
+        var filter_res = \filter_res.kr(specs[\filter_res].default);
+        var vibrato_rate = \vibrato_rate.kr(specs[\vibrato_rate].default);
+        var vibrato_depth = \vibrato_depth.kr(specs[\vibrato_depth].default);
+        var pulse_width = \pulse_width.kr(specs[\pulse_width].default);
+        var tremolo_rate = \tremolo_rate.kr(specs[\tremolo_rate].default);
+        var ring_mod_freq = \ring_mod_freq.kr(specs[\ring_mod_freq].default);
+        var noise_level = \noise_level.kr(specs[\noise_level].default);
+        var sub_level = \sub_level.kr(specs[\sub_level].default);
         
         // START USER EFFECT CODE
         var sig, final_sig, mono_for_analysis;
@@ -71,38 +86,8 @@
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
     def.add;
-    "Effect SynthDef 'test_sin_wave' added".postln;
+    "Effect SynthDef 'synthtoy' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        freq: ControlSpec(20, 2000, 'exp', 0, 440, "Hz"),
-        amp: ControlSpec(0, 1, 'lin', 0, 0.2, ""),
-        wave_mix: ControlSpec(0, 1, 'lin', 0, 0, ""),
-        filter_freq: ControlSpec(100, 8000, 'exp', 0, 2000, "Hz"),
-        filter_res: ControlSpec(0.1, 2, 'lin', 0, 0.1, ""),
-        vibrato_rate: ControlSpec(0.1, 20, 'exp', 0, 5, "Hz"),
-        vibrato_depth: ControlSpec(0, 100, 'lin', 0, 0, "Hz"),
-        pulse_width: ControlSpec(0, 1, 'lin', 0, 0.5, ""),
-        tremolo_rate: ControlSpec(0.1, 20, 'exp', 0, 3, "Hz"),
-        ring_mod_freq: ControlSpec(0, 2000, 'exp', 0, 0, "Hz"),
-        noise_level: ControlSpec(0, 1, 'lin', 0, 0, ""),
-        sub_level: ControlSpec(0, 1, 'lin', 0, 0, "")
-    ));
-
-    fork {
-        s.sync;
-
-        // Free existing synth if it exists
-        if(~effect.notNil, {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        });
-
-        // Create new test_sin_wave synth in the effect group
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )

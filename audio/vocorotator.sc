@@ -1,14 +1,20 @@
 // shader: oscilloscope
 (
     var defName = \vocorotator;
+    var specs = (
+        shift: ControlSpec(0.1, 4.0, 'exp', 0, 1.0, "x"),
+        feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.9, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var shift = \shift.kr(1.0);
-        var feedback = \feedback.kr(0.9);
-        var mix = \mix.kr(0.5);
+        var shift = \shift.kr(specs[\shift].default);
+        var feedback = \feedback.kr(specs[\feedback].default);
+        var mix = \mix.kr(specs[\mix].default);
         
         var sig, mono_for_analysis;
         var fb_sig, out_sig, chain; // chain is for internal FFT processing
@@ -44,25 +50,6 @@
     def.add;
     "Effect SynthDef 'vocorotator' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        shift: ControlSpec(0.1, 4.0, 'exp', 0, 1.0, "x"),
-        feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.9, "%"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
-    ));
-
-    fork {
-        s.sync;
-
-        if(~effect.notNil) {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        };
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )

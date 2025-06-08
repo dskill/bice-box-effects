@@ -2,19 +2,27 @@
 // Combines phaser with amplitude modulation for a "hungry to full" cycle effect
 (
     var defName = \zeeks_pizza;
+    var specs = (
+        rate: ControlSpec(0.01, 5.0, 'exp', 0, 0.5, "Hz"),
+        depth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        modRate: ControlSpec(0.01, 2.0, 'exp', 0, 0.2, "Hz"),
+        modDepth: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
         // Phaser parameters
-        var rate = \rate.kr(0.5); // Speed of phaser oscillation
-        var depth = \depth.kr(0.5); // Depth of phaser effect
+        var rate = \rate.kr(specs[\rate].default); // Speed of phaser oscillation
+        var depth = \depth.kr(specs[\depth].default); // Depth of phaser effect
         // Amplitude modulation
-        var modRate = \modRate.kr(0.2); // Speed of AM
-        var modDepth = \modDepth.kr(0.3); // Depth of AM
+        var modRate = \modRate.kr(specs[\modRate].default); // Speed of AM
+        var modDepth = \modDepth.kr(specs[\modDepth].default); // Depth of AM
         // Mix
-        var mix = \mix.kr(0.5);
+        var mix = \mix.kr(specs[\mix].default);
 
         var input, numStages = 6, freq = 100, modPhase, phaser, output, mono_for_analysis;
         
@@ -43,27 +51,6 @@
     def.add;
     "Effect SynthDef 'zeeks_pizza' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        rate: ControlSpec(0.01, 5.0, 'exp', 0, 0.5, "Hz"),
-        depth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        modRate: ControlSpec(0.01, 2.0, 'exp', 0, 0.2, "Hz"),
-        modDepth: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
-    ));
-
-    fork {
-        s.sync;
-
-        if(~effect.notNil) {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        };
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 ) 

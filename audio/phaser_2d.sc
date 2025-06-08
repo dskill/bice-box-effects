@@ -1,13 +1,19 @@
 (
     var defName = \phaser_2d;
+    var specs = (
+        x: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "stages"),
+        y: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "freq"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var x = \x.kr(0.5);
-        var y = \y.kr(0.5);
-        var mix = \mix.kr(1.0);
+        var x = \x.kr(specs[\x].default);
+        var y = \y.kr(specs[\y].default);
+        var mix = \mix.kr(specs[\mix].default);
         
         var sig, dry, processed, mono_for_analysis;
         var numStages, freq, feedback;
@@ -48,37 +54,21 @@
     def.add;
     "Effect SynthDef 'phaser_2d' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        x: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "stages"),
-        y: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "freq"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
-    ));
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 
-    fork {
-        s.sync;
-
-        if(~effect.notNil, { ~effect.free; });
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-
-        // OSC responder for phaser parameters
-        OSCdef.new(
-            \phaserParamsListener, // A unique key for this OSCdef
-            { |msg, time, addr, recvPort|
-                var x_val = msg[1];
-                var y_val = msg[2];
-                // ("Received /phaser/params: X=" ++ x_val ++ ", Y=" ++ y_val).postln; // For debugging
-                if(~effect.notNil, {
-                    ~effect.set(\x, x_val, \y, y_val);
-                });
-            },
-            '/params', // The OSC address to listen to
-            nil // Listen on any client address
-        );
-    };
+    // OSC responder for phaser parameters
+    OSCdef.new(
+        \phaserParamsListener, // A unique key for this OSCdef
+        { |msg, time, addr, recvPort|
+            var x_val = msg[1];
+            var y_val = msg[2];
+            // ("Received /phaser/params: X=" ++ x_val ++ ", Y=" ++ y_val).postln; // For debugging
+            if(~effect.notNil, {
+                ~effect.set(\x, x_val, \y, y_val);
+            });
+        },
+        '/params', // The OSC address to listen to
+        nil // Listen on any client address
+    );
 )

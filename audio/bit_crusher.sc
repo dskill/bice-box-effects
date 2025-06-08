@@ -2,18 +2,28 @@
 
 (
     var defName = \bit_crusher;
+    var specs = (
+        bits: ControlSpec(1, 16, 'lin', 1, 8, "bits"),
+        rate: ControlSpec(0.01, 1.0, 'exp', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%"),
+        machine: ControlSpec(100, 20000, 'exp', 0, 2000, "Hz"),
+        reverb: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
+        delay: ControlSpec(0.0, 1.0, 'lin', 0, 0.25, "s"),
+        delay_mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.2, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var bits = \bits.kr(8);
-        var rate = \rate.kr(0.5);
-        var mix = \mix.kr(1.0);
-        var machine = \machine.kr(2000);
-        var reverb = \reverb.kr(0.3);
-        var delay = \delay.kr(0.25);
-        var delay_mix = \delay_mix.kr(0.2);
+        var bits = \bits.kr(specs[\bits].default);
+        var rate = \rate.kr(specs[\rate].default);
+        var mix = \mix.kr(specs[\mix].default);
+        var machine = \machine.kr(specs[\machine].default);
+        var reverb = \reverb.kr(specs[\reverb].default);
+        var delay = \delay.kr(specs[\delay].default);
+        var delay_mix = \delay_mix.kr(specs[\delay_mix].default);
         
         var sig, crushed, filtered, wet, delayed, mono_for_analysis;
 
@@ -53,30 +63,6 @@
     def.add;
     "Effect SynthDef 'bit_crusher' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        bits: ControlSpec(1, 16, 'lin', 1, 8, "bits"),
-        rate: ControlSpec(0.01, 1.0, 'exp', 0, 0.5, "%"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%"),
-        machine: ControlSpec(100, 20000, 'exp', 0, 2000, "Hz"),
-        reverb: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
-        delay: ControlSpec(0.0, 1.0, 'lin', 0, 0.25, "s"),
-        delay_mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.2, "%")
-    ));
-
-    fork {
-        s.sync;
-
-        // Free existing synth if it exists
-        if(~effect.notNil) {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        };
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )

@@ -1,16 +1,24 @@
 // shader: neon_love
 (
     var defName = \neon_love;
+    var specs = (
+        decay: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "s"),
+        roomSize: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        intensity: ControlSpec(0.0, 3.0, 'lin', 0, 1.3, "x"),
+        speed: ControlSpec(-2.0, 2.0, 'lin', 0, -0.5, "Hz"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var decay = \decay.kr(1.0);
-        var roomSize = \roomSize.kr(0.7);
-        var intensity = \intensity.kr(1.3);
-        var speed = \speed.kr(-0.5);
-        var mix = \mix.kr(0.5);
+        var decay = \decay.kr(specs[\decay].default);
+        var roomSize = \roomSize.kr(specs[\roomSize].default);
+        var intensity = \intensity.kr(specs[\intensity].default);
+        var speed = \speed.kr(specs[\speed].default);
+        var mix = \mix.kr(specs[\mix].default);
         
         var sig, verb, dry, finalSig,
             dampedSig,
@@ -107,29 +115,6 @@
     def.add;
     "Effect SynthDef 'neon_love' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        decay: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "s"),
-        roomSize: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
-        intensity: ControlSpec(0.0, 3.0, 'lin', 0, 1.3, "x"),
-        speed: ControlSpec(-2.0, 2.0, 'lin', 0, -0.5, "Hz"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
-    ));
-
-    // Launch the effect
-    fork {
-        s.sync;
-
-        // Free existing synth if it exists
-        if(~effect.notNil) {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        };
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 ) 

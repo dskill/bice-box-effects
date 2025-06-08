@@ -1,15 +1,23 @@
 (
     var defName = \monarch_synth;
+    var specs = (
+        synthFilterCutoff: ControlSpec(100, 8000, 'exp', 0, 1802, "Hz"),
+        synthFilterResonance: ControlSpec(0.0, 4.0, 'lin', 0, 0.75, "Q"),
+        synthDrive: ControlSpec(0.0, 2.0, 'lin', 0, 0.7, "x"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        subOctaveMix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var synthFilterCutoff = \synthFilterCutoff.kr(1802);
-        var synthFilterResonance = \synthFilterResonance.kr(0.75);
-        var synthDrive = \synthDrive.kr(0.7);
-        var mix = \mix.kr(0.5);
-        var subOctaveMix = \subOctaveMix.kr(0.5);
+        var synthFilterCutoff = \synthFilterCutoff.kr(specs[\synthFilterCutoff].default);
+        var synthFilterResonance = \synthFilterResonance.kr(specs[\synthFilterResonance].default);
+        var synthDrive = \synthDrive.kr(specs[\synthDrive].default);
+        var mix = \mix.kr(specs[\mix].default);
+        var subOctaveMix = \subOctaveMix.kr(specs[\subOctaveMix].default);
         
         var sig, dry, freq, hasFreq, mainSynthSig, subOctaveSynthSig, synthSig, filteredSig, distortedSig, finalSig, mono_for_analysis, inputAmp;
 
@@ -58,29 +66,6 @@
     def.add;
     "Effect SynthDef 'monarch_synth' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        synthFilterCutoff: ControlSpec(100, 8000, 'exp', 0, 1802, "Hz"),
-        synthFilterResonance: ControlSpec(0.0, 4.0, 'lin', 0, 0.75, "Q"),
-        synthDrive: ControlSpec(0.0, 2.0, 'lin', 0, 0.7, "x"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        subOctaveMix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
-    ));
-
-    fork {
-        s.sync;
-
-        // Free existing synth if it exists
-        if(~effect.notNil, {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        });
-
-        // Create new monarch_synth synth in the effect group
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )

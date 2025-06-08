@@ -1,15 +1,22 @@
 // shader: radial_fft_line
 (
     var defName = \ping_pong_delay;
+    var specs = (
+        delayTime: ControlSpec(0.01, 2.0, 'lin', 0, 0.4, "s"),
+        feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.5, "%"),
+        wetLevel: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        gain: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "x")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var delayTime = \delayTime.kr(0.4);
-        var feedback = \feedback.kr(0.5);
-        var wetLevel = \wetLevel.kr(0.5);
-        var gain = \gain.kr(1);
+        var delayTime = \delayTime.kr(specs[\delayTime].default);
+        var feedback = \feedback.kr(specs[\feedback].default);
+        var wetLevel = \wetLevel.kr(specs[\wetLevel].default);
+        var gain = \gain.kr(specs[\gain].default);
         
         var sig, leftDelay, rightDelay, delaySig, dry, fbNode, finalSig, mono_for_analysis;
 
@@ -35,13 +42,8 @@
     def.add;
     "Effect SynthDef 'ping_pong_delay' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        delayTime: ControlSpec(0.01, 2.0, 'lin', 0, 0.4, "s"),
-        feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.5, "%"),
-        wetLevel: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        gain: ControlSpec(0.1, 3.0, 'exp', 0, 1.0, "x")
-    ));
+    // Register parameter specifications
+    ~registerEffectSpecs.value(defName, specs);
 
     OSCdef(\pingPongData).free;
 	OSCdef(\pingPongData, { |msg|
@@ -51,18 +53,6 @@
 			a, b
     );  	}, '/pingPongData', s.addr);
 
-    fork {
-        s.sync;
-
-        if(~effect.notNil, {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        });
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Create the synth
+    ~setupEffect.value(defName, specs);
 )

@@ -1,14 +1,20 @@
 // shader: oscilloscope
 (
     var defName = \tremolo;
+    var specs = (
+        rate: ControlSpec(0.1, 20, 'exp', 0, 2, "Hz"),
+        depth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var rate = \rate.kr(2);
-        var depth = \depth.kr(0.5);
-        var mix = \mix.kr(0.5);
+        var rate = \rate.kr(specs[\rate].default);
+        var depth = \depth.kr(specs[\depth].default);
+        var mix = \mix.kr(specs[\mix].default);
         
         var sig, trem, dry, wet, finalSig, tremMult, mono_for_analysis;
         var kr_impulse; // kr_impulse is kept for /tremoloData SendReply
@@ -36,34 +42,18 @@
     def.add;
     "Effect SynthDef 'tremolo' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        rate: ControlSpec(0.1, 20, 'exp', 0, 2, "Hz"),
-        depth: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
-    ));
+    // Register parameter specifications
+    ~registerEffectSpecs.value(defName, specs);
 
     // OSC responder for tremolo specific data - THIS IS OK TO KEEP
 	OSCdef(\tremoloData).free;
 	OSCdef(\tremoloData, { |msg|
 		var a = msg[3];
         var b = msg[4];
-		~o.sendMsg('\tremoloData', 
+		~o.sendMsg('\tremoloData',
 			a, b
     );  	}, '/tremoloData', s.addr);
 
-    fork {
-        s.sync;
-
-        if(~effect.notNil, {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        });
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Create the synth
+    ~setupEffect.value(defName, specs);
 )

@@ -1,15 +1,22 @@
 // shader: outrun
 (
     var defName = \crackle_reverb;
+    var specs = (
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        room: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        dist_amount: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        dist_hardness: ControlSpec(0.5, 10.0, 'exp', 0, 2.0, "x")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var mix = \mix.kr(0.5);
-        var room = \room.kr(0.7);
-        var dist_amount = \dist_amount.kr(0.5);
-        var dist_hardness = \dist_hardness.kr(2.0);
+        var mix = \mix.kr(specs[\mix].default);
+        var room = \room.kr(specs[\room].default);
+        var dist_amount = \dist_amount.kr(specs[\dist_amount].default);
+        var dist_hardness = \dist_hardness.kr(specs[\dist_hardness].default);
         
         var sig, dry, reverb_sig, reverb_channels, reverb_amp, norm_reverb_amp;
         var max_dist_gain_val, distortion_drive_mod, distorted_reverb_eff;
@@ -69,24 +76,6 @@
     def.add;
     "Effect SynthDef 'crackle_reverb' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        room: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
-        dist_amount: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        dist_hardness: ControlSpec(0.5, 10.0, 'exp', 0, 2.0, "x")
-    ));
-
-    fork {
-        s.sync;
-        if(~effect.notNil, {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        });
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )

@@ -1,18 +1,28 @@
 // shader: palpatine
 (
     var defName = \palpatine;
+    var specs = (
+        drive: ControlSpec(1.0, 100.0, 'exp', 0, 50, "x"),
+        tone: ControlSpec(100, 8000, 'exp', 0, 2000, "Hz"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%"),
+        reverb: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
+        delay: ControlSpec(0.01, 1.0, 'exp', 0, 0.25, "s"),
+        delay_mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.2, "%"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var drive = \drive.kr(50);
-        var tone = \tone.kr(2000);
-        var mix = \mix.kr(1.0);
-        var reverb = \reverb.kr(0.3);
-        var delay = \delay.kr(0.25);
-        var delay_mix = \delay_mix.kr(0.2);
-        var feedback = \feedback.kr(0.5);
+        var drive = \drive.kr(specs[\drive].default);
+        var tone = \tone.kr(specs[\tone].default);
+        var mix = \mix.kr(specs[\mix].default);
+        var reverb = \reverb.kr(specs[\reverb].default);
+        var delay = \delay.kr(specs[\delay].default);
+        var delay_mix = \delay_mix.kr(specs[\delay_mix].default);
+        var feedback = \feedback.kr(specs[\feedback].default);
         
         var sig, distorted, filtered, wet, delayed, mono_for_analysis;
         var mod_freq = LFNoise1.kr(0.5).range(4, 8);
@@ -52,29 +62,6 @@
     def.add;
     "Effect SynthDef 'palpatine' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        drive: ControlSpec(1.0, 100.0, 'exp', 0, 50, "x"),
-        tone: ControlSpec(100, 8000, 'exp', 0, 2000, "Hz"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%"),
-        reverb: ControlSpec(0.0, 1.0, 'lin', 0, 0.3, "%"),
-        delay: ControlSpec(0.01, 1.0, 'exp', 0, 0.25, "s"),
-        delay_mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.2, "%"),
-        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.5, "%")
-    ));
-
-    fork {
-        s.sync;
-
-        if(~effect.notNil) {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        };
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 ) 

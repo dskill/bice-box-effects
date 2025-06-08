@@ -1,17 +1,26 @@
 // shader: kaleidoscope
 (
     var defName = \kaleidoscope;
+    var specs = (
+        sparkle: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        delayTime: ControlSpec(0.01, 1.0, 'exp', 0, 0.3, "s"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.6, "%"),
+        shimmer: ControlSpec(0.0, 1.0, 'lin', 0, 0.4, "%"),
+        rotation: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var sparkle = \sparkle.kr(0.5);
-        var delayTime = \delayTime.kr(0.3);
-        var feedback = \feedback.kr(0.6);
-        var shimmer = \shimmer.kr(0.4);
-        var rotation = \rotation.kr(0.5);
-        var mix = \mix.kr(0.5);
+        var sparkle = \sparkle.kr(specs[\sparkle].default);
+        var delayTime = \delayTime.kr(specs[\delayTime].default);
+        var feedback = \feedback.kr(specs[\feedback].default);
+        var shimmer = \shimmer.kr(specs[\shimmer].default);
+        var rotation = \rotation.kr(specs[\rotation].default);
+        var mix = \mix.kr(specs[\mix].default);
         
         var sig, wet, dry, delayedSig, shiftedSig, sparkles;
         var mono_for_analysis;
@@ -47,29 +56,6 @@
     def.add;
     "Effect SynthDef 'kaleidoscope' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        sparkle: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        delayTime: ControlSpec(0.01, 1.0, 'exp', 0, 0.3, "s"),
-        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.6, "%"),
-        shimmer: ControlSpec(0.0, 1.0, 'lin', 0, 0.4, "%"),
-        rotation: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
-    ));
-
-    fork {
-        s.sync;
-
-        // Free existing synth if it exists
-        if(~effect.notNil) {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        };
-
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 ) 

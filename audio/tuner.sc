@@ -1,12 +1,16 @@
 // shader: oscilloscope
 (
     var defName = \tuner;
+    var specs = (
+        bypass: ControlSpec(0.0, 1.0, 'lin', 0, 0, "")
+    );
+
     var def = SynthDef(defName, {
         // Use NamedControl style instead of traditional arguments
         var out = \out.kr(0);
         var in_bus = \in_bus.kr(0);
         var analysis_out_bus = \analysis_out_bus.kr;
-        var bypass = \bypass.kr(0); // Simple parameter for consistency
+        var bypass = \bypass.kr(specs[\bypass].default); // Simple parameter for consistency
         
         var sig, normalized_sig, freq, hasFreq, differences, amplitudes, mono_for_analysis;
         var guitarStringsHz = #[82.41, 110.00, 146.83, 196.00, 246.94, 329.63]; // Frequencies of E2, A2, D3, G3, B3, E4
@@ -50,25 +54,6 @@
     def.add;
     "Effect SynthDef 'tuner' added".postln;
 
-    // Register parameter specifications using the helper function
-    ~registerEffectSpecs.value(defName, (
-        bypass: ControlSpec(0.0, 1.0, 'lin', 0, 0, "")
-    ));
-
-    fork {
-        s.sync;
-
-        // Free existing synth if it exists
-        if(~effect.notNil, {
-            "Freeing existing effect synth".postln;
-            ~effect.free;
-        });
-
-        // Create new tuner synth in the effect group
-        ~effect = Synth(defName, [
-            \in_bus, ~input_bus,
-            \analysis_out_bus, ~effect_output_bus_for_analysis
-        ], ~effectGroup);
-        ("New % synth created with analysis output bus").format(defName).postln;
-    };
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
 )
