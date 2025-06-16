@@ -1,0 +1,1 @@
+Always review shaders/_ShaderToy_HowTo.mdc for shader editing and audio/audio_effect_instructions.md for audio effect editing.
