@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "MultiEdit",
+      "Write",
+      "Glob",
+      "Grep",
+      "LS"
+    ],
+    "deny": [
+      "Bash(curl:*)"
+    ]
+  },
+  "env": {
+  }
+}
