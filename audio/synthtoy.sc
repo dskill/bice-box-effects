@@ -34,14 +34,15 @@
         var ring_mod_freq = \ring_mod_freq.kr(specs[\ring_mod_freq].default);
         var noise_level = \noise_level.kr(specs[\noise_level].default);
         var sub_level = \sub_level.kr(specs[\sub_level].default);
+        var gate = \gate.kr(0); // gate for MIDI control, default closed
         
         // START USER EFFECT CODE
-        var sig, final_sig, mono_for_analysis;
-        var vibrato, modulated_freq, tremolo;
+        var final_sig, mono_for_analysis;
+        var vibrato, modulated_freq, tremolo, env;
         var sine_wave, saw_wave, pulse_wave, mixed_wave;
         var ring_mod, noise, sub_osc;
 
-        sig = In.ar(in_bus); 
+        // sig = In.ar(in_bus); // THIS IS REMOVED
         
         // Add vibrato modulation to frequency
         vibrato = SinOsc.kr(vibrato_rate) * vibrato_depth;
@@ -74,8 +75,11 @@
         // Add tremolo (amplitude modulation)
         tremolo = SinOsc.kr(tremolo_rate) * 0.3 + 0.7; // oscillates between 0.4 and 1.0
         
-        // Apply amplitude with tremolo
-        final_sig = final_sig * amp * tremolo;
+        // Create an ADSR envelope controlled by the gate
+        env = EnvGen.ar(Env.adsr(0.01, 0.2, 0.7, 0.3), gate);
+
+        // Apply amplitude with tremolo and envelope
+        final_sig = final_sig * amp * tremolo * env;
         
         // END USER EFFECT CODE
 

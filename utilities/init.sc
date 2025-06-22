@@ -446,6 +446,50 @@ s.waitForBoot{
 
 	["Buffer 0 (in):", ~relay_buffer_in, "Buffer 1 (out):", ~relay_buffer_out, "Input Bus Object:", ~input_bus, "Input Bus Index:", ~input_bus.index].postln;
 
+	// MIDI SETUP START
+	MIDIClient.init;
+	"MIDI Initialized.".postln;
+	// ADDED: Log the list of connected MIDI sources
+	("MIDI Sources: " ++ MIDIClient.sources).postln;
+	MIDIIn.connectAll;
+	"Connected to all MIDI devices.".postln;
+
+	~held_notes = []; // for monophonic last-note priority
+
+	// Free previous MIDI funcs if they exist, to allow re-evaluation of this script
+	if(~midi_note_on_func.notNil, { ~midi_note_on_func.free });
+	if(~midi_note_off_func.notNil, { ~midi_note_off_func.free });
+
+	~midi_note_on_func = MIDIFunc.noteOn({ |vel, num, chan, src|
+		// ADDED: Log incoming MIDI note-on messages
+		("MIDI Note On: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
+		
+		("MIDI Handler ~effect check: isNil: %, defName: %, isRunning: %").format(~effect.isNil, ~effect.tryPerform(\defName), ~effect.tryPerform(\isRunning)).postln;
+
+		if (~held_notes.any({|item| item == num}).not) { ~held_notes.add(num); };
+		if (~effect.notNil and: {~effect.defName == \synthtoy}) {
+			("MIDI ON: Setting synthtoy freq: % gate: 1").format(num.midicps).postln;
+			~effect.set(\freq, num.midicps, \gate, 1);
+		};
+	});
+
+	~midi_note_off_func = MIDIFunc.noteOff({ |vel, num, chan, src|
+		// ADDED: Log incoming MIDI note-off messages
+		("MIDI Note Off: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
+		~held_notes.remove(num);
+		if (~effect.notNil and: {~effect.defName == \synthtoy}) {
+			if (~held_notes.isEmpty) {
+				"MIDI OFF: Setting synthtoy gate: 0".postln;
+				~effect.set(\gate, 0);
+			} {
+				("MIDI OFF: Setting synthtoy freq to last note: %").format(~held_notes.last.midicps).postln;
+				~effect.set(\freq, ~held_notes.last.midicps);
+			}
+		};
+	});
+	"MIDI note handlers created for synthtoy.".postln;
+	// MIDI SETUP END
+
 	"Server booted successfully. END OF SCRIPT".postln;
 };
 )
