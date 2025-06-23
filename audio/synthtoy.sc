@@ -34,7 +34,7 @@
         var ring_mod_freq = \ring_mod_freq.kr(specs[\ring_mod_freq].default);
         var noise_level = \noise_level.kr(specs[\noise_level].default);
         var sub_level = \sub_level.kr(specs[\sub_level].default);
-        var gate = \gate.kr(0); // gate for MIDI control, default closed
+        var gate = \gate.kr(if(~hasMIDI ? false, 0, 1)); // MIDI gate. Default ON if no MIDI.
         
         // START USER EFFECT CODE
         var final_sig, mono_for_analysis;
