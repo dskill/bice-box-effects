@@ -24,8 +24,17 @@ s.waitForBoot{
 	
 	// Set up language-side OSC listening
 	// The language needs to listen on a different port from the server
-	thisProcess.openUDPPort(57122); // Language listens on 57122
-	("SuperCollider language is listening for OSC on port: 57122").postln;
+	~langOSCPort = 57122; // Language OSC port
+	thisProcess.openUDPPort(~langOSCPort);
+	("SuperCollider language is listening for OSC on port: " ++ ~langOSCPort).postln;
+	
+	// Send port configuration to Electron for dynamic discovery
+	~o.sendMsg("/sc/config", 
+		"server_port", s.addr.port,
+		"lang_port", ~langOSCPort,
+		"electron_port", 57121
+	);
+	("SC: Sent port configuration to Electron").postln;
 
 	~rms_bus_input = Bus.control(s, 1);
 	~rms_bus_output = Bus.control(s, 1);
@@ -255,15 +264,12 @@ s.waitForBoot{
 		var specs = ~effectParameterSpecs[effectName];
 		var specsForJSON, jsonString, paramCount;
 
-		("=== SC: Received /effect/get_specs for: " ++ effectName ++ " ===").postln;
-		("SC: Current ~effectParameterSpecs keys: " ++ ~effectParameterSpecs.keys.asArray).postln;
+		("SC: Processing /effect/get_specs for: " ++ effectName).postln;
 
 		if(specs.isNil) {
 			("SC: No specs found for effect: " ++ effectName).postln;
-			("SC: Sending empty JSON reply for: " ++ effectName).postln;
 			~o.sendMsg("/effect/specs_reply", effectName.asString, "{}"); // Send empty JSON
 		} {
-			("SC: Found specs for " ++ effectName ++ ", processing...").postln;
 			
 			// Convert ControlSpecs to JSON-serializable format
 			specsForJSON = ();
@@ -295,13 +301,9 @@ s.waitForBoot{
 			});
 			jsonString = jsonString ++ "}";
 
-			("SC: About to send reply with JSON: " ++ jsonString).postln;
-			("SC: Sending to NetAddr: " ++ ~o).postln;
-
 			// Send the reply
 			~o.sendMsg("/effect/specs_reply", effectName.asString, jsonString);
-			
-			("SC: Reply sent for " ++ effectName).postln;
+			("SC: Sent specs reply for " ++ effectName).postln;
 		};
 	}, '/effect/get_specs');
 	"OSCdef for /effect/get_specs created.".postln;
