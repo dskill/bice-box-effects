@@ -467,8 +467,8 @@ s.waitForBoot{
 		("MIDI Handler ~effect check: isNil: %, defName: %, isRunning: %").format(~effect.isNil, ~effect.tryPerform(\defName), ~effect.tryPerform(\isRunning)).postln;
 
 		if (~held_notes.any({|item| item == num}).not) { ~held_notes.add(num); };
-		if (~effect.notNil and: {~effect.defName == \synthtoy}) {
-			("MIDI ON: Setting synthtoy freq: % gate: 1").format(num.midicps).postln;
+		if (~effect.notNil) {
+			("MIDI ON: Setting effect freq: % gate: 1").format(num.midicps).postln;
 			~effect.set(\freq, num.midicps, \gate, 1);
 		};
 	});
@@ -477,17 +477,17 @@ s.waitForBoot{
 		// ADDED: Log incoming MIDI note-off messages
 		("MIDI Note Off: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
 		~held_notes.remove(num);
-		if (~effect.notNil and: {~effect.defName == \synthtoy}) {
+		if (~effect.notNil) {
 			if (~held_notes.isEmpty) {
-				"MIDI OFF: Setting synthtoy gate: 0".postln;
+				"MIDI OFF: Setting effect gate: 0".postln;
 				~effect.set(\gate, 0);
 			} {
-				("MIDI OFF: Setting synthtoy freq to last note: %").format(~held_notes.last.midicps).postln;
+				("MIDI OFF: Setting effect freq to last note: %").format(~held_notes.last.midicps).postln;
 				~effect.set(\freq, ~held_notes.last.midicps);
 			}
 		};
 	});
-	"MIDI note handlers created for synthtoy.".postln;
+	"MIDI note handlers created.".postln;
 	// MIDI SETUP END
 
 	"Server booted successfully. END OF SCRIPT".postln;
