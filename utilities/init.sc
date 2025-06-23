@@ -14,6 +14,13 @@ s.waitForBoot{
 	~chunkDownsample = 1;
 	~numChunks = 16;
 	"Network address and variables initialized".postln;
+	("NetAddr configured to send to: 127.0.0.1:57121").postln;
+	("Server default options: " ++ Server.default.options).postln;
+	("Current server: " ++ s).postln;
+
+	// Log OSC server configuration for debugging
+	("Server addr: " ++ s.addr).postln;
+	("SuperCollider server is listening for OSC on: " ++ s.addr).postln;
 
 	~rms_bus_input = Bus.control(s, 1);
 	~rms_bus_output = Bus.control(s, 1);
@@ -242,13 +249,17 @@ s.waitForBoot{
 			var specs = ~effectParameterSpecs[effectName];
 			var specsForJSON, jsonString, paramCount;
 
-			("Received /effect/get_specs for: " ++ effectName).postln;
+			("=== SC: Received /effect/get_specs for: " ++ effectName ++ " ===").postln;
+			("SC: Current ~effectParameterSpecs keys: " ++ ~effectParameterSpecs.keys.asArray).postln;
 
 			if(specs.isNil) {
-				("No specs found for effect: " ++ effectName).postln;
+				("SC: No specs found for effect: " ++ effectName).postln;
+				("SC: Sending empty JSON reply for: " ++ effectName).postln;
 				~o.sendMsg("/effect/specs_reply", effectName.asString, "{}"); // Send empty JSON
 				^this.exit;
 			};
+			
+			("SC: Found specs for " ++ effectName ++ ", processing...").postln;
 			
 			// Convert ControlSpecs to JSON-serializable format
 			specsForJSON = ();
@@ -280,15 +291,29 @@ s.waitForBoot{
 			});
 			jsonString = jsonString ++ "}";
 
-			("Replying with specs for %: %").format(effectName, jsonString).postln;
+			("SC: About to send reply with JSON: " ++ jsonString).postln;
+			("SC: Sending to NetAddr: " ++ ~o).postln;
 
 			// Send the reply
 			~o.sendMsg("/effect/specs_reply", effectName.asString, jsonString);
+			
+			("SC: Reply sent for " ++ effectName).postln;
 		},
 		'/effect/get_specs'
 	);
 	"OSCdef for /effect/get_specs created.".postln;
 
+	// Test OSC handler to verify OSC reception is working
+	OSCdef(\test_osc_reception, { |msg|
+		("TEST: Received OSC message at /test with args: " ++ msg).postln;
+	}, '/test');
+	"Test OSC handler created for /test".postln;
+
+	// Add a more comprehensive OSC test
+	OSCdef(\debug_all_osc, { |msg, time, addr, recvPort|
+		("DEBUG OSC: addr=" ++ msg.address ++ " args=" ++ msg.args ++ " from=" ++ addr ++ " port=" ++ recvPort).postln;
+	}, '/effect/get_specs'); // This will catch our specific message
+	"Debug OSC handler created for /effect/get_specs".postln;
 
 	OSCdef(\combinedData).free;
 	OSCdef(\combinedData, { |msg|
