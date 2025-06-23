@@ -456,8 +456,19 @@ s.waitForBoot{
 		if(~hasMIDI, {
 			// Log the list of connected MIDI sources
 			("MIDI Sources: " ++ MIDIClient.sources).postln;
-			MIDIIn.connectAll;
-			"Connected to all MIDI devices.".postln;
+
+			// Selectively connect to hardware MIDI inputs instead of using MIDIIn.connectAll,
+			// which can hang on some systems (like Raspberry Pi) by connecting to virtual ports.
+			MIDIClient.sources.do({ |src|
+				var deviceName = src.device.asString;
+				if (deviceName.contains("pisound")) {
+					MIDIIn.connect(nil, src);
+					("Connected to MIDI source: " ++ deviceName).postln;
+				} {
+					("Skipping connection to MIDI source: " ++ deviceName).postln;
+				}
+			});
+			"Finished selective MIDI connection.".postln;
 		}, {
 			"No MIDI devices detected.".postln;
 		});
