@@ -21,6 +21,11 @@ s.waitForBoot{
 	// Log OSC server configuration for debugging
 	("Server addr: " ++ s.addr).postln;
 	("SuperCollider server is listening for OSC on: " ++ s.addr).postln;
+	
+	// Set up language-side OSC listening
+	// The language needs to listen on a different port from the server
+	thisProcess.openUDPPort(57122); // Language listens on 57122
+	("SuperCollider language is listening for OSC on port: 57122").postln;
 
 	~rms_bus_input = Bus.control(s, 1);
 	~rms_bus_output = Bus.control(s, 1);
@@ -241,24 +246,23 @@ s.waitForBoot{
 	};
 	"~setupEffect helper function defined.".postln;
 
+	// Free and recreate the OSCdef to ensure it's properly registered
+	OSCdef(\get_effect_specs_handler).free;
+	
 	// Handler for getting effect parameter specifications
-	~get_effect_specs_handler = OSCdef(
-		\get_effect_specs_handler,
-		{ |msg|
-			var effectName = msg[1].asSymbol;
-			var specs = ~effectParameterSpecs[effectName];
-			var specsForJSON, jsonString, paramCount;
+	OSCdef(\get_effect_specs_handler, { |msg|
+		var effectName = msg[1].asSymbol;
+		var specs = ~effectParameterSpecs[effectName];
+		var specsForJSON, jsonString, paramCount;
 
-			("=== SC: Received /effect/get_specs for: " ++ effectName ++ " ===").postln;
-			("SC: Current ~effectParameterSpecs keys: " ++ ~effectParameterSpecs.keys.asArray).postln;
+		("=== SC: Received /effect/get_specs for: " ++ effectName ++ " ===").postln;
+		("SC: Current ~effectParameterSpecs keys: " ++ ~effectParameterSpecs.keys.asArray).postln;
 
-			if(specs.isNil) {
-				("SC: No specs found for effect: " ++ effectName).postln;
-				("SC: Sending empty JSON reply for: " ++ effectName).postln;
-				~o.sendMsg("/effect/specs_reply", effectName.asString, "{}"); // Send empty JSON
-				^this.exit;
-			};
-			
+		if(specs.isNil) {
+			("SC: No specs found for effect: " ++ effectName).postln;
+			("SC: Sending empty JSON reply for: " ++ effectName).postln;
+			~o.sendMsg("/effect/specs_reply", effectName.asString, "{}"); // Send empty JSON
+		} {
 			("SC: Found specs for " ++ effectName ++ ", processing...").postln;
 			
 			// Convert ControlSpecs to JSON-serializable format
@@ -298,22 +302,19 @@ s.waitForBoot{
 			~o.sendMsg("/effect/specs_reply", effectName.asString, jsonString);
 			
 			("SC: Reply sent for " ++ effectName).postln;
-		},
-		'/effect/get_specs'
-	);
+		};
+	}, '/effect/get_specs');
 	"OSCdef for /effect/get_specs created.".postln;
 
-	// Test OSC handler to verify OSC reception is working
+	// Free and recreate test OSC handler
+	OSCdef(\test_osc_reception).free;
 	OSCdef(\test_osc_reception, { |msg|
 		("TEST: Received OSC message at /test with args: " ++ msg).postln;
 	}, '/test');
 	"Test OSC handler created for /test".postln;
-
-	// Add a more comprehensive OSC test
-	OSCdef(\debug_all_osc, { |msg, time, addr, recvPort|
-		("DEBUG OSC: addr=" ++ msg.address ++ " args=" ++ msg.args ++ " from=" ++ addr ++ " port=" ++ recvPort).postln;
-	}, '/effect/get_specs'); // This will catch our specific message
-	"Debug OSC handler created for /effect/get_specs".postln;
+	
+	// Verify OSCdefs are registered
+	("OSCdef.all keys: " ++ OSCdef.all.keys.asArray).postln;
 
 	OSCdef(\combinedData).free;
 	OSCdef(\combinedData, { |msg|
