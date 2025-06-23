@@ -1,8 +1,0 @@
-        {
-          "name": "multipass_test",
-          "description": "A test for multi-pass ShaderToy shaders.",
-          "audio": "audio/bypass.sc",
-          "shader": "shaders/silexar_ascii",
-          "curated": true,
-          "params": []
-        }

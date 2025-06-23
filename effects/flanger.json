@@ -1,7 +1,0 @@
-{
-  "name": "flanger",
-  "description": "An improved flanger effect with adjustable parameters",
-  "audio": "audio/flanger.sc",
-  "shader": "shaders/scope",
-  "curated": true
-}
