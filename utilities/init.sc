@@ -447,57 +447,64 @@ s.waitForBoot{
 	["Buffer 0 (in):", ~relay_buffer_in, "Buffer 1 (out):", ~relay_buffer_out, "Input Bus Object:", ~input_bus, "Input Bus Index:", ~input_bus.index].postln;
 
 	// MIDI SETUP START
-	MIDIClient.init;
-	"MIDI Initialized.".postln;
-	~hasMIDI = MIDIClient.sources.notEmpty;
+	// Wrap in a try block to prevent boot failure on systems with MIDI issues (e.g., Raspberry Pi)
+	try {
+		MIDIClient.init;
+		"MIDI Initialized.".postln;
+		~hasMIDI = MIDIClient.sources.notEmpty;
 
-	if(~hasMIDI, {
-		// Log the list of connected MIDI sources
-		("MIDI Sources: " ++ MIDIClient.sources).postln;
-		MIDIIn.connectAll;
-		"Connected to all MIDI devices.".postln;
-	}, {
-		"No MIDI devices detected.".postln;
-	});
-
-	~held_notes = []; // for monophonic last-note priority
-
-	// Free previous MIDI funcs if they exist, to allow re-evaluation of this script
-	if(~midi_note_on_func.notNil, { ~midi_note_on_func.free });
-	if(~midi_note_off_func.notNil, { ~midi_note_off_func.free });
-
-	if(~hasMIDI, {
-		~midi_note_on_func = MIDIFunc.noteOn({ |vel, num, chan, src|
-			// ADDED: Log incoming MIDI note-on messages
-			("MIDI Note On: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
-
-			("MIDI Handler ~effect check: isNil: %, defName: %, isRunning: %").format(~effect.isNil, ~effect.tryPerform(\defName), ~effect.tryPerform(\isRunning)).postln;
-
-			if (~held_notes.any({|item| item == num}).not) { ~held_notes.add(num); };
-			if (~effect.notNil) {
-				("MIDI ON: Setting effect freq: % gate: 1").format(num.midicps).postln;
-				~effect.set(\freq, num.midicps, \gate, 1);
-			};
+		if(~hasMIDI, {
+			// Log the list of connected MIDI sources
+			("MIDI Sources: " ++ MIDIClient.sources).postln;
+			MIDIIn.connectAll;
+			"Connected to all MIDI devices.".postln;
+		}, {
+			"No MIDI devices detected.".postln;
 		});
 
-		~midi_note_off_func = MIDIFunc.noteOff({ |vel, num, chan, src|
-			// ADDED: Log incoming MIDI note-off messages
-			("MIDI Note Off: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
-			~held_notes.remove(num);
-			if (~effect.notNil) {
-				if (~held_notes.isEmpty) {
-					"MIDI OFF: Setting effect gate: 0".postln;
-					~effect.set(\gate, 0);
-				} {
-					("MIDI OFF: Setting effect freq to last note: %").format(~held_notes.last.midicps).postln;
-					~effect.set(\freq, ~held_notes.last.midicps);
-				}
-			};
+		~held_notes = []; // for monophonic last-note priority
+
+		// Free previous MIDI funcs if they exist, to allow re-evaluation of this script
+		if(~midi_note_on_func.notNil, { ~midi_note_on_func.free });
+		if(~midi_note_off_func.notNil, { ~midi_note_off_func.free });
+
+		if(~hasMIDI, {
+			~midi_note_on_func = MIDIFunc.noteOn({ |vel, num, chan, src|
+				// ADDED: Log incoming MIDI note-on messages
+				("MIDI Note On: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
+				
+				("MIDI Handler ~effect check: isNil: %, defName: %, isRunning: %").format(~effect.isNil, ~effect.tryPerform(\defName), ~effect.tryPerform(\isRunning)).postln;
+
+				if (~held_notes.any({|item| item == num}).not) { ~held_notes.add(num); };
+				if (~effect.notNil) {
+					("MIDI ON: Setting effect freq: % gate: 1").format(num.midicps).postln;
+					~effect.set(\freq, num.midicps, \gate, 1);
+				};
+			});
+
+			~midi_note_off_func = MIDIFunc.noteOff({ |vel, num, chan, src|
+				// ADDED: Log incoming MIDI note-off messages
+				("MIDI Note Off: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
+				~held_notes.remove(num);
+				if (~effect.notNil) {
+					if (~held_notes.isEmpty) {
+						"MIDI OFF: Setting effect gate: 0".postln;
+						~effect.set(\gate, 0);
+					} {
+						("MIDI OFF: Setting effect freq to last note: %").format(~held_notes.last.midicps).postln;
+						~effect.set(\freq, ~held_notes.last.midicps);
+					}
+				};
+			});
+			"MIDI note handlers created.".postln;
+		}, {
+			"No MIDI devices found, MIDI handlers not created.".postln;
 		});
-		"MIDI note handlers created.".postln;
-	}, {
-		"No MIDI devices found, MIDI handlers not created.".postln;
-	});
+	} { |error|
+		("MIDI Setup Failed: " ++ error.errorString).postln;
+		"Continuing boot without MIDI.".postln;
+		~hasMIDI = false; // Ensure ~hasMIDI is false if setup fails
+	};
 	// MIDI SETUP END
 
 	"Server booted successfully. END OF SCRIPT".postln;
