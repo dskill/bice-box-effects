@@ -443,45 +443,55 @@ s.waitForBoot{
 				// Log the list of connected MIDI sources
 				("MIDI Sources: " ++ MIDIClient.sources).postln;
 
-				// Connect to hardware MIDI inputs, but be more flexible with device names
+				// Connect to hardware MIDI inputs, avoiding problematic system devices
 				MIDIClient.sources.do({ |src, i|
 					var deviceName = src.device.asString;
-					("MIDI DEBUG: Examining source % - device: %, name: %, uid: %").format(i, deviceName, src.name, src.uid).postln;
+					var sourceName = src.name.asString;
+					("MIDI DEBUG: Examining source % - device: %, name: %, uid: %").format(i, deviceName, sourceName, src.uid).postln;
 					
-					// Connect to pisound (Raspberry Pi) or common MIDI controllers
-					if (deviceName.contains("pisound") or: 
-						deviceName.containsi("launchkey") or: 
-						deviceName.containsi("midi") or:
-						deviceName.containsi("keyboard") or:
-						deviceName.containsi("controller")) {
-						
-						("MIDI DEBUG: Attempting to connect to: % (uid: %)").format(deviceName, src.uid).postln;
-						
-						// Try different connection methods to handle different MIDI interface types
-						try {
-							// Method 1: Connect using port number
-							MIDIIn.connect(0, src.uid);
-							("MIDI DEBUG: Successfully connected to MIDI source via uid: " ++ deviceName).postln;
-						} { |error1|
-							("MIDI DEBUG: Method 1 failed (% %), trying method 2...").format(error1.class, error1.errorString).postln;
-							try {
-								// Method 2: Connect using device index
-								MIDIIn.connect(device: i);
-								("MIDI DEBUG: Successfully connected to MIDI source via device index: " ++ deviceName).postln;
-							} { |error2|
-								("MIDI DEBUG: Method 2 failed (% %), trying method 3...").format(error2.class, error2.errorString).postln;
-								try {
-									// Method 3: Connect all (might work for some devices)
-									MIDIIn.connectAll;
-									("MIDI DEBUG: Successfully connected via connectAll").postln;
-								} { |error3|
-									("MIDI DEBUG: All connection methods failed for device: % - Error1: %, Error2: %, Error3: %")
-										.format(deviceName, error1.errorString, error2.errorString, error3.errorString).postln;
-								}
-							}
-						};
+					// Skip problematic system devices that cause "Device or resource busy" errors
+					if (deviceName.contains("System") or: 
+						deviceName.contains("SuperCollider") or:
+						sourceName.contains("Timer") or:
+						sourceName.contains("Announce") or:
+						sourceName.contains("out")) {
+						("MIDI DEBUG: Skipping system/virtual device: % - %").format(deviceName, sourceName).postln;
 					} {
-						("MIDI DEBUG: Skipping connection to MIDI source: " ++ deviceName).postln;
+						// Connect to pisound (Raspberry Pi) or common MIDI controllers, but avoid Midi Through if busy
+						if (deviceName.contains("pisound") or: 
+							deviceName.containsi("launchkey") or: 
+							(deviceName.containsi("midi") and: deviceName.contains("Through").not) or:
+							deviceName.containsi("keyboard") or:
+							deviceName.containsi("controller")) {
+							
+							("MIDI DEBUG: Attempting to connect to: % - % (uid: %)").format(deviceName, sourceName, src.uid).postln;
+							
+							// Try different connection methods, but avoid connectAll on Pi
+							try {
+								// Method 1: Connect using port 0 and device UID
+								MIDIIn.connect(0, src.uid);
+								("MIDI DEBUG: Successfully connected via Method 1 (port 0, uid) to: % - %").format(deviceName, sourceName).postln;
+							} { |error1|
+								("MIDI DEBUG: Method 1 failed: %, trying method 2...").format(error1.errorString).postln;
+								try {
+									// Method 2: Connect using device index
+									MIDIIn.connect(device: i);
+									("MIDI DEBUG: Successfully connected via Method 2 (device index) to: % - %").format(deviceName, sourceName).postln;
+								} { |error2|
+									("MIDI DEBUG: Method 2 failed: %, trying method 3...").format(error2.errorString).postln;
+									try {
+										// Method 3: Connect using just the UID
+										MIDIIn.connect(src.uid);
+										("MIDI DEBUG: Successfully connected via Method 3 (uid only) to: % - %").format(deviceName, sourceName).postln;
+									} { |error3|
+										("MIDI DEBUG: All connection methods failed for: % - %. Errors: [1: %, 2: %, 3: %]")
+											.format(deviceName, sourceName, error1.errorString, error2.errorString, error3.errorString).postln;
+									}
+								}
+							};
+						} {
+							("MIDI DEBUG: Skipping non-target device: % - %").format(deviceName, sourceName).postln;
+						}
 					}
 				});
 				"MIDI DEBUG: Finished selective MIDI connection.".postln;
