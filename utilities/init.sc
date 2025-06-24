@@ -433,31 +433,69 @@ s.waitForBoot{
 	["Buffer 0 (in):", ~relay_buffer_in, "Buffer 1 (out):", ~relay_buffer_out, "Input Bus Object:", ~input_bus, "Input Bus Index:", ~input_bus.index].postln;
 
 	// MIDI SETUP START
-	// Wrap in a try block to prevent boot failure on systems with MIDI issues (e.g., Raspberry Pi)
-	try {
-		MIDIClient.init;
-		"MIDI Initialized.".postln;
-		~hasMIDI = MIDIClient.sources.notEmpty;
+			// Wrap in a try block to prevent boot failure on systems with MIDI issues (e.g., Raspberry Pi)
+		try {
+			MIDIClient.init;
+			"MIDI Initialized.".postln;
+			~hasMIDI = MIDIClient.sources.notEmpty;
 
-		if(~hasMIDI, {
-			// Log the list of connected MIDI sources
-			("MIDI Sources: " ++ MIDIClient.sources).postln;
+			if(~hasMIDI, {
+				// Log the list of connected MIDI sources
+				("MIDI Sources: " ++ MIDIClient.sources).postln;
 
-			// Selectively connect to hardware MIDI inputs instead of using MIDIIn.connectAll,
-			// which can hang on some systems (like Raspberry Pi) by connecting to virtual ports.
-			MIDIClient.sources.do({ |src|
-				var deviceName = src.device.asString;
-				if (deviceName.contains("pisound")) {
-					MIDIIn.connect(nil, src);
-					("Connected to MIDI source: " ++ deviceName).postln;
-				} {
-					("Skipping connection to MIDI source: " ++ deviceName).postln;
-				}
+				// Connect to hardware MIDI inputs, but be more flexible with device names
+				MIDIClient.sources.do({ |src, i|
+					var deviceName = src.device.asString;
+					("MIDI DEBUG: Examining source % - device: %, name: %, uid: %").format(i, deviceName, src.name, src.uid).postln;
+					
+					// Connect to pisound (Raspberry Pi) or common MIDI controllers
+					if (deviceName.contains("pisound") or: 
+						deviceName.containsi("launchkey") or: 
+						deviceName.containsi("midi") or:
+						deviceName.containsi("keyboard") or:
+						deviceName.containsi("controller")) {
+						
+						("MIDI DEBUG: Attempting to connect to: % (uid: %)").format(deviceName, src.uid).postln;
+						
+						// Try different connection methods to handle different MIDI interface types
+						try {
+							// Method 1: Connect using port number
+							MIDIIn.connect(0, src.uid);
+							("MIDI DEBUG: Successfully connected to MIDI source via uid: " ++ deviceName).postln;
+						} { |error1|
+							("MIDI DEBUG: Method 1 failed (% %), trying method 2...").format(error1.class, error1.errorString).postln;
+							try {
+								// Method 2: Connect using device index
+								MIDIIn.connect(device: i);
+								("MIDI DEBUG: Successfully connected to MIDI source via device index: " ++ deviceName).postln;
+							} { |error2|
+								("MIDI DEBUG: Method 2 failed (% %), trying method 3...").format(error2.class, error2.errorString).postln;
+								try {
+									// Method 3: Connect all (might work for some devices)
+									MIDIIn.connectAll;
+									("MIDI DEBUG: Successfully connected via connectAll").postln;
+								} { |error3|
+									("MIDI DEBUG: All connection methods failed for device: % - Error1: %, Error2: %, Error3: %")
+										.format(deviceName, error1.errorString, error2.errorString, error3.errorString).postln;
+								}
+							}
+						};
+					} {
+						("MIDI DEBUG: Skipping connection to MIDI source: " ++ deviceName).postln;
+					}
+				});
+				"MIDI DEBUG: Finished selective MIDI connection.".postln;
+				
+				// Add a general MIDI message handler for debugging all incoming MIDI
+				if(~midi_all_func.notNil, { ~midi_all_func.free });
+				~midi_all_func = MIDIFunc({ |val, num, chan, src|
+					("MIDI DEBUG: Raw MIDI message - val: %, num: %, chan: %, src: %").format(val, num, chan, src).postln;
+				});
+				"MIDI DEBUG: General MIDI message handler created.".postln;
+				
+			}, {
+				"MIDI DEBUG: No MIDI devices detected.".postln;
 			});
-			"Finished selective MIDI connection.".postln;
-		}, {
-			"No MIDI devices detected.".postln;
-		});
 
 		~held_notes = []; // for monophonic last-note priority
 
@@ -467,35 +505,56 @@ s.waitForBoot{
 
 		if(~hasMIDI, {
 			~midi_note_on_func = MIDIFunc.noteOn({ |vel, num, chan, src|
-				// ADDED: Log incoming MIDI note-on messages
-				("MIDI Note On: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
+				var srcDevice;
+				// Enhanced debug logging for MIDI note-on messages
+				srcDevice = MIDIClient.sources.detect{|d| d.uid == src};
+				("MIDI DEBUG: Note On - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
+					.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
 				
-				("MIDI Handler ~effect check: isNil: %, defName: %, isRunning: %").format(~effect.isNil, ~effect.tryPerform(\defName), ~effect.tryPerform(\isRunning)).postln;
+				("MIDI DEBUG: Current ~effect state - isNil: %, defName: %, isRunning: %, ~held_notes: %")
+					.format(~effect.isNil, ~effect.tryPerform(\defName), ~effect.tryPerform(\isRunning), ~held_notes).postln;
 
-				if (~held_notes.any({|item| item == num}).not) { ~held_notes.add(num); };
+				if (~held_notes.any({|item| item == num}).not) { 
+					~held_notes.add(num); 
+					("MIDI DEBUG: Added note % to held_notes, now: %").format(num, ~held_notes).postln;
+				} {
+					("MIDI DEBUG: Note % already in held_notes: %").format(num, ~held_notes).postln;
+				};
+				
 				if (~effect.notNil) {
-					("MIDI ON: Setting effect freq: % gate: 1").format(num.midicps).postln;
+					("MIDI DEBUG: Setting effect freq: % Hz, gate: 1").format(num.midicps.round(0.1)).postln;
 					~effect.set(\freq, num.midicps, \gate, 1);
+				} {
+					"MIDI DEBUG: No effect synth to control".postln;
 				};
 			});
 
 			~midi_note_off_func = MIDIFunc.noteOff({ |vel, num, chan, src|
-				// ADDED: Log incoming MIDI note-off messages
-				("MIDI Note Off: vel=%, num=%, chan=%, src=%" ++ MIDIClient.sources.detect{|d| d.uid == src}.device).format(vel, num, chan, src).postln;
+				var srcDevice;
+				// Enhanced debug logging for MIDI note-off messages
+				srcDevice = MIDIClient.sources.detect{|d| d.uid == src};
+				("MIDI DEBUG: Note Off - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
+					.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
+				
 				~held_notes.remove(num);
+				("MIDI DEBUG: Removed note % from held_notes, now: %").format(num, ~held_notes).postln;
+				
 				if (~effect.notNil) {
 					if (~held_notes.isEmpty) {
-						"MIDI OFF: Setting effect gate: 0".postln;
+						"MIDI DEBUG: No more held notes, setting gate: 0".postln;
 						~effect.set(\gate, 0);
 					} {
-						("MIDI OFF: Setting effect freq to last note: %").format(~held_notes.last.midicps).postln;
+						("MIDI DEBUG: Still holding notes, setting freq to last note: % (% Hz)")
+							.format(~held_notes.last, ~held_notes.last.midicps.round(0.1)).postln;
 						~effect.set(\freq, ~held_notes.last.midicps);
 					}
+				} {
+					"MIDI DEBUG: No effect synth to control".postln;
 				};
 			});
-			"MIDI note handlers created.".postln;
+			"MIDI DEBUG: Note handlers created.".postln;
 		}, {
-			"No MIDI devices found, MIDI handlers not created.".postln;
+			"MIDI DEBUG: No MIDI devices found, MIDI handlers not created.".postln;
 		});
 	} { |error|
 		("MIDI Setup Failed: " ++ error.errorString).postln;
