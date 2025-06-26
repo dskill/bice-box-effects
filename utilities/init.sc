@@ -248,9 +248,26 @@ s.waitForBoot{
 				s.sync;
 			});
 
+			// Clean up voice allocation state
+			~voice_allocator = Dictionary.new;
+			~voice_states = Array.fill(~maxVoices, \free);
+			~voice_freqs = Array.fill(~maxVoices, 440);
+			~voice_gates = Array.fill(~maxVoices, 0);
+			~voice_amps = Array.fill(~maxVoices, 0);
+
 			// Create new synth in the effect group
 			~effect = Synth(defName, finalArgs, ~effectGroup);
 			("New '%' synth created with args: %").format(defName, finalArgs).postln;
+			
+			// If this is a polyphonic synth, initialize voice arrays
+			if(defName.asString.contains("synthtoy")) {
+				"Initializing voice arrays for polyphonic synth".postln;
+				~effect.set(
+					\voice_freqs, ~voice_freqs,
+					\voice_gates, ~voice_gates,
+					\voice_amps, ~voice_amps
+				);
+			};
 		};
 	};
 	"~setupEffect helper function defined.".postln;
@@ -508,6 +525,39 @@ s.waitForBoot{
 			});
 
 		~held_notes = []; // for monophonic last-note priority
+		
+		// Voice allocation for single-synth polyphony
+		~maxVoices = 8; // Must match the numVoices in polyphonic synths
+		~voice_allocator = (); // Dictionary: midiNote -> voiceIndex
+		~voice_states = Array.fill(~maxVoices, \free); // Track voice states: \free, \active
+		~voice_freqs = Array.fill(~maxVoices, 440); // Current frequencies
+		~voice_gates = Array.fill(~maxVoices, 0); // Current gate states
+		~voice_amps = Array.fill(~maxVoices, 0); // Current amplitudes
+		
+		// Voice allocation helper functions
+		~findFreeVoice = {
+			var freeIndex = ~voice_states.indexOf(\free);
+			if(freeIndex.isNil) {
+				// No free voices, steal the oldest (voice 0 for simplicity)
+				("MIDI DEBUG: No free voices, stealing voice 0").postln;
+				0;
+			} {
+				freeIndex;
+			};
+		};
+		
+		~updateVoiceArrays = {
+			// Send updated voice arrays to the effect synth
+			if(~effect.notNil) {
+				~effect.set(
+					\voice_freqs, ~voice_freqs,
+					\voice_gates, ~voice_gates,
+					\voice_amps, ~voice_amps
+				);
+				("MIDI DEBUG: Updated voice arrays - freqs: %, gates: %, amps: %")
+					.format(~voice_freqs, ~voice_gates, ~voice_amps).postln;
+			};
+		};
 
 		// Free previous MIDI funcs if they exist, to allow re-evaluation of this script
 		if(~midi_note_on_func.notNil, { ~midi_note_on_func.free });
@@ -515,51 +565,98 @@ s.waitForBoot{
 
 		if(~hasMIDI, {
 			~midi_note_on_func = MIDIFunc.noteOn({ |vel, num, chan, src|
-				var srcDevice;
+				var srcDevice, voiceIndex;
 				// Enhanced debug logging for MIDI note-on messages
 				srcDevice = MIDIClient.sources.detect{|d| d.uid == src};
 				("MIDI DEBUG: Note On - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
 					.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
 				
-				("MIDI DEBUG: Current ~effect state - isNil: %, defName: %, isRunning: %, ~held_notes: %")
-					.format(~effect.isNil, ~effect.tryPerform(\defName), ~effect.tryPerform(\isRunning), ~held_notes).postln;
-
-				if (~held_notes.any({|item| item == num}).not) { 
-					~held_notes.add(num); 
-					("MIDI DEBUG: Added note % to held_notes, now: %").format(num, ~held_notes).postln;
+				// Check if current effect supports single-synth polyphony
+				if (~effect.notNil and: ~effect.defName.notNil and: 
+					~effect.defName.asString.contains("synthtoy")) { // Add other polyphonic synths here
+					
+					("MIDI DEBUG: Using single-synth polyphony for %").format(~effect.defName).postln;
+					
+					// Check if this note is already allocated
+					if (~voice_allocator[num].notNil) {
+						// Note is already playing, retrigger it
+						voiceIndex = ~voice_allocator[num];
+						("MIDI DEBUG: Retriggering note % on voice %").format(num, voiceIndex).postln;
+						~voice_gates[voiceIndex] = 0; // Quick gate off
+						0.01.wait; // Brief pause
+						~voice_gates[voiceIndex] = 1; // Gate back on
+						~voice_amps[voiceIndex] = vel / 127;
+					} {
+						// Allocate a new voice
+						voiceIndex = ~findFreeVoice.value;
+						~voice_allocator[num] = voiceIndex;
+						~voice_states[voiceIndex] = \active;
+						~voice_freqs[voiceIndex] = num.midicps;
+						~voice_gates[voiceIndex] = 1;
+						~voice_amps[voiceIndex] = vel / 127;
+						
+						("MIDI DEBUG: Allocated voice % for note % (% Hz)")
+							.format(voiceIndex, num, num.midicps.round(0.1)).postln;
+					};
+					
+					// Update the synth with new voice arrays
+					~updateVoiceArrays.value;
+					
 				} {
-					("MIDI DEBUG: Note % already in held_notes: %").format(num, ~held_notes).postln;
-				};
-				
-				if (~effect.notNil) {
-					("MIDI DEBUG: Setting effect freq: % Hz, gate: 1").format(num.midicps.round(0.1)).postln;
-					~effect.set(\freq, num.midicps, \gate, 1);
-				} {
-					"MIDI DEBUG: No effect synth to control".postln;
+					// Fallback to monophonic behavior for non-generator effects
+					if (~held_notes.any({|item| item == num}).not) { 
+						~held_notes.add(num); 
+						("MIDI DEBUG: Added note % to held_notes, now: %").format(num, ~held_notes).postln;
+					} {
+						("MIDI DEBUG: Note % already in held_notes: %").format(num, ~held_notes).postln;
+					};
+					
+					if (~effect.notNil) {
+						("MIDI DEBUG: Setting monophonic effect freq: % Hz, gate: 1").format(num.midicps.round(0.1)).postln;
+						~effect.set(\freq, num.midicps, \gate, 1);
+					} {
+						"MIDI DEBUG: No effect synth to control".postln;
+					};
 				};
 			});
 
 			~midi_note_off_func = MIDIFunc.noteOff({ |vel, num, chan, src|
-				var srcDevice;
+				var srcDevice, voiceIndex;
 				// Enhanced debug logging for MIDI note-off messages
 				srcDevice = MIDIClient.sources.detect{|d| d.uid == src};
 				("MIDI DEBUG: Note Off - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
 					.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
 				
-				~held_notes.remove(num);
-				("MIDI DEBUG: Removed note % from held_notes, now: %").format(num, ~held_notes).postln;
-				
-				if (~effect.notNil) {
-					if (~held_notes.isEmpty) {
-						"MIDI DEBUG: No more held notes, setting gate: 0".postln;
-						~effect.set(\gate, 0);
-					} {
-						("MIDI DEBUG: Still holding notes, setting freq to last note: % (% Hz)")
-							.format(~held_notes.last, ~held_notes.last.midicps.round(0.1)).postln;
-						~effect.set(\freq, ~held_notes.last.midicps);
-					}
+				// Handle single-synth polyphonic note-off
+				if (~voice_allocator[num].notNil) {
+					voiceIndex = ~voice_allocator[num];
+					("MIDI DEBUG: Releasing voice % for note %").format(voiceIndex, num).postln;
+					
+					// Release the voice
+					~voice_gates[voiceIndex] = 0;
+					~voice_states[voiceIndex] = \free;
+					~voice_allocator.removeAt(num);
+					
+					// Update the synth with new voice arrays
+					~updateVoiceArrays.value;
+					
 				} {
-					"MIDI DEBUG: No effect synth to control".postln;
+					// Fallback to monophonic behavior
+					~held_notes.remove(num);
+					("MIDI DEBUG: Removed note % from held_notes, now: %").format(num, ~held_notes).postln;
+					
+					if (~effect.notNil) {
+						if (~held_notes.isEmpty) {
+							"MIDI DEBUG: No more held notes, setting gate: 0".postln;
+							~effect.set(\gate, 0);
+						} {
+							("MIDI DEBUG: Still holding notes, setting freq to last note: % (% Hz)")
+								.format(~held_notes.last, ~held_notes.last.midicps.round(0.1)).postln;
+							~effect.set(\freq, ~held_notes.last.midicps);
+						}
+					} {
+						"MIDI DEBUG: No effect synth to control".postln;
+					};
 				};
 			});
 			"MIDI DEBUG: Note handlers created.".postln;
