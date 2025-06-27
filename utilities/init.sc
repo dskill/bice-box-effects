@@ -615,7 +615,6 @@ s.waitForBoot{
 						};
 						
 						~effect.set(\freq, num.midicps, \gate, 1);
-						("MIDI DEBUG: Set monophonic freq: % Hz, gate: 1").format(num.midicps.round(0.1)).postln;
 					};
 				} {
 					"MIDI DEBUG: No effect synth to control".postln;
@@ -626,17 +625,13 @@ s.waitForBoot{
 				var srcDevice, voiceIndex;
 				// Enhanced debug logging for MIDI note-off messages
 				srcDevice = MIDIClient.sources.detect{|d| d.uid == src};
-				("MIDI DEBUG: Note Off - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
-					.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
 				
 				if (~effect.notNil) {
 					if(~currentMidiMode == \poly) {
 						// POLYPHONIC MODE: Handle voice release
-						("MIDI DEBUG: Processing polyphonic MIDI note off for %").format(~effect.defName).postln;
 						
 						if (~voice_allocator[num].notNil) {
 							voiceIndex = ~voice_allocator[num];
-							("MIDI DEBUG: Releasing voice % for note %").format(voiceIndex, num).postln;
 							
 							// Release the voice
 							~voice_gates[voiceIndex] = 0;
@@ -646,19 +641,12 @@ s.waitForBoot{
 							// Update the synth with new voice arrays
 							~updateVoiceArrays.value;
 						};
-					} {
-						// MONOPHONIC MODE: Handle note release with last-note priority
-						("MIDI DEBUG: Processing monophonic MIDI note off for %").format(~effect.defName).postln;
-						
+					} {						
 						~held_notes.remove(num);
-						("MIDI DEBUG: Removed note % from held_notes, now: %").format(num, ~held_notes).postln;
 						
 						if (~held_notes.isEmpty) {
-							"MIDI DEBUG: No more held notes, setting gate: 0".postln;
 							~effect.set(\gate, 0);
 						} {
-							("MIDI DEBUG: Still holding notes, setting freq to last note: % (% Hz)")
-								.format(~held_notes.last, ~held_notes.last.midicps.round(0.1)).postln;
 							~effect.set(\freq, ~held_notes.last.midicps);
 						};
 					};
