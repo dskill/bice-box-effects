@@ -6,6 +6,7 @@
 - **Use specs defaults**: `\param.kr(specs[\param].default)`
 - **Mono-first**: Process in mono, output `[processed, processed]`
 - **Analysis out**: Always mono signal to `analysis_out_bus`
+- **Maximum 12 faders** fit on screen - design parameters accordingly
 
 ## Template
 ```supercollider
@@ -45,6 +46,100 @@
     ~setupEffect.value(defName, specs);
 )
 ```
+
+## Polyphonic Synth Template
+For MIDI-controllable polyphonic synthesizers:
+
+```supercollider
+// shader: oscilloscope  
+(
+    var defName = \synth_name;
+    var numVoices = 8; // Maximum polyphony
+    var specs = (
+        // Your synth parameters (max 12 faders fit on screen)
+        amp: ControlSpec(0, 1, 'lin', 0, 0.5, ""),
+        filter_freq: ControlSpec(100, 8000, 'exp', 0, 2000, "Hz"),
+        wave_type: ControlSpec(0, 2, 'lin', 1, 0, ""), // discrete values
+        // ADSR envelope parameters
+        attack: ControlSpec(0.001, 2.0, 'exp', 0, 0.01, "s"),
+        decay: ControlSpec(0.001, 2.0, 'exp', 0, 0.1, "s"),
+        sustain: ControlSpec(0.0, 1.0, 'lin', 0, 0.8, ""),
+        release: ControlSpec(0.001, 4.0, 'exp', 0, 0.2, "s")
+    );
+
+    var def = SynthDef(defName, {
+        // Standard parameters
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        
+        // Your synth parameters
+        var amp = \amp.kr(specs[\amp].default);
+        var filter_freq = \filter_freq.kr(specs[\filter_freq].default);
+        var wave_type = \wave_type.kr(specs[\wave_type].default);
+        var attack = \attack.kr(specs[\attack].default);
+        var decay = \decay.kr(specs[\decay].default);
+        var sustain = \sustain.kr(specs[\sustain].default);
+        var release = \release.kr(specs[\release].default);
+        
+        // Voice arrays - REQUIRED for polyphonic synths
+        var voice_freqs = \voice_freqs.kr(Array.fill(numVoices, 440));
+        var voice_gates = \voice_gates.kr(Array.fill(numVoices, 0));
+        var voice_amps = \voice_amps.kr(Array.fill(numVoices, 0));
+        
+        // ALL other variables declared here!
+        var voice_signals, mixed_voices, final_sig, mono_for_analysis;
+        
+        // Generate all voices
+        voice_signals = Array.fill(numVoices, { |i|
+            var freq = voice_freqs[i];
+            var gate = voice_gates[i];
+            var vel_amp = voice_amps[i];
+            var env, wave, voice_out;
+            
+            // ADSR envelope
+            env = EnvGen.ar(Env.adsr(attack, decay, sustain, release), gate);
+            
+            // Your oscillator/wave generation here
+            wave = Select.ar(wave_type, [
+                SinOsc.ar(freq),    // 0 = sine
+                Saw.ar(freq),       // 1 = saw  
+                Pulse.ar(freq, 0.5) // 2 = square
+            ]);
+            
+            // Apply envelope and velocity
+            voice_out = wave * env * vel_amp;
+            voice_out;
+        });
+        
+        // Mix all voices together
+        mixed_voices = Mix.ar(voice_signals);
+        
+        // Apply your processing (filters, effects, etc.)
+        final_sig = RLPF.ar(mixed_voices, filter_freq, 0.3);
+        final_sig = final_sig * amp;
+        
+        // Outputs
+        mono_for_analysis = final_sig;
+        Out.ar(analysis_out_bus, mono_for_analysis);
+        Out.ar(out, [final_sig, final_sig]);
+    });
+    def.add;
+    "Effect SynthDef 'synth_name' (polyphonic) added".postln;
+
+    // CRITICAL: Use \poly mode for MIDI control!
+    ~setupEffect.value(defName, specs, [], \poly);
+)
+```
+
+## Polyphonic Synth Key Points
+- **numVoices**: Set maximum polyphony (typically 4-16)
+- **Voice arrays**: `voice_freqs`, `voice_gates`, `voice_amps` are automatically managed
+- **\poly mode**: MUST use `~setupEffect.value(defName, specs, [], \poly)` for MIDI
+- **Voice generation**: Use `Array.fill(numVoices, { |i| ... })` pattern
+- **Mix voices**: Use `Mix.ar(voice_signals)` to combine all voices
+- **Envelopes**: Typically use `Env.adsr()` with `EnvGen.ar()`
+- **Parameters**: Design for max 12 faders - prioritize most important controls
 
 ## Common ControlSpecs
 - Linear 0-1: `ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")`
