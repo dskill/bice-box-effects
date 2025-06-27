@@ -259,15 +259,13 @@ s.waitForBoot{
 			~effect = Synth(defName, finalArgs, ~effectGroup);
 			("New '%' synth created with args: %").format(defName, finalArgs).postln;
 			
-			// If this is a polyphonic synth, initialize voice arrays
-			if(defName.asString.contains("synthtoy")) {
-				"Initializing voice arrays for polyphonic synth".postln;
-				~effect.set(
-					\voice_freqs, ~voice_freqs,
-					\voice_gates, ~voice_gates,
-					\voice_amps, ~voice_amps
-				);
-			};
+			// Always initialize voice arrays for any synth (they'll ignore them if not needed)
+			"Initializing voice arrays for synth (will be ignored if not supported)".postln;
+			~effect.set(
+				\voice_freqs, ~voice_freqs,
+				\voice_gates, ~voice_gates,
+				\voice_amps, ~voice_amps
+			);
 		};
 	};
 	"~setupEffect helper function defined.".postln;
@@ -571,11 +569,9 @@ s.waitForBoot{
 				("MIDI DEBUG: Note On - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
 					.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
 				
-				// Check if current effect supports single-synth polyphony
-				if (~effect.notNil and: ~effect.defName.notNil and: 
-					~effect.defName.asString.contains("synthtoy")) { // Add other polyphonic synths here
-					
-					("MIDI DEBUG: Using single-synth polyphony for %").format(~effect.defName).postln;
+				// Always handle polyphonic voice allocation for any synth
+				if (~effect.notNil) {
+					("MIDI DEBUG: Processing MIDI note on for %").format(~effect.defName).postln;
 					
 					// Check if this note is already allocated
 					if (~voice_allocator[num].notNil) {
@@ -599,24 +595,20 @@ s.waitForBoot{
 							.format(voiceIndex, num, num.midicps.round(0.1)).postln;
 					};
 					
-					// Update the synth with new voice arrays
+					// Always send voice arrays AND monophonic data to any synth
+					// Synths will ignore parameters they don't have
 					~updateVoiceArrays.value;
 					
-				} {
-					// Fallback to monophonic behavior for non-generator effects
+					// Also update traditional monophonic parameters for backward compatibility
 					if (~held_notes.any({|item| item == num}).not) { 
 						~held_notes.add(num); 
 						("MIDI DEBUG: Added note % to held_notes, now: %").format(num, ~held_notes).postln;
-					} {
-						("MIDI DEBUG: Note % already in held_notes: %").format(num, ~held_notes).postln;
 					};
 					
-					if (~effect.notNil) {
-						("MIDI DEBUG: Setting monophonic effect freq: % Hz, gate: 1").format(num.midicps.round(0.1)).postln;
-						~effect.set(\freq, num.midicps, \gate, 1);
-					} {
-						"MIDI DEBUG: No effect synth to control".postln;
-					};
+					~effect.set(\freq, num.midicps, \gate, 1);
+					("MIDI DEBUG: Sent both polyphonic and monophonic MIDI data").postln;
+				} {
+					"MIDI DEBUG: No effect synth to control".postln;
 				};
 			});
 
@@ -627,36 +619,40 @@ s.waitForBoot{
 				("MIDI DEBUG: Note Off - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
 					.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
 				
-				// Handle single-synth polyphonic note-off
-				if (~voice_allocator[num].notNil) {
-					voiceIndex = ~voice_allocator[num];
-					("MIDI DEBUG: Releasing voice % for note %").format(voiceIndex, num).postln;
+				// Always handle both polyphonic and monophonic note-off
+				if (~effect.notNil) {
+					("MIDI DEBUG: Processing MIDI note off for %").format(~effect.defName).postln;
 					
-					// Release the voice
-					~voice_gates[voiceIndex] = 0;
-					~voice_states[voiceIndex] = \free;
-					~voice_allocator.removeAt(num);
+					// Handle polyphonic voice release
+					if (~voice_allocator[num].notNil) {
+						voiceIndex = ~voice_allocator[num];
+						("MIDI DEBUG: Releasing voice % for note %").format(voiceIndex, num).postln;
+						
+						// Release the voice
+						~voice_gates[voiceIndex] = 0;
+						~voice_states[voiceIndex] = \free;
+						~voice_allocator.removeAt(num);
+						
+						// Update the synth with new voice arrays
+						~updateVoiceArrays.value;
+					};
 					
-					// Update the synth with new voice arrays
-					~updateVoiceArrays.value;
-					
-				} {
-					// Fallback to monophonic behavior
+					// Also handle monophonic note tracking for backward compatibility
 					~held_notes.remove(num);
 					("MIDI DEBUG: Removed note % from held_notes, now: %").format(num, ~held_notes).postln;
 					
-					if (~effect.notNil) {
-						if (~held_notes.isEmpty) {
-							"MIDI DEBUG: No more held notes, setting gate: 0".postln;
-							~effect.set(\gate, 0);
-						} {
-							("MIDI DEBUG: Still holding notes, setting freq to last note: % (% Hz)")
-								.format(~held_notes.last, ~held_notes.last.midicps.round(0.1)).postln;
-							~effect.set(\freq, ~held_notes.last.midicps);
-						}
+					if (~held_notes.isEmpty) {
+						"MIDI DEBUG: No more held notes, setting monophonic gate: 0".postln;
+						~effect.set(\gate, 0);
 					} {
-						"MIDI DEBUG: No effect synth to control".postln;
+						("MIDI DEBUG: Still holding notes, setting monophonic freq to last note: % (% Hz)")
+							.format(~held_notes.last, ~held_notes.last.midicps.round(0.1)).postln;
+						~effect.set(\freq, ~held_notes.last.midicps);
 					};
+					
+					("MIDI DEBUG: Sent both polyphonic and monophonic note-off data").postln;
+				} {
+					"MIDI DEBUG: No effect synth to control".postln;
 				};
 			});
 			"MIDI DEBUG: Note handlers created.".postln;
