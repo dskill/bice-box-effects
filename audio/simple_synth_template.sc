@@ -3,7 +3,7 @@
 
 (
     var defName = \simple_synth_template;
-    var numVoices = 8; // Maximum polyphony
+    var numVoices = 16; // Polyphonic synth
     var specs = (
         // Define your effect parameters here
         amp: ControlSpec(0, 1, 'lin', 0, 0.5, ""),
@@ -35,10 +35,13 @@
         
         // Generate all voices
         voice_signals = Array.fill(numVoices, { |i|
-            var freq = voice_freqs[i];
-            var gate = voice_gates[i];
-            var vel_amp = voice_amps[i];
+            var freq, gate, vel_amp;
             var env, wave, voice_out;
+
+            // Access the parameters for the current voice
+            freq = voice_freqs[i];
+            gate = voice_gates[i];
+            vel_amp = voice_amps[i];
             
             // ADSR envelope using the parameters
             env = EnvGen.ar(Env.adsr(attack, decay, sustain, release), gate);
@@ -74,5 +77,5 @@
     "Effect SynthDef 'simple_synth_template' (polyphonic) added".postln;
 
     // Register specs and create the synth - NOTE THE \poly MIDI MODE!
-    ~setupEffect.value(defName, specs, [], \poly);
+    ~setupEffect.value(defName, specs, [], numVoices);
 ) 

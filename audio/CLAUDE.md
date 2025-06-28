@@ -92,10 +92,20 @@ For MIDI-controllable polyphonic synthesizers:
         
         // Generate all voices
         voice_signals = Array.fill(numVoices, { |i|
-            var freq = voice_freqs[i];
-            var gate = voice_gates[i];
-            var vel_amp = voice_amps[i];
+            var freq, gate, vel_amp;
             var env, wave, voice_out;
+
+            // When numVoices > 1, controls are multi-channel and must be indexed.
+            // When numVoices == 1, they are single-channel and cannot be indexed.
+            if(numVoices > 1) {
+                freq = voice_freqs[i];
+                gate = voice_gates[i];
+                vel_amp = voice_amps[i];
+            } {
+                freq = voice_freqs;
+                gate = voice_gates;
+                vel_amp = voice_amps;
+            };
             
             // ADSR envelope
             env = EnvGen.ar(Env.adsr(attack, decay, sustain, release), gate);
@@ -127,16 +137,17 @@ For MIDI-controllable polyphonic synthesizers:
     def.add;
     "Effect SynthDef 'synth_name' (polyphonic) added".postln;
 
-    // CRITICAL: Use \poly mode for MIDI control!
-    ~setupEffect.value(defName, specs, [], \poly);
+    // CRITICAL: Pass numVoices to ~setupEffect to enable MIDI control
+    ~setupEffect.value(defName, specs, [], numVoices);
 )
 ```
 
 ## Polyphonic Synth Key Points
-- **numVoices**: Set maximum polyphony (typically 4-16)
-- **Voice arrays**: `voice_freqs`, `voice_gates`, `voice_amps` are automatically managed
-- **\poly mode**: MUST use `~setupEffect.value(defName, specs, [], \poly)` for MIDI
-- **Voice generation**: Use `Array.fill(numVoices, { |i| ... })` pattern
+- **numVoices**: Set for polyphony (e.g., 8 or more). This MUST be > 1.
+- **MIDI Setup**: Pass `numVoices` to `~setupEffect.value(defName, specs, [], numVoices)` to enable MIDI control.
+- **Voice arrays**: `voice_freqs`, `voice_gates`, `voice_amps` are automatically managed.
+- **Voice generation**: Use `Array.fill(numVoices, { |i| ... })` pattern.
+- **Robust Indexing**: Use `if(numVoices > 1)` when accessing voice parameters inside the `Array.fill` block to ensure compatibility.
 - **Mix voices**: Use `Mix.ar(voice_signals)` to combine all voices
 - **Envelopes**: Typically use `Env.adsr()` with `EnvGen.ar()`
 - **Parameters**: Design for max 12 faders - prioritize most important controls

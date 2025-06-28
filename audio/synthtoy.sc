@@ -110,5 +110,5 @@
     "Effect SynthDef 'synthtoy' (polyphonic) added".postln;
 
     // Register specs and create the synth
-    ~setupEffect.value(defName, specs, [], \poly);
+    ~setupEffect.value(defName, specs, [], numVoices);
 )

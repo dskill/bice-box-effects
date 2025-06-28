@@ -226,7 +226,7 @@ s.waitForBoot{
 	};
 	"~registerEffectSpecs function defined.".postln;
 
-	~setupEffect = { |defName, specs, additionalArgs = #[], midiMode = \mono|
+	~setupEffect = { |defName, specs, additionalArgs = #[], numVoices = 0|
 		var finalArgs;
 
 		// First, register the parameter specifications
@@ -248,23 +248,25 @@ s.waitForBoot{
 				s.sync;
 			});
 
-			// Clean up voice allocation state for polyphonic effects
-			if(midiMode == \poly, {
+			// Clean up and initialize voice allocation state for MIDI-enabled effects
+			~currentSynthNumVoices = numVoices; // Store numVoices for MIDI handlers
+			if(numVoices > 0, {
+				("Initializing MIDI state for '%' with % voices.").format(defName, numVoices).postln;
 				~voice_allocator = Dictionary.new;
-				~voice_states = Array.fill(~maxVoices, \free);
-				~voice_freqs = Array.fill(~maxVoices, 440);
-				~voice_gates = Array.fill(~maxVoices, 0);
-				~voice_amps = Array.fill(~maxVoices, 0);
+				~voice_states = Array.fill(numVoices, \free);
+				~voice_freqs = Array.fill(numVoices, 440);
+				~voice_gates = Array.fill(numVoices, 0);
+				~voice_amps = Array.fill(numVoices, 0);
+				~held_notes = []; // Used for both mono and poly tracking
 			});
 
 			// Create new synth in the effect group
 			~effect = Synth(defName, finalArgs, ~effectGroup);
-			~currentMidiMode = midiMode; // Store the MIDI mode for this effect
-			("New '%' synth created with MIDI mode: % and args: %").format(defName, midiMode, finalArgs).postln;
-			
-			// Initialize voice arrays only for polyphonic synths
-			if(midiMode == \poly, {
-				"Initializing voice arrays for polyphonic synth".postln;
+			("New '%' synth created with args: %").format(defName, finalArgs).postln;
+
+			// Initialize voice arrays for MIDI-enabled synths
+			if(numVoices > 0, {
+				"Initializing voice arrays on new synth instance".postln;
 				~effect.set(
 					\voice_freqs, ~voice_freqs,
 					\voice_gates, ~voice_gates,
@@ -273,7 +275,7 @@ s.waitForBoot{
 			});
 		};
 	};
-	"~setupEffect helper function defined with MIDI mode support.".postln;
+	"~setupEffect helper function defined with unified MIDI handling.".postln;
 
 	// Free and recreate the OSCdef to ensure it's properly registered
 	OSCdef(\get_effect_specs_handler).free;
@@ -528,13 +530,12 @@ s.waitForBoot{
 			});
 
 		// Voice allocation for polyphonic effects only
-		~maxVoices = 8; // Must match the numVoices in polyphonic synths
+		~currentSynthNumVoices = 0; // The number of voices for the current synth
 		~voice_allocator = (); // Dictionary: midiNote -> voiceIndex
-		~voice_states = Array.fill(~maxVoices, \free); // Track voice states: \free, \active
-		~voice_freqs = Array.fill(~maxVoices, 440); // Current frequencies
-		~voice_gates = Array.fill(~maxVoices, 0); // Current gate states
-		~voice_amps = Array.fill(~maxVoices, 0); // Current amplitudes
-		~currentMidiMode = \mono; // Default to monophonic
+		~voice_states = Array.new; // Track voice states: \free, \active
+		~voice_freqs = Array.new; // Current frequencies
+		~voice_gates = Array.new; // Current gate states
+		~voice_amps = Array.new; // Current amplitudes
 		
 		// Monophonic state for simple effects
 		~held_notes = []; // for monophonic last-note priority
@@ -553,7 +554,7 @@ s.waitForBoot{
 		
 		~updateVoiceArrays = {
 			// Send updated voice arrays to the effect synth (polyphonic mode only)
-			if(~effect.notNil and: (~currentMidiMode == \poly)) {
+			if(~effect.notNil and: (~currentSynthNumVoices > 0)) {
 				~effect.set(
 					\voice_freqs, ~voice_freqs,
 					\voice_gates, ~voice_gates,
@@ -573,88 +574,54 @@ s.waitForBoot{
 				var srcDevice, voiceIndex;
 				// Enhanced debug logging for MIDI note-on messages
 				srcDevice = MIDIClient.sources.detect{|d| d.uid == src};
-				// ("MIDI DEBUG: Note On - velocity: %, note: % (% Hz), channel: %, source: %, device: %")
-				// 	.format(vel, num, num.midicps.round(0.1), chan, src, if(srcDevice.notNil, srcDevice.device, "unknown")).postln;
 				
-				if (~effect.notNil) {
-					if(~currentMidiMode == \poly) {
-						// POLYPHONIC MODE: Handle voice allocation
-						// ("MIDI DEBUG: Processing polyphonic MIDI note on for %").format(~effect.defName).postln;
-						
-						// Check if this note is already allocated
-						if (~voice_allocator[num].notNil) {
-							// Note is already playing, retrigger it
-							voiceIndex = ~voice_allocator[num];
-							// ("MIDI DEBUG: Retriggering note % on voice %").format(num, voiceIndex).postln;
-							~voice_gates[voiceIndex] = 0; // Quick gate off
-							0.01.wait; // Brief pause
-							~voice_gates[voiceIndex] = 1; // Gate back on
-							~voice_amps[voiceIndex] = vel / 127;
-						} {
-							// Allocate a new voice
-							voiceIndex = ~findFreeVoice.value;
-							~voice_allocator[num] = voiceIndex;
-							~voice_states[voiceIndex] = \active;
-							~voice_freqs[voiceIndex] = num.midicps;
-							~voice_gates[voiceIndex] = 1;
-							~voice_amps[voiceIndex] = vel / 127;
-							
-							// ("MIDI DEBUG: Allocated voice % for note % (% Hz)")
-							// 	.format(voiceIndex, num, num.midicps.round(0.1)).postln;
-						};
-						
-						~updateVoiceArrays.value;
+				if (~effect.notNil and: {~currentSynthNumVoices > 0}) {
+					// --- POLYPHONIC LOGIC ---
+					
+					// Check if this note is already allocated (re-trigger)
+					if (~voice_allocator[num].notNil) {
+						voiceIndex = ~voice_allocator[num];
+						~voice_gates[voiceIndex] = 0; // Quick gate off for re-trigger
+						0.01.wait; // Brief pause
+						~voice_gates[voiceIndex] = 1; // Gate back on
+						~voice_amps[voiceIndex] = vel / 127;
 					} {
-						// MONOPHONIC MODE: Simple last-note priority
-						// ("MIDI DEBUG: Processing monophonic MIDI note on for %").format(~effect.defName).postln;
-						
-						if (~held_notes.any({|item| item == num}).not) { 
-							~held_notes.add(num); 
-
-							// ("MIDI DEBUG: Added note % to held_notes, now: %").format(num, ~held_notes).postln;
-						};
-						
-						~effect.set(\freq, num.midicps, \gate, 1);
+						// Allocate a new voice
+						voiceIndex = ~findFreeVoice.value;
+						~voice_allocator[num] = voiceIndex;
+						~voice_states[voiceIndex] = \active;
+						~voice_freqs[voiceIndex] = num.midicps;
+						~voice_gates[voiceIndex] = 1;
+						~voice_amps[voiceIndex] = vel / 127;
 					};
+					
+					~updateVoiceArrays.value; // Send updates to the synth
 				} {
-					"MIDI DEBUG: No effect synth to control".postln;
+					"MIDI DEBUG: No effect synth to control or synth is not MIDI-enabled".postln;
 				};
 			});
 
 			~midi_note_off_func = MIDIFunc.noteOff({ |vel, num, chan, src|
 				var srcDevice, voiceIndex;
-				// Enhanced debug logging for MIDI note-off messages
 				srcDevice = MIDIClient.sources.detect{|d| d.uid == src};
 				
-				if (~effect.notNil) {
-					if(~currentMidiMode == \poly) {
-						// POLYPHONIC MODE: Handle voice release
+				if (~effect.notNil and: {~currentSynthNumVoices > 0}) {
+					// --- POLYPHONIC LOGIC ---
+					if (~voice_allocator[num].notNil) {
+						voiceIndex = ~voice_allocator[num];
 						
-						if (~voice_allocator[num].notNil) {
-							voiceIndex = ~voice_allocator[num];
-							
-							// Release the voice
-							~voice_gates[voiceIndex] = 0;
-							~voice_states[voiceIndex] = \free;
-							~voice_allocator.removeAt(num);
-							
-							// Update the synth with new voice arrays
-							~updateVoiceArrays.value;
-						};
-					} {						
-						~held_notes.remove(num);
-						
-						if (~held_notes.isEmpty) {
-							~effect.set(\gate, 0);
-						} {
-							~effect.set(\freq, ~held_notes.last.midicps);
-						};
+						// Release the voice by setting its gate to 0
+						~voice_gates[voiceIndex] = 0;
+						~voice_states[voiceIndex] = \free;
+						~voice_allocator.removeAt(num);
 					};
+					
+					~updateVoiceArrays.value; // Send updates to the synth
 				} {
-					"MIDI DEBUG: No effect synth to control".postln;
+					"MIDI DEBUG: No effect synth to control or synth is not MIDI-enabled".postln;
 				};
 			});
-			"MIDI DEBUG: Simplified MIDI handlers created.".postln;
+			"MIDI DEBUG: Unified MIDI handlers created.".postln;
 		}, {
 			"MIDI DEBUG: No MIDI devices found, MIDI handlers not created.".postln;
 		});

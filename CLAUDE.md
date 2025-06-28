@@ -1,5 +1,3 @@
-Always review shaders/_ShaderToy_HowTo.mdc for shader editing and audio/
-
 # Audio Effects
 - Audio effects are SuperCollider (.sc) files in the audio/ folder
 - see audio_effect_instructions.md for instructions
