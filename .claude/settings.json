@@ -9,8 +9,18 @@
       "Write",
       "Glob",
       "Grep",
-      "LS"
+      "LS",
+      "mcp__bice-box__get_current_effect",
+      "mcp__bice-box__list_effects",
+      "mcp__bice-box__list_visualizers",
+      "mcp__bice-box__set_current_effect",
+      "mcp__bice-box__set_effect_parameters",
+      "mcp__bice-box__set_visualizer"
     ],
     "deny": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "bice-box"
+  ]
 }
