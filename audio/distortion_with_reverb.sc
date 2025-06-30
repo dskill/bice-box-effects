@@ -3,7 +3,7 @@
 (
     var defName = \distortion_with_reverb;
     var specs = (
-        drive: ControlSpec(0.1, 10.0, 'exp', 0, 0.5, "x"),
+        drive: ControlSpec(0.1, 10.0, 'exp', 0, 1.0, "x"),
         tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
         decay: ControlSpec(0.0, 2.0, 'lin', 0, 1.0, "s"),
         roomSize: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),

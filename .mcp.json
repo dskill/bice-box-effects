@@ -1,8 +1,8 @@
 {
-    "mcpServers": {
-        "bice-box-tools": {
-            "transport": "http",
-            "url": "http://localhost:31337/mcp"
-        }
+  "mcpServers": {
+    "bice-box": {
+      "type": "http",
+      "url": "http://localhost:31337/mcp"
     }
-} 
+  }
+}
