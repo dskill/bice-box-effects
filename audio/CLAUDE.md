@@ -157,3 +157,25 @@ For MIDI-controllable polyphonic synthesizers:
 - Frequency: `ControlSpec(20, 2000, 'exp', 0, 440, "Hz")`
 - Gain: `ControlSpec(0.1, 5.0, 'exp', 0, 1.0, "x")`
 - Time: `ControlSpec(0.001, 2.0, 'exp', 0, 0.1, "s")`
+
+## MCP Integration
+
+Bice-Box exposes an MCP server which you should have access to.
+
+### Available Tools
+- **get_current_effect**: Returns active effect name and parameters
+- **list_effects**: Lists all available audio effects  
+- **list_visualizers**: Lists all p5.js sketches and GLSL shaders
+- **set_current_effect**: Switch audio effect by name
+- **set_effect_parameters**: Update live parameter values (session only)
+- **set_visualizer**: Switch visualizer by name
+
+### Integration Notes
+- **Parameter updates**: `set_effect_parameters` only affects live values. To change defaults, edit the `.sc` file directly.
+- **UI synchronization**: Effect/visualizer changes via MCP automatically update the UI faders and display.
+- **Hot reloading**: File changes are detected and auto-reload the active effect/visualizer.
+- **Audio effects**: Must exist in `audio/` directory with matching filename and defName.
+- **Visualizers**: Located in `visual/` (p5.js) or `shaders/` (GLSL) directories.
+
+### Shader Comments
+Add `// shader: visualizer_name` as the first line in `.sc` files to auto-load a visualizer when the effect loads.
