@@ -3,7 +3,7 @@
 // https://www.shadertoy.com/view/XsjXRm
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 // Contact the author for other licensing options
-//resolution: .5
+//resolution: .1
 //looks best with around 25 rays
 #define NUM_RAYS 13.
 
