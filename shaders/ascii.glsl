@@ -1,5 +1,6 @@
 // https://www.shadertoy.com/view/MlsGDs
 // ascii terminal
+// resolution: 0.5
 float time;
 
 float noise(vec2 p)
