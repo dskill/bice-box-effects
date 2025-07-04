@@ -1,5 +1,7 @@
 {
-  "env": {},
+  "env": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "true"
+  },
   "permissions": {
     "allow": [
       "Bash",
@@ -10,6 +12,10 @@
       "Glob",
       "Grep",
       "LS",
+      "WebSearch",
+      "WebFetch",
+      "TodoRead",
+      "TodoWrite",
       "mcp__bice-box__get_current_effect",
       "mcp__bice-box__list_effects",
       "mcp__bice-box__list_visualizers",
