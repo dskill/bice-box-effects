@@ -1,8 +1,4 @@
 {
   "mcpServers": {
-    "bice-box": {
-      "type": "http",
-      "url": "http://localhost:31337/mcp"
-    }
   }
 }
