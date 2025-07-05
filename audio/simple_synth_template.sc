@@ -15,7 +15,7 @@
         sustain: ControlSpec(0.0, 1.0, 'lin', 0, 0.8, ""),
         release: ControlSpec(0.001, 4.0, 'exp', 0, 0.2, "s")
     );
-
+ 
     var def = SynthDef(defName, {
         // ALL VARIABLE DECLARATIONS MUST BE AT THE TOP
         var out = \out.kr(0);
