@@ -1,4 +1,4 @@
-// shader: oscilloscope
+// shader: fractal_waves
 
 (
     var defName = \synthtoy;
