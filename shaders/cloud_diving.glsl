@@ -13,7 +13,7 @@ float fbm(vec3 p)
     for (float i = 0.; i < 7.; ++i)
     {
         p += result*.1;
-        p.z += iRMSTime*.1;
+        p.z += iRMSTime*.01;
         result += abs(gyroid(p/a)*a);
         a /= 1.7;
     }

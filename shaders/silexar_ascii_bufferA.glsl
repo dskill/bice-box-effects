@@ -97,7 +97,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     float noiseStrength = 0.16;
     float noiseScale = 0.001;
     
-    float speed = 0.1;
+    float speed = 1.0;
     float noiseTime = iRMSTime * speed;
 
     float noise = snoise(vec3(

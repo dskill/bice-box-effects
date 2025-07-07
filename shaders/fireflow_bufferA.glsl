@@ -50,7 +50,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     v.xy+=(v.w)*vec2(0.0, 1.0);
     
-    float t=iRMSTime*0.2;//+3.0;
+    float t=iRMSTime*0.02;//+3.0;
     
     vec2 mousePos=iMouse.xy;
     if(mousePos.x<3.0)mousePos.xy=vec2(iResolution.xy*0.5);

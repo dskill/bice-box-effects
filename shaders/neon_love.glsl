@@ -134,7 +134,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     //Shift upwards to centre heart
     pos.y += 0.03;
 	pos.xy *= -iRMSOutput*1.0 + 1.0;
-    float t = iRMSTime * 10.0;
+    float t = iRMSTime * 0.1;
     
     //Get first segment
     float dist = getSegment(t, pos, 0.0);

@@ -23,7 +23,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Audio reactivity
     float audioScale = 1.0 + iRMSOutput * 2.0;
     float waveVal = texture(iAudioTexture, vec2(fragCoord.x / iResolution.x, 0.75)).x * 2.0 - 1.0;
-    float timeOffset = iRMSTime * 0.05 + iTime * 0.4;
+    float timeOffset = iRMSTime * 0.0005 + iTime * 0.4;
     
     for (float i = 0.0; i < 4.0; i++) {
         uv = fract(uv * 1.5 * audioScale) - 0.5;

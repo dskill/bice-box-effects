@@ -19,7 +19,7 @@
 void mainImage(out vec4 O, vec2 I)
 {
     //Time for animation
-    float t = iRMSTime + .1,
+    float t = iRMSTime*.05 + .1,
     //Raymarch loop iterator
     i,
     //Raymarched depth

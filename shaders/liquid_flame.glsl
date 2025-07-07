@@ -20,7 +20,7 @@ void mainImage(out vec4 O, vec2 C) {
   
   // Audio-reactive scaling and timing
   float audioScale = 1.0 + iRMSOutput * 1.5;
-  float audioTime = iTime + iRMSTime * 0.1;
+  float audioTime = iTime*0.2 + iRMSTime * 0.4;
   
   // RAYMARCHING LOOP: Cast a ray from camera through each pixel
   for (
