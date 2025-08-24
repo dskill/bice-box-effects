@@ -62,13 +62,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     vec3 col = vec3(0.0);
     float rmsMultiplier = iRMSOutput + .5;
     
-    // Add waveform effect (green)
+    // Add waveform effect (synthwave cyan)
     float wave = sdSound(uv);
-    col += mix(col, vec3(0.404,0.984,0.396), wave * rmsMultiplier);
+    col += mix(col, vec3(0.0,0.9,1.0), wave * rmsMultiplier);
     
-    // Add FFT effect (magenta)
+    // Add FFT effect (synthwave pink/magenta)
     float fft = sdFFT(uv);
-    col += mix(col, vec3(0.984,0.404,0.796), fft * rmsMultiplier);
+    col += mix(col, vec3(1.0,0.0,0.8), fft * rmsMultiplier);
     
     // Add grid pattern
     col += .1*mix(col, vec3(0.031,0.031,0.031), float(sdBox(cube(uv), vec2(.49)) <= 0.));
@@ -78,8 +78,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     puv *= 1.0 - puv.yx;
     col *= pow(puv.x*puv.y*30.0, 0.5);
     
-    // Apply blue tint
-    col *= vec3(0.0, 0.667, 1.0);
+    // Apply synthwave purple tint
+    col *= vec3(0.8, 0.2, 1.0);
     
     // Add debug RMS bars
     // puv is fragCoord.xy / iResolution.xy, used for vignette, so it's screen_uv [0,1]
