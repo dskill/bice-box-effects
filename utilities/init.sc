@@ -194,8 +194,8 @@ s.waitForBoot{
 			paramName = msg[1];
 			value = msg[2];
 			if(~effect.notNil, {
-				// Ensure paramName is a symbol for .set
-				// "~effect.set(paramName: %, value: %);".format(paramName.asSymbol, value).postln; // For debugging
+				// Debug: log param set
+				//("OSCdef setEffectParam: set % to %").format(paramName, value).postln;
 				~effect.set(paramName.asSymbol, value);
 			}, {
 				"OSCdef setEffectParam: ~effect is nil, cannot set % to %".format(paramName, value).postln;
