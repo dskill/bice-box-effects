@@ -169,6 +169,8 @@ Bice-Box exposes an MCP server which you should have access to.
 - **set_current_effect**: Switch audio effect by name
 - **set_effect_parameters**: Update live parameter values (session only)
 - **set_visualizer**: Switch visualizer by name
+- **create_or_update_audio_effect**: Safely create/update an audio effect with SuperCollider code (compiles before saving)
+- **test_supercollider_code**: Test SuperCollider code for compilation errors without saving
 
 ### Integration Notes
 - **Parameter updates**: `set_effect_parameters` only affects live values. To change defaults, edit the `.sc` file directly.
@@ -176,6 +178,12 @@ Bice-Box exposes an MCP server which you should have access to.
 - **Hot reloading**: File changes are detected and auto-reload the active effect/visualizer.
 - **Audio effects**: Must exist in `audio/` directory with matching filename and defName.
 - **Visualizers**: Located in `visual/` (p5.js) or `shaders/` (GLSL) directories.
+
+### Creating/Updating Effects
+- **Safe creation**: Use `create_or_update_audio_effect` to create or modify effects - it tests compilation before saving.
+- **Testing code**: Use `test_supercollider_code` to validate SC syntax during development without creating files.
+- **Error handling**: Both tools return detailed compilation errors if the SuperCollider code fails.
+- **Atomic updates**: Effect files are updated atomically to prevent audio interruptions during active playback.
 
 ### Shader Comments
 Add `// shader: visualizer_name` as the first line in `.sc` files to auto-load a visualizer when the effect loads.
