@@ -622,6 +622,59 @@ s.waitForBoot{
 				};
 			});
 			"MIDI DEBUG: Unified MIDI handlers created.".postln;
+			
+			// MIDI CC Handler for parameter control
+			if(~midi_cc_func.notNil, { ~midi_cc_func.free });
+			~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
+				var paramIndex, normalizedValue, paramName, paramSpec;
+				
+				// Only respond to CC 21-28 on channel 1 (channel 0 in SC)
+				if (chan == 0 and: { ccNum >= 21 and: { ccNum <= 28 }}) {
+					paramIndex = ccNum - 21; // Map CC 21-28 to param index 0-7
+					normalizedValue = val / 127.0; // MIDI CC is 0-127, normalize to 0-1
+					
+					// Get current effect's parameter specs
+					if (~effect.notNil and: { ~effectParameterSpecs.notNil }) {
+						var currentEffectName = ~effect.defName.asString;
+						var specs = ~effectParameterSpecs[currentEffectName.asSymbol];
+						
+						if (specs.notNil) {
+							var paramNames = specs.keys.asArray.sort; // Get sorted param names for consistent ordering
+							
+							if (paramIndex < paramNames.size) {
+								paramName = paramNames[paramIndex];
+								paramSpec = specs[paramName];
+								
+								if (paramSpec.notNil) {
+									// Map normalized value to parameter range
+									var mappedValue = paramSpec.map(normalizedValue);
+									
+									// Update the parameter in SuperCollider
+									~effect.set(paramName, mappedValue);
+									
+									// Send OSC message to Electron to update UI
+									~o.sendMsg("/effect/param/update", 
+										currentEffectName, 
+										paramName.asString, 
+										mappedValue
+									);
+									
+									// ("MIDI CC: Updated % to % (CC %, val %)").format(
+									// 	paramName, mappedValue, ccNum, val
+									// ).postln;
+								}
+							} {
+								// ("MIDI CC: CC % ignored - effect has only % parameters").format(ccNum, paramNames.size).postln;
+							}
+						} {
+							// ("MIDI CC: No parameter specs found for effect %").format(currentEffectName).postln;
+						}
+					} {
+						// ("MIDI CC: No active effect to control").postln;
+					}
+				}
+			});
+			"MIDI CC handler created for CC 21-28 on channel 1".postln;
 		}, {
 			"MIDI DEBUG: No MIDI devices found, MIDI handlers not created.".postln;
 		});
