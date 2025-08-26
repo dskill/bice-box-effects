@@ -633,6 +633,8 @@ s.waitForBoot{
 					paramIndex = ccNum - 21; // Map CC 21-28 to param index 0-7
 					normalizedValue = val / 127.0; // MIDI CC is 0-127, normalize to 0-1
 					
+					//("[MIDI DEBUG] CC % received - raw val: %, normalized: %").format(ccNum, val, normalizedValue).postln;
+					
 					// Get current effect's parameter specs
 					if (~effect.notNil and: { ~effectParameterSpecs.notNil }) {
 						var currentEffectName = ~effect.defName.asString;
@@ -642,17 +644,25 @@ s.waitForBoot{
 							// Sort param names alphabetically to match UI fader layout
 							// CC 21 = first param (alphabetically), CC 22 = second param, etc.
 							var paramNames = specs.keys.asArray.sort;
+							//("[MIDI DEBUG] Effect % has params: %").format(currentEffectName, paramNames).postln;
 							
 							if (paramIndex < paramNames.size) {
 								paramName = paramNames[paramIndex];
 								paramSpec = specs[paramName];
+								//("[MIDI DEBUG] Param index % maps to param: %").format(paramIndex, paramName).postln;
 								
 								if (paramSpec.notNil) {
 									// Map normalized value to parameter range
 									var mappedValue = paramSpec.map(normalizedValue);
+									//("[MIDI DEBUG] Spec for %: min=%, max=%, warp=%, default=%").format(
+									//	paramName, paramSpec.minval, paramSpec.maxval, 
+									//	paramSpec.warp.asSpecifier, paramSpec.default
+									//).postln;
+									//("[MIDI DEBUG] Mapped value: % -> % (using spec.map)").format(normalizedValue, mappedValue).postln;
 									
 									// Update the parameter in SuperCollider
 									~effect.set(paramName, mappedValue);
+									//("[MIDI DEBUG] Set effect.% = %").format(paramName, mappedValue).postln;
 									
 									// Send OSC message to Electron to update UI
 									~o.sendMsg("/effect/param/update", 
@@ -660,10 +670,9 @@ s.waitForBoot{
 										paramName.asString, 
 										mappedValue
 									);
-									
-									// ("MIDI CC: Updated % to % (CC %, val %)").format(
-									// 	paramName, mappedValue, ccNum, val
-									// ).postln;
+									//("[MIDI DEBUG] Sent OSC /effect/param/update: %, %, %").format(
+									//	currentEffectName, paramName, mappedValue
+									//).postln;
 								}
 							} {
 								// ("MIDI CC: CC % ignored - effect has only % parameters").format(ccNum, paramNames.size).postln;

@@ -2,7 +2,7 @@
 (
     var defName = \bypass;
     var specs = (
-        gain: ControlSpec(0, 3, 'lin', 0.1, 0.2, "gain")
+        gain: ControlSpec(0, 3, 'lin', 0.001, 0.2, "gain")  // Changed step from 0.1 to 0.001 for smooth MIDI control
     );
 
     var def = SynthDef(defName, {
