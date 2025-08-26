@@ -13,7 +13,7 @@
         vibrato_depth: ControlSpec(0, 100, 'lin', 0, 0, "Hz"),
         pulse_width: ControlSpec(0, 1, 'lin', 0, 0.5, ""),
         tremolo_rate: ControlSpec(0.1, 20, 'exp', 0, 3, "Hz"),
-        ring_mod_freq: ControlSpec(0, 2000, 'exp', 0, 0, "Hz"),
+        ring_mod_freq: ControlSpec(10, 2000, 'exp', 0, 0, "Hz"),
         noise_level: ControlSpec(0, 1, 'lin', 0, 0, ""),
         sub_level: ControlSpec(0, 1, 'lin', 0, 0, "")
     );
