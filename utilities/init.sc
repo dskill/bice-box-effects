@@ -639,7 +639,9 @@ s.waitForBoot{
 						var specs = ~effectParameterSpecs[currentEffectName.asSymbol];
 						
 						if (specs.notNil) {
-							var paramNames = specs.keys.asArray.sort; // Get sorted param names for consistent ordering
+							// Sort param names alphabetically to match UI fader layout
+							// CC 21 = first param (alphabetically), CC 22 = second param, etc.
+							var paramNames = specs.keys.asArray.sort;
 							
 							if (paramIndex < paramNames.size) {
 								paramName = paramNames[paramIndex];
