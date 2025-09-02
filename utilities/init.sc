@@ -186,7 +186,7 @@ s.waitForBoot{
 
 	// OSC Handler for setting effect parameters
 	OSCdef(\setEffectParam, { |msg|
-		var paramName, value;
+		var paramName, value, currentEffectName;
 		// msg[0] is the address, e.g. '/effect/param/set'
 		// msg[1] should be the parameter name (symbol or string)
 		// msg[2] should be the value
@@ -197,6 +197,15 @@ s.waitForBoot{
 				// Debug: log param set
 				//("OSCdef setEffectParam: set % to %").format(paramName, value).postln;
 				~effect.set(paramName.asSymbol, value);
+				
+				// Track ALL parameter updates for broadcasting (OSC and MIDI)
+				// This ensures UI gets feedback when it sends parameter changes
+				currentEffectName = ~effect.defName.asString;
+				if(~effectParameterValues[currentEffectName.asSymbol].isNil, {
+					~effectParameterValues[currentEffectName.asSymbol] = IdentityDictionary.new;
+				});
+				~effectParameterValues[currentEffectName.asSymbol][paramName.asSymbol] = value;
+				// Parameter tracked for broadcasting
 			}, {
 				"OSCdef setEffectParam: ~effect is nil, cannot set % to %".format(paramName, value).postln;
 			});
@@ -209,6 +218,10 @@ s.waitForBoot{
 	// Initialize the global specs dictionary (if not already done by an effect file)
 	~effectParameterSpecs ?? { ~effectParameterSpecs = IdentityDictionary.new; };
 	"~effectParameterSpecs initialized or confirmed existing.".postln;
+	
+	// Initialize parameter values dictionary to track current values
+	~effectParameterValues ?? { ~effectParameterValues = IdentityDictionary.new; };
+	"~effectParameterValues initialized for broadcasting.".postln;
 
 	// Helper function to register effect parameter specifications
 	~registerEffectSpecs = { |effectName, specsDict|
@@ -231,6 +244,15 @@ s.waitForBoot{
 
 		// First, register the parameter specifications
 		~registerEffectSpecs.value(defName, specs);
+
+		// Initialize parameter values with defaults for this effect
+		if(~effectParameterValues[defName.asSymbol].isNil, {
+			~effectParameterValues[defName.asSymbol] = IdentityDictionary.new;
+		});
+		specs.keysValuesDo({ |paramName, spec|
+			~effectParameterValues[defName.asSymbol][paramName] = spec.default;
+		});
+		("Initialized parameter values for % with defaults").format(defName).postln;
 
 		// Then, create or replace the synth instance
 		finalArgs = [
@@ -452,6 +474,73 @@ s.waitForBoot{
 	);
 	"masterAnalyserSynth instantiated in analysisGroup".postln;
 
+	// Parameter Broadcasting Routine - broadcasts only when parameters actually change
+	// This makes SuperCollider the single source of truth for parameter values
+	~lastBroadcastValues ?? { ~lastBroadcastValues = IdentityDictionary.new; };
+	~parameterBroadcastRoutine = fork {
+		// Parameter broadcast routine started
+		loop {
+			0.05.wait; // Faster rate: 50ms = 20Hz for responsive UI updates
+			if (~effect.notNil and: { ~effectParameterSpecs.notNil }) {
+				try {
+					var currentEffectName = ~effect.defName.asString;
+					var specs = ~effectParameterSpecs[currentEffectName.asSymbol];
+					
+					if (specs.notNil) {
+						// Get current parameter values from our tracking dictionary
+						var paramValues = ~effectParameterValues[currentEffectName.asSymbol];
+						var paramData = [];
+						var hasChanges = false;
+						var lastValues = ~lastBroadcastValues[currentEffectName.asSymbol];
+						
+						if (lastValues.isNil) {
+							~lastBroadcastValues[currentEffectName.asSymbol] = IdentityDictionary.new;
+							lastValues = ~lastBroadcastValues[currentEffectName.asSymbol];
+						};
+						
+						if (paramValues.notNil) {
+							paramValues.keysValuesDo({ |paramName, value|
+								var lastValue = lastValues[paramName];
+								// Much larger tolerance to prevent any oscillations
+								// Only broadcast significant changes (> 2% of parameter range)
+								var tolerance = 0.005; // 0.5% tolerance for responsive UI updates
+								var diff = if(lastValue.isNil, { 999 }, { (value - lastValue).abs });
+								if (lastValue.isNil or: { diff > tolerance }) {
+									paramData = paramData ++ [paramName.asString, value];
+									lastValues[paramName] = value;
+									hasChanges = true;
+																						// Parameter changed, broadcasting
+								};
+							});
+							
+							if (hasChanges and: { paramData.size > 0 }) {
+								~o.sendMsg('/effect/state', currentEffectName, *paramData);
+																	// Broadcasting parameter changes to UI
+							};
+						} {
+							// Fallback to defaults if no values tracked yet - only broadcast once
+							if (lastValues.size == 0) {
+								specs.keysValuesDo({ |paramName, spec|
+									paramData = paramData ++ [paramName.asString, spec.default];
+									lastValues[paramName] = spec.default;
+								});
+								
+								if (paramData.size > 0) {
+									~o.sendMsg('/effect/state', currentEffectName, *paramData);
+																				// Broadcasting default parameters to UI
+								};
+							};
+						};
+					};
+				} { |error|
+					// Silently handle errors to prevent routine from stopping
+					// Silently handle broadcast errors
+				};
+			};
+		};
+	};
+	"Parameter broadcast routine started".postln;
+
 	["Buffer 0 (in):", ~relay_buffer_in, "Buffer 1 (out):", ~relay_buffer_out, "Input Bus Object:", ~input_bus, "Input Bus Index:", ~input_bus.index].postln;
 
 	// MIDI SETUP START
@@ -469,7 +558,7 @@ s.waitForBoot{
 				MIDIClient.sources.do({ |src, i|
 					var deviceName = src.device.asString;
 					var sourceName = src.name.asString;
-					("MIDI DEBUG: Examining source % - device: %, name: %, uid: %").format(i, deviceName, sourceName, src.uid).postln;
+					// Examining MIDI source
 					
 					// Skip problematic system devices that cause "Device or resource busy" errors
 					if (deviceName.contains("System") or: 
@@ -477,7 +566,7 @@ s.waitForBoot{
 						sourceName.contains("Timer") or:
 						sourceName.contains("Announce") or:
 						sourceName.contains("out")) {
-						("MIDI DEBUG: Skipping system/virtual device: % - %").format(deviceName, sourceName).postln;
+													// Skipping system/virtual device
 					} {
 						// Connect to pisound (Raspberry Pi) or common MIDI controllers, but avoid Midi Through if busy
 						if (deviceName.contains("pisound") or: 
@@ -486,47 +575,46 @@ s.waitForBoot{
 							deviceName.containsi("keyboard") or:
 							deviceName.containsi("controller")) {
 							
-							("MIDI DEBUG: Attempting to connect to: % - % (uid: %)").format(deviceName, sourceName, src.uid).postln;
+															// Attempting MIDI connection
 							
 							// Try different connection methods, but avoid connectAll on Pi
 							try {
 								// Method 1: Connect using port 0 and device UID
 								MIDIIn.connect(0, src.uid);
-								("MIDI DEBUG: Successfully connected via Method 1 (port 0, uid) to: % - %").format(deviceName, sourceName).postln;
+																		// Successfully connected to MIDI device
 							} { |error1|
-								("MIDI DEBUG: Method 1 failed: %, trying method 2...").format(error1.errorString).postln;
+																		// Connection method 1 failed, trying method 2
 								try {
 									// Method 2: Connect using device index
 									MIDIIn.connect(device: i);
-									("MIDI DEBUG: Successfully connected via Method 2 (device index) to: % - %").format(deviceName, sourceName).postln;
+																				// Successfully connected via method 2
 								} { |error2|
-									("MIDI DEBUG: Method 2 failed: %, trying method 3...").format(error2.errorString).postln;
+																				// Method 2 failed, trying method 3
 									try {
 										// Method 3: Connect using just the UID
 										MIDIIn.connect(src.uid);
-										("MIDI DEBUG: Successfully connected via Method 3 (uid only) to: % - %").format(deviceName, sourceName).postln;
+																						// Successfully connected via method 3
 									} { |error3|
-										("MIDI DEBUG: All connection methods failed for: % - %. Errors: [1: %, 2: %, 3: %]")
-											.format(deviceName, sourceName, error1.errorString, error2.errorString, error3.errorString).postln;
+																						// All MIDI connection methods failed
 									}
 								}
 							};
 						} {
-							("MIDI DEBUG: Skipping non-target device: % - %").format(deviceName, sourceName).postln;
+							// Skipping non-target device
 						}
 					}
 				});
-				"MIDI DEBUG: Finished selective MIDI connection.".postln;
+				"MIDI connection setup complete.".postln;
 				
 				// Add a general MIDI message handler for debugging all incoming MIDI
 				if(~midi_all_func.notNil, { ~midi_all_func.free });
 				~midi_all_func = MIDIFunc({ |val, num, chan, src|
-					("MIDI DEBUG: Raw MIDI message - val: %, num: %, chan: %, src: %").format(val, num, chan, src).postln;
+					// Raw MIDI message received
 				});
-				"MIDI DEBUG: General MIDI message handler created.".postln;
+				"MIDI message handler created.".postln;
 				
 			}, {
-				"MIDI DEBUG: No MIDI devices detected.".postln;
+				"No MIDI devices detected.".postln;
 			});
 
 		// Voice allocation for polyphonic effects only
@@ -545,7 +633,7 @@ s.waitForBoot{
 			var freeIndex = ~voice_states.indexOf(\free);
 			if(freeIndex.isNil) {
 				// No free voices, steal the oldest (voice 0 for simplicity)
-				("MIDI DEBUG: No free voices, stealing voice 0").postln;
+				// No free voices, stealing voice 0
 				0;
 			} {
 				freeIndex;
@@ -597,7 +685,7 @@ s.waitForBoot{
 					
 					~updateVoiceArrays.value; // Send updates to the synth
 				} {
-					"MIDI DEBUG: No effect synth to control or synth is not MIDI-enabled".postln;
+					// No MIDI-enabled effect synth available
 				};
 			});
 
@@ -618,10 +706,10 @@ s.waitForBoot{
 					
 					~updateVoiceArrays.value; // Send updates to the synth
 				} {
-					"MIDI DEBUG: No effect synth to control or synth is not MIDI-enabled".postln;
+					// No MIDI-enabled effect synth available
 				};
 			});
-			"MIDI DEBUG: Unified MIDI handlers created.".postln;
+			"MIDI handlers created.".postln;
 			
 			// MIDI CC Handler for parameter control
 			if(~midi_cc_func.notNil, { ~midi_cc_func.free });
@@ -660,19 +748,20 @@ s.waitForBoot{
 									//).postln;
 									//("[MIDI DEBUG] Mapped value: % -> % (using spec.map)").format(normalizedValue, mappedValue).postln;
 									
-									// Update the parameter in SuperCollider
-									~effect.set(paramName, mappedValue);
-									//("[MIDI DEBUG] Set effect.% = %").format(paramName, mappedValue).postln;
-									
-									// Send OSC message to Electron to update UI
-									~o.sendMsg("/effect/param/update", 
-										currentEffectName, 
-										paramName.asString, 
-										mappedValue
-									);
-									//("[MIDI DEBUG] Sent OSC /effect/param/update: %, %, %").format(
-									//	currentEffectName, paramName, mappedValue
-									//).postln;
+																																																																																																						// Update the parameter in SuperCollider
+																																																																																		~effect.set(paramName, mappedValue);
+																																																																																		("[MIDI DEBUG] CC% val=% -> %=% (norm=%)").format(ccNum, val, paramName, mappedValue, normalizedValue).postln;
+											
+																												// MIDI is the ONLY source that updates parameter tracking
+																	// This prevents conflicts between OSC and MIDI tracking
+																	if(~effectParameterValues[currentEffectName.asSymbol].isNil, {
+																		~effectParameterValues[currentEffectName.asSymbol] = IdentityDictionary.new;
+																	});
+																	~effectParameterValues[currentEffectName.asSymbol][paramName] = mappedValue;
+																	// MIDI parameter tracked for broadcasting
+											
+											// Note: UI updates will come from the parameter broadcast routine
+											// No direct OSC message to UI needed - eliminates feedback loop
 								}
 							} {
 								// ("MIDI CC: CC % ignored - effect has only % parameters").format(ccNum, paramNames.size).postln;
@@ -698,4 +787,13 @@ s.waitForBoot{
 
 	"Server booted successfully. END OF SCRIPT".postln;
 };
+
+// Cleanup function to stop parameter broadcasting when server shuts down
+ServerQuit.add({
+	if (~parameterBroadcastRoutine.notNil) {
+		~parameterBroadcastRoutine.stop;
+		~parameterBroadcastRoutine = nil;
+		"Parameter broadcast routine stopped".postln;
+	};
+});
 )
