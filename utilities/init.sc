@@ -503,7 +503,7 @@ s.waitForBoot{
 								var lastValue = lastValues[paramName];
 								// Much larger tolerance to prevent any oscillations
 								// Only broadcast significant changes (> 2% of parameter range)
-								var tolerance = 0.005; // 0.5% tolerance for responsive UI updates
+								var tolerance = 0.0001; // 0.5% tolerance for responsive UI updates
 								var diff = if(lastValue.isNil, { 999 }, { (value - lastValue).abs });
 								if (lastValue.isNil or: { diff > tolerance }) {
 									paramData = paramData ++ [paramName.asString, value];
@@ -715,6 +715,13 @@ s.waitForBoot{
 			if(~midi_cc_func.notNil, { ~midi_cc_func.free });
 			~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
 				var paramIndex, normalizedValue, paramName, paramSpec;
+				
+				// Handle CC 117 for push-to-talk functionality
+				if (chan == 15 and: { ccNum == 117 }) { // Channel 16 (15 in SC) Controller 117
+					// Send OSC message to Electron for push-to-talk control
+					~o.sendMsg('/midi/cc117', val);
+					("[MIDI DEBUG] CC117 push-to-talk: val=%").format(val).postln;
+				};
 				
 				// Only respond to CC 21-28 on channel 1 (channel 0 in SC)
 				if (chan == 0 and: { ccNum >= 21 and: { ccNum <= 28 }}) {
