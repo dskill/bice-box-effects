@@ -501,15 +501,12 @@ s.waitForBoot{
 						if (paramValues.notNil) {
 							paramValues.keysValuesDo({ |paramName, value|
 								var lastValue = lastValues[paramName];
-								// Much larger tolerance to prevent any oscillations
-								// Only broadcast significant changes (> 2% of parameter range)
-								var tolerance = 0.0001; // 0.5% tolerance for responsive UI updates
-								var diff = if(lastValue.isNil, { 999 }, { (value - lastValue).abs });
-								if (lastValue.isNil or: { diff > tolerance }) {
+								// Broadcast all parameter changes without tolerance check
+								if (lastValue.isNil or: { value != lastValue }) {
 									paramData = paramData ++ [paramName.asString, value];
 									lastValues[paramName] = value;
 									hasChanges = true;
-																						// Parameter changed, broadcasting
+									// Parameter changed, broadcasting
 								};
 							});
 							
@@ -711,22 +708,99 @@ s.waitForBoot{
 			});
 			"MIDI handlers created.".postln;
 			
-			// MIDI CC Handler for parameter control
-			if(~midi_cc_func.notNil, { ~midi_cc_func.free });
-			~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
-				var paramIndex, normalizedValue, paramName, paramSpec;
+					// Initialize 14-bit MIDI storage if not already done
+		if (~midi14BitValues.isNil) {
+			~midi14BitValues = IdentityDictionary.new; // Store MSB/LSB values for 14-bit CCs
+		};
+		
+		// MIDI CC Handler for parameter control (supports both 7-bit and 14-bit)
+		if(~midi_cc_func.notNil, { ~midi_cc_func.free });
+		~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
+			var paramIndex, normalizedValue, paramName, paramSpec, is14Bit = false, finalValue;
+			
+			// MIDI CC processing (debug logging removed for performance)
+			
+			// Handle CC 117 for push-to-talk functionality
+			if (chan == 15 and: { ccNum == 117 }) { // Channel 16 (15 in SC) Controller 117
+				// Send OSC message to Electron for push-to-talk control
+				~o.sendMsg('/midi/cc117', val);
+
+			};
+			
+			// Handle 14-bit MIDI encoders: Multiple schemes supported
+			
+			// Scheme 1: Standard CC 1-8 (MSB) + CC 33-40 (LSB) 
+			if (chan == 0 and: { ccNum >= 1 and: { ccNum <= 8 }}) {
+				paramIndex = ccNum - 1; // Map CC 1-8 to param index 0-7
+				is14Bit = true;
 				
-				// Handle CC 117 for push-to-talk functionality
-				if (chan == 15 and: { ccNum == 117 }) { // Channel 16 (15 in SC) Controller 117
-					// Send OSC message to Electron for push-to-talk control
-					~o.sendMsg('/midi/cc117', val);
-					("[MIDI DEBUG] CC117 push-to-talk: val=%").format(val).postln;
+				if (~midi14BitValues[paramIndex].isNil) {
+					~midi14BitValues[paramIndex] = [0, 0]; // [MSB, LSB]
 				};
+				~midi14BitValues[paramIndex][0] = val;
 				
-				// Only respond to CC 21-28 on channel 1 (channel 0 in SC)
-				if (chan == 0 and: { ccNum >= 21 and: { ccNum <= 28 }}) {
-					paramIndex = ccNum - 21; // Map CC 21-28 to param index 0-7
-					normalizedValue = val / 127.0; // MIDI CC is 0-127, normalize to 0-1
+				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
+				normalizedValue = finalValue / 16383.0;
+				
+
+			};
+			
+			if (chan == 0 and: { ccNum >= 33 and: { ccNum <= 40 }}) {
+				paramIndex = ccNum - 33; // Map CC 33-40 to param index 0-7
+				is14Bit = true;
+				
+				if (~midi14BitValues[paramIndex].isNil) {
+					~midi14BitValues[paramIndex] = [0, 0]; // [MSB, LSB]
+				};
+				~midi14BitValues[paramIndex][1] = val;
+				
+				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
+				normalizedValue = finalValue / 16383.0;
+				
+
+			};
+			
+			// Scheme 2: CC 21-28 (MSB) + CC 53-60 (LSB) - Common on BCR2000/BCF2000
+			if (chan == 0 and: { ccNum >= 21 and: { ccNum <= 28 }}) {
+				paramIndex = ccNum - 21; // Map CC 21-28 to param index 0-7
+				is14Bit = true;
+				
+				if (~midi14BitValues[paramIndex].isNil) {
+					~midi14BitValues[paramIndex] = [0, 0]; // [MSB, LSB]
+				};
+				~midi14BitValues[paramIndex][0] = val;
+				
+				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
+				normalizedValue = finalValue / 16383.0;
+				
+
+			};
+			
+			if (chan == 0 and: { ccNum >= 53 and: { ccNum <= 60 }}) {
+				paramIndex = ccNum - 53; // Map CC 53-60 to param index 0-7
+				is14Bit = true;
+				
+				if (~midi14BitValues[paramIndex].isNil) {
+					~midi14BitValues[paramIndex] = [0, 0]; // [MSB, LSB]
+				};
+				~midi14BitValues[paramIndex][1] = val;
+				
+				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
+				normalizedValue = finalValue / 16383.0;
+				
+
+			};
+			
+			// Legacy 7-bit MIDI support removed for CC 21-28 (now used for 14-bit MSB)
+			// If you need 7-bit support, use a different CC range or configure your controller differently
+			
+			// Process parameter update for 14-bit controllers
+			if ((chan == 0) and: { 
+				((ccNum >= 1 and: { ccNum <= 8 }) or: 
+				 (ccNum >= 33 and: { ccNum <= 40 }) or: 
+				 (ccNum >= 21 and: { ccNum <= 28 }) or:
+				 (ccNum >= 53 and: { ccNum <= 60 })) 
+			}) {
 					
 					//("[MIDI DEBUG] CC % received - raw val: %, normalized: %").format(ccNum, val, normalizedValue).postln;
 					
@@ -757,7 +831,7 @@ s.waitForBoot{
 									
 																																																																																																						// Update the parameter in SuperCollider
 																																																																																		~effect.set(paramName, mappedValue);
-																																																																																		("[MIDI DEBUG] CC% val=% -> %=% (norm=%)").format(ccNum, val, paramName, mappedValue, normalizedValue).postln;
+																																																																																		// Parameter updated (debug logging removed for performance)
 											
 																												// MIDI is the ONLY source that updates parameter tracking
 																	// This prevents conflicts between OSC and MIDI tracking
@@ -781,9 +855,9 @@ s.waitForBoot{
 					}
 				}
 			});
-			"MIDI CC handler created for CC 21-28 on channel 1".postln;
+			"MIDI CC handler created for 14-bit encoders (multiple schemes supported) on channel 1".postln;
 		}, {
-			"MIDI DEBUG: No MIDI devices found, MIDI handlers not created.".postln;
+			"No MIDI devices found, MIDI handlers not created.".postln;
 		});
 	} { |error|
 		("MIDI Setup Failed: " ++ error.errorString).postln;
