@@ -5,7 +5,17 @@ This guide consolidates all the essential information for creating audio effects
 # SuperCollider Audio Effects Quick Reference
 
 ## Critical Rules
-- **defName MUST match filename** (e.g., `reverb.sc` → `\reverb`)
+
+### ⚠️ FILENAME/DEFNAME MATCHING IS CRITICAL ⚠️
+- **defName MUST EXACTLY match filename** (character for character!)
+  - ✅ CORRECT: `reverb.sc` → `var defName = \reverb;`
+  - ✅ CORRECT: `synthtoy.sc` → `var defName = \synthtoy;`
+  - ✅ CORRECT: `ping_pong_delay.sc` → `var defName = \ping_pong_delay;`
+  - ❌ WRONG: `happy-synth.sc` → `var defName = \happy_synth;` (hyphen vs underscore!)
+  - ❌ WRONG: `my_effect.sc` → `var defName = \my-effect;` (underscore vs hyphen!)
+- **If faders don't appear in UI, check filename vs defName first!**
+
+### Other Critical Rules
 - **All variables in ONE block** after parameters - NO `var` declarations anywhere else
 - **Use specs defaults**: `\param.kr(specs[\param].default)`
 - **Mono-first**: Process in mono, output `[processed, processed]`
@@ -16,7 +26,7 @@ This guide consolidates all the essential information for creating audio effects
 ```supercollider
 // shader: oscilloscope
 (
-    var defName = \effect_name;
+    var defName = \effect_name;  // ← MUST match filename exactly!
     var specs = (
         param1: ControlSpec(0.1, 10.0, 'exp', 0, 1.0, "x"),
         mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
@@ -57,10 +67,10 @@ For MIDI-controllable polyphonic synthesizers:
 ```supercollider
 // shader: oscilloscope  
 (
-    var defName = \synth_name;
+    var defName = \synth_name;  // ← MUST match filename exactly!
     var numVoices = 8; // Maximum polyphony
     var specs = (
-        // Your synth parameters (max 12 faders fit on screen)
+        // Your synth parameters (max 8 faders fit on screen)
         amp: ControlSpec(0, 1, 'lin', 0, 0.5, ""),
         filter_freq: ControlSpec(100, 8000, 'exp', 0, 2000, "Hz"),
         wave_type: ControlSpec(0, 2, 'lin', 1, 0, ""), // discrete values
@@ -154,7 +164,7 @@ For MIDI-controllable polyphonic synthesizers:
 - **Robust Indexing**: Use `if(numVoices > 1)` when accessing voice parameters inside the `Array.fill` block to ensure compatibility.
 - **Mix voices**: Use `Mix.ar(voice_signals)` to combine all voices
 - **Envelopes**: Typically use `Env.adsr()` with `EnvGen.ar()`
-- **Parameters**: Design for max 12 faders - prioritize most important controls
+- **Parameters**: Design for max 8 faders - prioritize most important controls
 
 ## Common ControlSpecs
 - Linear 0-1: `ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")`
