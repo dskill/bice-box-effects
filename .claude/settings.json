@@ -23,7 +23,8 @@
       "mcp__bice-box__set_effect_parameters",
       "mcp__bice-box__set_visualizer",
       "mcp__bice-box__create_or_update_audio_effect",
-      "mcp__bice-box__test_supercollider_code"
+      "mcp__bice-box__test_supercollider_code",
+      "mcp__bice-box__read_logs"
     ],
     "deny": []
   },
