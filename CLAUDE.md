@@ -166,6 +166,17 @@ For MIDI-controllable polyphonic synthesizers:
 - **Envelopes**: Typically use `Env.adsr()` with `EnvGen.ar()`
 - **Parameters**: Design for max 8 faders - prioritize most important controls
 
+## Feedback Effects Pattern
+For delays, reverbs, and other feedback-based effects:
+```supercollider
+// Get feedback from previous iteration
+var fbNode = LocalIn.ar(1);
+// Create delay with input + feedback
+var delayed = DelayC.ar(sig + fbNode, maxDelayTime, delayTime);
+// Send feedback back (with feedback amount control)
+LocalOut.ar(delayed * feedback);
+```
+
 ## Common ControlSpecs
 - Linear 0-1: `ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")`
 - Frequency: `ControlSpec(20, 2000, 'exp', 0, 440, "Hz")`
