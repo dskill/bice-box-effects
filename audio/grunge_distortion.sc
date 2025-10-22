@@ -1,44 +1,67 @@
+// shader: skull
 // Grunge Distortion - Heavy 90s distortion pedal
 // Inspired by classic grunge tones with pre-gain, clipping, and tone shaping
+(
+    var defName = \grunge_distortion;
+    var specs = (
+        drive: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        gain: ControlSpec(0.0, 1.0, 'lin', 0, 0.8, "%"),
+        tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        level: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
+    );
 
-var defName = \grunge_distortion;
+    var def = SynthDef(defName, {
+        var out = \out.kr(0);
+        var in_bus = \in_bus.kr(0);
+        var analysis_out_bus = \analysis_out_bus.kr;
+        var drive = \drive.kr(specs[\drive].default);
+        var gain = \gain.kr(specs[\gain].default);
+        var tone = \tone.kr(specs[\tone].default);
+        var level = \level.kr(specs[\level].default);
+        var mix = \mix.kr(specs[\mix].default);
 
-SynthDef(defName, {
-    arg in = 0, out = 0,
-        drive = 0.7,      // 0-1: Pre-gain drive amount
-        gain = 0.8,       // 0-1: Input gain boost
-        tone = 0.5,       // 0-1: Tone control (dark to bright)
-        level = 0.7,      // 0-1: Output level
-        mix = 1.0;        // 0-1: Wet/dry mix
+        var input, preamp, clipped, filtered, wet, dry, output;
+        var mono_for_analysis;
+        var low_freq, high_freq;
 
-    var input, preamp, clipped, filtered, wet, dry, output;
+        // Get input (stereo -> mono)
+        input = In.ar(in_bus);
+        dry = input;
 
-    // Get input
-    input = In.ar(in, 2);
-    dry = input;
+        // Pre-gain boost (emulate input gain stage)
+        preamp = input * (1 + (gain * 20));
 
-    // Pre-gain boost (emulate input gain stage)
-    preamp = input * (1 + (gain * 20));
+        // Asymmetric soft clipping with drive
+        clipped = (preamp * (1 + (drive * 50))).tanh;
 
-    // Asymmetric soft clipping with drive
-    clipped = (preamp * (1 + (drive * 50))).tanh;
+        // Add some harmonic saturation
+        clipped = (clipped * 1.5).softclip;
 
-    // Add some harmonic saturation
-    clipped = (clipped * 1.5).softclip;
+        // Tone control using HPF and LPF
+        // Map tone from dark (more low-pass) to bright (more high-pass)
+        low_freq = tone.linexp(0, 1, 100, 4000);
+        high_freq = tone.linexp(0, 1, 800, 12000);
+        
+        filtered = HPF.ar(clipped, low_freq);
+        filtered = LPF.ar(filtered, high_freq);
 
-    // Tone stack (simulate passive EQ of guitar pedal)
-    // Low shelf for darkness, high shelf for brightness
-    filtered = BLowShelf.ar(clipped, 800, 1.0, tone.linlin(0, 0.5, 6, 0));
-    filtered = BHiShelf.ar(filtered, 1200, 1.0, tone.linlin(0.5, 1, 0, 8));
+        // Output level control
+        wet = filtered * level * 0.5;
 
-    // Add slight mid scoop for that scooped grunge sound
-    filtered = BMidEQ.ar(filtered, 600, 0.7, -3);
+        // Mix wet/dry
+        output = (dry * (1 - mix)) + (wet * mix);
 
-    // Output level control
-    wet = filtered * level * 0.5;
+        // Analysis output
+        mono_for_analysis = output;
+        Out.ar(analysis_out_bus, mono_for_analysis);
 
-    // Mix wet/dry
-    output = (dry * (1 - mix)) + (wet * mix);
+        // Main output - duplicate mono to stereo
+        Out.ar(out, [output, output]);
+    });
+    def.add;
+    "Effect SynthDef 'grunge_distortion' added".postln;
 
-    ReplaceOut.ar(out, output);
-}).add;
+    // Register specs and create the synth
+    ~setupEffect.value(defName, specs);
+)
