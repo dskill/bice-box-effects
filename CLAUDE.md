@@ -2,11 +2,31 @@
 
 Quick reference for creating audio effects and visualizers for Bice-Box.
 
+## 🚨 CRITICAL: Effect File Editing Policy 🚨
+
+**ALL effect file modifications MUST use the designated skill + MCP tool workflow:**
+
+- **Audio effects (`.sc` files in `audio/`)** → MUST use `audio-effect` skill + MCP tools
+- **Synths (`.sc` files in `audio/`)** → MUST use `polyphonic-synth` skill + MCP tools
+- **GLSL shaders (`.glsl` files)** → MUST use `glsl-shader` skill + MCP tools
+- **p5.js visuals (`.js` files in `visual/`)** → Use Write tool directly
+
+**This applies to:**
+- ✅ Creating new effects
+- ✅ Updating/modifying existing effects
+- ✅ Changing default parameter values
+- ✅ Fixing bugs in effects
+- ✅ ANY modification to effect files
+
+**NEVER directly edit effect files using Write, Read+Write, or Search_Replace tools!**
+
+**Why?** The MCP workflow includes validation, syntax testing, and safety checks that prevent breaking the live system.
+
 ## Quick Start
 
-**Creating audio effects?** → Use the `audio-effect` skill
-**Creating synths/instruments?** → Use the `polyphonic-synth` skill
-**Creating visualizers?** → Use the `glsl-shader` skill
+**Working with audio effects?** → Use the `audio-effect` skill
+**Working with synths/instruments?** → Use the `polyphonic-synth` skill
+**Working with visualizers?** → Use the `glsl-shader` skill
 
 ## MCP Tools Quick Reference
 
@@ -27,11 +47,11 @@ All tools are available via the `mcp__bice-box__` prefix:
 - **set_effect_parameters** - Update live parameter values (session only, doesn't change defaults)
   - `params` (object, required) - key/value pairs like `{mix: 0.7, delay: 0.5}`
 
-### Creating/Testing (Preferred Methods)
-- **create_or_update_audio_effect** - Safely create/update effects (validates before saving)
+### Creating/Updating Effects (Required Methods)
+- **create_or_update_audio_effect** - REQUIRED for all `.sc` file modifications (validates before saving)
   - `effectName` (string, required) - name without .sc extension
-  - `scCode` (string, required) - SuperCollider code
-  - `makeActive` (boolean, optional) - load effect immediately after creation
+  - `scCode` (string, required) - SuperCollider code (authored using appropriate skill)
+  - `makeActive` (boolean, optional) - load effect immediately after creation/update
 - **test_supercollider_code** - Test syntax without saving files
   - `scCode` (string, required) - SuperCollider code to validate
 
@@ -51,7 +71,9 @@ All tools are available via the `mcp__bice-box__` prefix:
 
 **File Management**
 - Files auto-reload on save via hot-reload system
-- Always use MCP tools for creation/updates (validates before saving)
+- **SuperCollider effects (`.sc`)**: MUST use `create_or_update_audio_effect` MCP tool (validates before saving)
+- **GLSL shaders (`.glsl`)**: MUST use `glsl-shader` skill + Write tool
+- **p5.js visuals (`.js`)**: Can use Write tool directly
 - Maximum 12 faders fit on screen - design parameters accordingly
 
 ## Directory Structure
@@ -71,7 +93,16 @@ All tools are available via the `mcp__bice-box__` prefix:
 
 ## Notes
 
-- **Parameter updates via MCP** only affect live values for the current session
-- To change default values, edit the `.sc` file directly
+- **Parameter updates via MCP** (`set_effect_parameters`) only affect live values for the current session
+- **To change default values**: Use the appropriate skill to author the updated code, then use `create_or_update_audio_effect` to save it
 - Effect/visualizer changes via MCP automatically update the UI
 - Hot-reload detects file changes and reloads active effect/visualizer
+
+## Workflow Summary
+
+1. **Read existing effect** (if updating) → Use Read tool on `.sc` or `.glsl` file
+2. **Author/update code** → Use appropriate skill (`audio-effect`, `polyphonic-synth`, or `glsl-shader`)
+3. **Test syntax** (for SC only) → `test_supercollider_code`
+4. **Save effect** → `create_or_update_audio_effect` (for SC) or Write tool (for GLSL)
+5. **Activate** → `set_current_effect` or `set_visualizer`
+6. **Tweak parameters** → `set_effect_parameters` for live testing
