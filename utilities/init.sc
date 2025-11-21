@@ -289,32 +289,51 @@ s.waitForBoot{
 					paramNames = specs.keys.asArray.sort;
 					
 					// Update LCDs and Motors for first 8 params
-					min(paramNames.size, 8).do({ |i|
-						var name = paramNames[i];
-						var spec = specs[name];
-						var val = values[name] ? spec.default;
-						var normalizedVal = spec.unmap(val);
-						var midi14BitVal = (normalizedVal * 16383).asInteger;
-						var msb = (midi14BitVal >> 7) & 0x7F;
-						var lsb = midi14BitVal & 0x7F;
-						
-						// 1. Update Track Details (LCD)
-						// TRACK DETAILS: 07 <TI:2 TN:0D CS GT>
-						var trackIdx = ~to14Bit.value(i);
-						var trackName = ~toAsciiPadded.value(name.asString, 13);
-						var color = 10 + (i * 5); // Arbitrary color
-						var grouped = 0;
+					8.do({ |i|
 						var ccMsb, ccLsb;
-
-						~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetails, 
-							trackIdx ++ trackName ++ [color, grouped]);
 						
-						// 2. Move Motor (Channel 16)
-						// Knob 0: CC 12 (MSB) / CC 44 (LSB)
-						ccMsb = 12 + i;
-						ccLsb = ccMsb + 32;
-						~rotoOut.control(15, ccMsb, msb);
-						~rotoOut.control(15, ccLsb, lsb);
+						if (i < paramNames.size, {
+							// --- Active Parameter ---
+							var name = paramNames[i];
+							var spec = specs[name];
+							var val = values[name] ? spec.default;
+							var normalizedVal = spec.unmap(val);
+							var midi14BitVal = (normalizedVal * 16383).asInteger;
+							var msb = (midi14BitVal >> 7) & 0x7F;
+							var lsb = midi14BitVal & 0x7F;
+							
+							// 1. Update Track Details (LCD)
+							// TRACK DETAILS: 07 <TI:2 TN:0D CS GT>
+							var trackIdx = ~to14Bit.value(i);
+							var trackName = ~toAsciiPadded.value(name.asString, 13);
+							var color = 10 + (i * 5); // Arbitrary color
+							var grouped = 0;
+							
+							~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetails, 
+								trackIdx ++ trackName ++ [color, grouped]);
+							
+							// 2. Move Motor (Channel 16)
+							ccMsb = 12 + i;
+							ccLsb = ccMsb + 32;
+							~rotoOut.control(15, ccMsb, msb);
+							~rotoOut.control(15, ccLsb, lsb);
+						}, {
+							// --- Unused Parameter (Blank) ---
+							// 1. Blank LCD
+							var trackIdx = ~to14Bit.value(i);
+							var trackName = ~toAsciiPadded.value("", 13);
+							var color = 69; // Off/Black (no idea why it is 69)
+							var grouped = 0;
+							
+							~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetails, 
+								trackIdx ++ trackName ++ [color, grouped]);
+								
+							// 2. Reset Motor to 0
+							ccMsb = 12 + i;
+							ccLsb = ccMsb + 32;
+							~rotoOut.control(15, ccMsb, 0);
+							~rotoOut.control(15, ccLsb, 0);
+						});
 						
 						0.01.wait; // Slight throttle
 					});
