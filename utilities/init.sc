@@ -239,6 +239,95 @@ s.waitForBoot{
 	};
 	"~registerEffectSpecs function defined.".postln;
 
+	// --- ROTO CONTROL HELPERS START ---
+	~rotoId = [0xF0, 0x00, 0x22, 0x03, 0x02]; // Header
+	~rotoCmdGeneral = 0x0A;
+	~rotoCmdMix = 0x0C;
+	~rotoScDawStarted = 0x01;
+	~rotoScPingDaw = 0x02;
+	~rotoScDawPingResponse = 0x03;
+	~rotoScTrackDetails = 0x07;
+	~rotoScTrackDetailsEnd = 0x08;
+	~rotoScRotoDawConnected = 0x0C;
+
+	~hasRoto = false;
+	~rotoOut = nil;
+
+	~sendRotoSysEx = { |cmdType, subCmd, data = #[]|
+		if (~rotoOut.notNil, {
+			var msg = Int8Array.newFrom(~rotoId ++ [cmdType, subCmd] ++ data ++ [0xF7]);
+			~rotoOut.sysex(msg);
+		});
+	};
+
+	~to14Bit = { |val|
+		// Big Endian for Roto SysEx Track Index (per notes)
+		[(val >> 7) & 0x7F, val & 0x7F]
+	};
+
+	~toAsciiPadded = { |str, len = 13|
+		var bytes = Int8Array.newClear(len);
+		var strBytes = str.ascii;
+		len.do({ |i|
+			if (i < strBytes.size, {
+				bytes[i] = strBytes[i];
+			}, {
+				bytes[i] = 0x20; // Pad with spaces
+			});
+		});
+		bytes
+	};
+
+	~syncRotoToEffect = { |effectName|
+		if (~hasRoto, {
+			fork {
+				var specs = ~effectParameterSpecs[effectName.asSymbol];
+				var values = ~effectParameterValues[effectName.asSymbol];
+				var paramNames;
+
+				if (specs.notNil, {
+					paramNames = specs.keys.asArray.sort;
+					
+					// Update LCDs and Motors for first 8 params
+					min(paramNames.size, 8).do({ |i|
+						var name = paramNames[i];
+						var spec = specs[name];
+						var val = values[name] ? spec.default;
+						var normalizedVal = spec.unmap(val);
+						var midi14BitVal = (normalizedVal * 16383).asInteger;
+						var msb = (midi14BitVal >> 7) & 0x7F;
+						var lsb = midi14BitVal & 0x7F;
+						
+						// 1. Update Track Details (LCD)
+						// TRACK DETAILS: 07 <TI:2 TN:0D CS GT>
+						var trackIdx = ~to14Bit.value(i);
+						var trackName = ~toAsciiPadded.value(name.asString, 13);
+						var color = 10 + (i * 5); // Arbitrary color
+						var grouped = 0;
+						var ccMsb, ccLsb;
+
+						~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetails, 
+							trackIdx ++ trackName ++ [color, grouped]);
+						
+						// 2. Move Motor (Channel 16)
+						// Knob 0: CC 12 (MSB) / CC 44 (LSB)
+						ccMsb = 12 + i;
+						ccLsb = ccMsb + 32;
+						~rotoOut.control(15, ccMsb, msb);
+						~rotoOut.control(15, ccLsb, lsb);
+						
+						0.01.wait; // Slight throttle
+					});
+					
+					// Commit LCD updates
+					~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetailsEnd);
+					("Roto Control synced to effect: " ++ effectName).postln;
+				});
+			};
+		});
+	};
+	// --- ROTO CONTROL HELPERS END ---
+
 	~setupEffect = { |defName, specs, additionalArgs = #[], numVoices = 0|
 		var finalArgs;
 
@@ -285,6 +374,9 @@ s.waitForBoot{
 			// Create new synth in the effect group
 			~effect = Synth(defName, finalArgs, ~effectGroup);
 			("New '%' synth created with args: %").format(defName, finalArgs).postln;
+
+			// Sync Roto Control if active
+			~syncRotoToEffect.value(defName);
 
 			// Initialize voice arrays for MIDI-enabled synths
 			if(numVoices > 0, {
@@ -499,6 +591,8 @@ s.waitForBoot{
 						};
 						
 						if (paramValues.notNil) {
+							var paramNames = specs.keys.asArray.sort;
+
 							paramValues.keysValuesDo({ |paramName, value|
 								var lastValue = lastValues[paramName];
 								// Broadcast all parameter changes without tolerance check
@@ -507,6 +601,24 @@ s.waitForBoot{
 									lastValues[paramName] = value;
 									hasChanges = true;
 									// Parameter changed, broadcasting
+
+									// --- ROTO UPDATE ---
+									// If Roto is connected, update the corresponding motor
+									if (~hasRoto) {
+										var paramIdx = paramNames.indexOf(paramName);
+										if (paramIdx.notNil and: { paramIdx < 8 }) {
+											var spec = specs[paramName];
+											var normalizedVal = spec.unmap(value);
+											var midi14BitVal = (normalizedVal * 16383).asInteger;
+											var msb = (midi14BitVal >> 7) & 0x7F;
+											var lsb = midi14BitVal & 0x7F;
+											var ccMsb = 12 + paramIdx;
+											var ccLsb = ccMsb + 32;
+											
+											~rotoOut.control(15, ccMsb, msb);
+											~rotoOut.control(15, ccLsb, lsb);
+										};
+									};
 								};
 							});
 							
@@ -570,6 +682,7 @@ s.waitForBoot{
 							deviceName.containsi("launchkey") or: 
 							(deviceName.containsi("midi") and: deviceName.contains("Through").not) or:
 							deviceName.containsi("keyboard") or:
+							deviceName.containsi("roto") or: // Added Roto explicitly
 							deviceName.containsi("controller")) {
 							
 															// Attempting MIDI connection
@@ -602,6 +715,38 @@ s.waitForBoot{
 					}
 				});
 				"MIDI connection setup complete.".postln;
+
+				// ROTO CONTROL SETUP
+				~rotoDest = MIDIClient.destinations.detect { |d| d.device.containsi("Roto") };
+				if (~rotoDest.notNil, {
+					"Found Roto Control destination.".postln;
+					~rotoOut = MIDIOut.newByName(~rotoDest.device, ~rotoDest.name);
+					~hasRoto = true;
+					
+					// Send Handshake: DAW STARTED
+					~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScDawStarted);
+					"Sent Roto Handshake: DAW STARTED".postln;
+					
+					// Roto SysEx Handler for Handshake
+					MIDIFunc.sysex({ |data|
+						var cmdType = data[5];
+						var subCmd = data[6];
+						
+						if (cmdType == ~rotoCmdGeneral, {
+							if (subCmd == ~rotoScPingDaw, {
+								"Roto: Received PING DAW. Sending response...".postln;
+								// DAW PING RESPONSE: 03 <DAW_ID> (01 = Ableton)
+								~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScDawPingResponse, [0x01]);
+							});
+							if (subCmd == ~rotoScRotoDawConnected, {
+								"Roto: Connected successfully!".postln;
+							});
+						});
+					}, nil, ~rotoId); // Filter by Roto Header (argTemplate)
+					
+				}, {
+					"Roto Control not found.".postln;
+				});
 				
 				// Add a general MIDI message handler for debugging all incoming MIDI
 				if(~midi_all_func.notNil, { ~midi_all_func.free });
@@ -718,6 +863,9 @@ s.waitForBoot{
 		~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
 			var paramIndex, normalizedValue, paramName, paramSpec, is14Bit = false, finalValue;
 			
+			// Debug logging for ALL MIDI CC
+			// ("MIDI CC Received: Channel " ++ chan ++ ", CC " ++ ccNum ++ ", Value " ++ val).postln;
+			
 			// MIDI CC processing (debug logging removed for performance)
 			
 			// Handle CC 117 for push-to-talk functionality
@@ -725,6 +873,92 @@ s.waitForBoot{
 				// Send OSC message to Electron for push-to-talk control
 				~o.sendMsg('/midi/cc117', val);
 
+			};
+			
+			// --- ROTO CONTROL (Channel 16) ---
+			// Observed Mapping from Logs:
+			// Knob 1 (Index 0): Control 1 (Coarse/MSB) / Control 33 (Fine/LSB) ??  -- WAIT, logs show "Effect Control 1" = CC 12/44?
+			// Let's re-read the logs carefully.
+			
+			// Log 1: Knob 1 moved.
+			// "From Roto-Control Control 16 Effect Control 1 (coarse) 54"
+			// "From Roto-Control Control 16 Effect Control 1 (fine) 101"
+			// "Effect Control 1" usually maps to CC 12 (0x0C) or CC 16? 
+			// Standard General MIDI: Effect Control 1 = CC 12.
+			// So Knob 1 (Index 0) is CC 12 / 44.
+			
+			// Log 2: Knob 2 moved.
+			// "From Roto-Control Control 16 Effect Control 2 (coarse) 43"
+			// Effect Control 2 = CC 13.
+			// So Knob 2 (Index 1) is CC 13 / 45.
+			
+			// Log 3: Knob 3 moved.
+			// "From Roto-Control Control 16 Controller 14 80"
+			// Controller 14 = CC 14.
+			// So Knob 3 (Index 2) is CC 14 / 46.
+			
+			// Log 4: Knob 4 moved.
+			// "From Roto-Control Control 16 Controller 15 38"
+			// Controller 15 = CC 15.
+			// So Knob 4 (Index 3) is CC 15 / 47.
+
+			// Log 5: Knob 5 moved.
+			// "From Roto-Control Control 16 General Purpose 1 (coarse) 71"
+			// General Purpose 1 = CC 16.
+			// So Knob 5 (Index 4) is CC 16 / 48.
+
+			// Log 6: Knob 6 moved.
+			// "From Roto-Control Control 16 General Purpose 2 (coarse) 115"
+			// General Purpose 2 = CC 17.
+			// So Knob 6 (Index 5) is CC 17 / 49.
+
+			// Log 7: Knob 7 moved.
+			// "From Roto-Control Control 16 General Purpose 3 (coarse) 100"
+			// General Purpose 3 = CC 18.
+			// So Knob 7 (Index 6) is CC 18 / 50.
+
+			// Log 8: Knob 8 moved.
+			// "From Roto-Control Control 16 General Purpose 4 (coarse) 62"
+			// General Purpose 4 = CC 19.
+			// So Knob 8 (Index 7) is CC 19 / 51.
+			
+			// CONCLUSION: 
+			// Channel 16 (SC Channel 15).
+			// Knobs 0-7 map to CC 12-19 (MSB) and 44-51 (LSB).
+			
+			// MY IMPLEMENTATION:
+			// if (chan == 15 and: { ccNum >= 12 and: { ccNum <= 19 } })
+			// if (chan == 15 and: { ccNum >= 44 and: { ccNum <= 51 } })
+			
+			// This logic matches the logs perfectly. 
+			// So why isn't it updating?
+			
+			// Possible Issue 1: `normalizedValue` is not persisting out of the block?
+			// The `normalizedValue` variable is local to the `cc` function.
+			// But my Roto blocks only set `midi14BitValues` and calculate `normalizedValue`.
+			// They do NOT set `paramIndex`.
+			// AND... `paramIndex` is a local variable initialized to nil.
+			
+			// FIX: I need to set `paramIndex` inside the Roto blocks so the subsequent
+			// logic (which uses `paramIndex`) knows which parameter to update!
+			
+			if (chan == 15 and: { ccNum >= 12 and: { ccNum <= 19 } }) {
+				paramIndex = ccNum - 12;
+				is14Bit = true;
+				if (~midi14BitValues[paramIndex].isNil) { ~midi14BitValues[paramIndex] = [0, 0]; };
+				~midi14BitValues[paramIndex][0] = val;
+				
+				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
+				normalizedValue = finalValue / 16383.0;
+			};
+			if (chan == 15 and: { ccNum >= 44 and: { ccNum <= 51 } }) {
+				paramIndex = ccNum - 44;
+				is14Bit = true;
+				if (~midi14BitValues[paramIndex].isNil) { ~midi14BitValues[paramIndex] = [0, 0]; };
+				~midi14BitValues[paramIndex][1] = val;
+				
+				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
+				normalizedValue = finalValue / 16383.0;
 			};
 			
 			// Handle 14-bit MIDI encoders: Multiple schemes supported
@@ -795,12 +1029,7 @@ s.waitForBoot{
 			// If you need 7-bit support, use a different CC range or configure your controller differently
 			
 			// Process parameter update for 14-bit controllers
-			if ((chan == 0) and: { 
-				((ccNum >= 1 and: { ccNum <= 8 }) or: 
-				 (ccNum >= 33 and: { ccNum <= 40 }) or: 
-				 (ccNum >= 21 and: { ccNum <= 28 }) or:
-				 (ccNum >= 53 and: { ccNum <= 60 })) 
-			}) {
+			if (normalizedValue.notNil) {
 					
 					//("[MIDI DEBUG] CC % received - raw val: %, normalized: %").format(ccNum, val, normalizedValue).postln;
 					
@@ -838,7 +1067,17 @@ s.waitForBoot{
 																	if(~effectParameterValues[currentEffectName.asSymbol].isNil, {
 																		~effectParameterValues[currentEffectName.asSymbol] = IdentityDictionary.new;
 																	});
-																	~effectParameterValues[currentEffectName.asSymbol][paramName] = mappedValue;
+																	
+																	// Only update if value has changed significantly to avoid jitter
+																	if (~effectParameterValues[currentEffectName.asSymbol][paramName] != mappedValue) {
+																		~effectParameterValues[currentEffectName.asSymbol][paramName] = mappedValue;
+																		
+																		// Force broadcast on next cycle
+																		if (~lastBroadcastValues[currentEffectName.asSymbol].notNil) {
+																			// Invalidating last value ensures the broadcast routine picks it up
+																			~lastBroadcastValues[currentEffectName.asSymbol][paramName] = nil;
+																		};
+																	};
 																	// MIDI parameter tracked for broadcasting
 											
 											// Note: UI updates will come from the parameter broadcast routine
