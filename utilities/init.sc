@@ -680,16 +680,6 @@ s.waitForBoot{
 		try {
 			MIDIClient.init;
 			"MIDI Initialized.".postln;
-
-			// --- DEBUG LOGGING START ---
-			"--- MIDI SOURCES ---".postln;
-			MIDIClient.sources.do({ |src|
-				("UID: " ++ src.uid ++ " | Device: " ++ src.device ++ " | Name: " ++ src.name).postln;
-			});
-			MIDIFunc.trace(false); 
-			"--- DEBUG LOGGING ENABLED (Trace DISABLED to reduce noise) ---".postln;
-			// --- DEBUG LOGGING END ---
-
 			~hasMIDI = MIDIClient.sources.notEmpty;
 
 			if(~hasMIDI, {
@@ -1020,13 +1010,9 @@ s.waitForBoot{
 		
 		// MIDI CC Handler for parameter control (supports both 7-bit and 14-bit)
 		if(~midi_cc_func.notNil, { ~midi_cc_func.free });
-		"Creating MIDI CC Handler...".postln;
 		~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
 			var paramIndex, normalizedValue, paramName, paramSpec, is14Bit = false, finalValue;
 			
-			// DEBUG: Confirm handler is running
-			// ("CC Handler: ch=" ++ chan ++ " cc=" ++ ccNum ++ " val=" ++ val).postln;
-
 			// Handle CC 117 for push-to-talk functionality
 			if (chan == 15 and: { ccNum == 117 }) { // Channel 16 (15 in SC) Controller 117
 				// Send OSC message to Electron for push-to-talk control
@@ -1150,7 +1136,6 @@ s.waitForBoot{
 				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
 				normalizedValue = finalValue / 16383.0;
 				
-
 			};
 			
 			if (chan == 0 and: { ccNum >= 33 and: { ccNum <= 40 }}) {
@@ -1165,7 +1150,6 @@ s.waitForBoot{
 				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
 				normalizedValue = finalValue / 16383.0;
 				
-
 			};
 			
 			// Scheme 2: CC 21-28 (MSB) + CC 53-60 (LSB) - Common on BCR2000/BCF2000
@@ -1181,7 +1165,6 @@ s.waitForBoot{
 				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
 				normalizedValue = finalValue / 16383.0;
 				
-
 			};
 			
 			if (chan == 0 and: { ccNum >= 53 and: { ccNum <= 60 }}) {
@@ -1196,7 +1179,6 @@ s.waitForBoot{
 				finalValue = (~midi14BitValues[paramIndex][0] * 128) + ~midi14BitValues[paramIndex][1];
 				normalizedValue = finalValue / 16383.0;
 				
-
 			};
 			
 			// Legacy 7-bit MIDI support removed for CC 21-28 (now used for 14-bit MSB)
@@ -1232,30 +1214,30 @@ s.waitForBoot{
 									//).postln;
 									//("[MIDI DEBUG] Mapped value: % -> % (using spec.map)").format(normalizedValue, mappedValue).postln;
 									
-																																																																																																						// Update the parameter in SuperCollider
-																																																																																		~effect.set(paramName, mappedValue);
-																																																																																		// Parameter updated (debug logging removed for performance)
+									// Update the parameter in SuperCollider
+									~effect.set(paramName, mappedValue);
+									// Parameter updated (debug logging removed for performance)
 											
-																												// MIDI is the ONLY source that updates parameter tracking
-																	// This prevents conflicts between OSC and MIDI tracking
-																	if(~effectParameterValues[currentEffectName.asSymbol].isNil, {
-																		~effectParameterValues[currentEffectName.asSymbol] = IdentityDictionary.new;
-																	});
-																	
-																	// Only update if value has changed significantly to avoid jitter
-																	if (~effectParameterValues[currentEffectName.asSymbol][paramName] != mappedValue) {
-																		~effectParameterValues[currentEffectName.asSymbol][paramName] = mappedValue;
-																		
-																		// Force broadcast on next cycle
-																		if (~lastBroadcastValues[currentEffectName.asSymbol].notNil) {
-																			// Invalidating last value ensures the broadcast routine picks it up
-																			~lastBroadcastValues[currentEffectName.asSymbol][paramName] = nil;
-																		};
-																	};
-																	// MIDI parameter tracked for broadcasting
+									// MIDI is the ONLY source that updates parameter tracking
+									// This prevents conflicts between OSC and MIDI tracking
+									if(~effectParameterValues[currentEffectName.asSymbol].isNil, {
+										~effectParameterValues[currentEffectName.asSymbol] = IdentityDictionary.new;
+									});
+									
+									// Only update if value has changed significantly to avoid jitter
+									if (~effectParameterValues[currentEffectName.asSymbol][paramName] != mappedValue) {
+										~effectParameterValues[currentEffectName.asSymbol][paramName] = mappedValue;
+										
+										// Force broadcast on next cycle
+										if (~lastBroadcastValues[currentEffectName.asSymbol].notNil) {
+											// Invalidating last value ensures the broadcast routine picks it up
+											~lastBroadcastValues[currentEffectName.asSymbol][paramName] = nil;
+										};
+									};
+									// MIDI parameter tracked for broadcasting
 											
-											// Note: UI updates will come from the parameter broadcast routine
-											// No direct OSC message to UI needed - eliminates feedback loop
+									// Note: UI updates will come from the parameter broadcast routine
+									// No direct OSC message to UI needed - eliminates feedback loop
 								}
 							} {
 								// ("MIDI CC: CC % ignored - effect has only % parameters").format(ccNum, paramNames.size).postln;
@@ -1265,7 +1247,6 @@ s.waitForBoot{
 						}
 					} {
 						// ("MIDI CC: No active effect to control").postln;
-						("MIDI CC IGNORED: ~effect is " ++ if(~effect.isNil, "NIL", "OK") ++ ", ~effectParameterSpecs is " ++ if(~effectParameterSpecs.isNil, "NIL", "OK")).postln;
 					}
 				}
 			});
