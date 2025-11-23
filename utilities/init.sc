@@ -246,16 +246,20 @@ s.waitForBoot{
 	~rotoScDawStarted = 0x01;
 	~rotoScPingDaw = 0x02;
 	~rotoScDawPingResponse = 0x03;
+	~rotoScNumTracks = 0x04;
+	~rotoScFirstTrack = 0x05;
 	~rotoScTrackDetails = 0x07;
 	~rotoScTrackDetailsEnd = 0x08;
 	~rotoScRotoDawConnected = 0x0C;
 
 	~hasRoto = false;
+	~isRotoConnected = false;
 	~rotoOut = nil;
 
 	~sendRotoSysEx = { |cmdType, subCmd, data = #[]|
 		if (~rotoOut.notNil, {
 			var msg = Int8Array.newFrom(~rotoId ++ [cmdType, subCmd] ++ data ++ [0xF7]);
+			// ("Sending Roto SysEx: " ++ msg).postln;
 			~rotoOut.sysex(msg);
 		});
 	};
@@ -737,31 +741,151 @@ s.waitForBoot{
 
 				// ROTO CONTROL SETUP
 				~rotoDest = MIDIClient.destinations.detect { |d| d.device.containsi("Roto") };
+				~rotoSrc = MIDIClient.sources.detect { |s| s.device.containsi("Roto") };
+
 				if (~rotoDest.notNil, {
 					"Found Roto Control destination.".postln;
+
+					// DIRECT MIDIIn HOOKS (Defined BEFORE connecting)
+					MIDIIn.sysex = { |src, data|
+						// Convert Int8Array (signed) to standard Array of unsigned integers (0-255)
+						var bytes = data.collect { |b| b.bitAnd(0xFF) };
+						
+						// ("DEBUG: MIDIIn SysEx received: " ++ bytes).postln; 
+						
+						// Parse using unsigned bytes
+						if (bytes.size > 5 and: { bytes[0] == 0xF0 } and: { bytes[1] == 0x00 } and: { bytes[2] == 0x22 } and: { bytes[3] == 0x03 } and: { bytes[4] == 0x02 }) {
+							 var cmdType = bytes[5];
+							 var subCmd = bytes[6];
+							 
+							 if (cmdType == ~rotoCmdGeneral) {
+								if (subCmd == ~rotoScPingDaw) {
+									"Roto: Received PING DAW. Sending response...".postln;
+									~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScDawPingResponse, [0x01]);
+								};
+								if (subCmd == ~rotoScRotoDawConnected) {
+									if (~isRotoConnected.not) {
+										"Roto: Connected successfully! Initializing Session...".postln;
+										~isRotoConnected = true;
+										
+										fork {
+											0.1.wait;
+											~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScNumTracks, ~to14Bit.value(8));
+											"Roto: Sent Num Tracks (8)".postln;
+											0.1.wait;
+											~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScFirstTrack, ~to14Bit.value(0));
+											"Roto: Sent First Track (0)".postln;
+											0.1.wait;
+											8.do({ |i|
+												var trackIdx = ~to14Bit.value(i);
+												var trackName = ~toAsciiPadded.value("Roto Ready", 13);
+												var color = 10;
+												var grouped = 0;
+												~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetails, trackIdx ++ trackName ++ [color, grouped]);
+												0.01.wait;
+											});
+											0.1.wait;
+											~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetailsEnd);
+											"Roto: Initialized Tracks".postln;
+										};
+									};
+								};
+							 };
+						};
+					};
+					
+					// Cleanup MIDIIn function on server quit
+					ServerQuit.add({ MIDIIn.sysex = nil; });
+
 					~rotoOut = MIDIOut.newByName(~rotoDest.device, ~rotoDest.name);
+					~rotoOut.latency = 0; // Ensure immediate transmission
 					~hasRoto = true;
 					
-					// Send Handshake: DAW STARTED
-					~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScDawStarted);
-					"Sent Roto Handshake: DAW STARTED".postln;
-					
-					// Roto SysEx Handler for Handshake
-					MIDIFunc.sysex({ |data|
-						var cmdType = data[5];
-						var subCmd = data[6];
-						
-						if (cmdType == ~rotoCmdGeneral, {
-							if (subCmd == ~rotoScPingDaw, {
-								"Roto: Received PING DAW. Sending response...".postln;
-								// DAW PING RESPONSE: 03 <DAW_ID> (01 = Ableton)
-								~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScDawPingResponse, [0x01]);
+					// TARGETED CONNECTION
+					if (~rotoSrc.notNil) {
+						("Connecting specifically to Roto Source: " ++ ~rotoSrc).postln;
+						MIDIIn.connect(0, ~rotoSrc.uid);
+					} {
+						"WARNING: Roto Destination found but Source NOT found!".postln;
+						"Falling back to connectAll...".postln;
+						MIDIIn.connectAll;
+					};
+
+					// Roto Handshake Loop
+					fork {
+						loop {
+							if (~isRotoConnected.not, {
+								// Send Handshake: DAW STARTED
+								~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScDawStarted);
+								"Sent Roto Handshake: DAW STARTED (Retrying...)".postln;
 							});
-							if (subCmd == ~rotoScRotoDawConnected, {
-								"Roto: Connected successfully!".postln;
+							2.wait; // Retry every 2 seconds until connected
+						};
+					};
+
+					/* REMOVED MIDIFunc in favor of MIDIIn.sysex
+					// DEBUG: Trace all MIDI to console
+					// MIDIFunc.trace(true); 
+
+					// Roto SysEx Handler for Handshake - REMOVED FILTER for debugging
+					MIDIFunc.sysex({ |data|
+						var cmdType, subCmd;
+						
+						// ("DEBUG SYSEX: " ++ data).postln;
+
+						// Check header manually
+						if (data.size > 5 and: { data[0] == 0xF0 } and: { data[1] == 0x00 } and: { data[2] == 0x22 } and: { data[3] == 0x03 } and: { data[4] == 0x02 }, {
+							
+							cmdType = data[5];
+							subCmd = data[6];
+							
+							if (cmdType == ~rotoCmdGeneral, {
+								if (subCmd == ~rotoScPingDaw, {
+									"Roto: Received PING DAW. Sending response...".postln;
+									// DAW PING RESPONSE: 03 <DAW_ID> (01 = Ableton)
+									~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScDawPingResponse, [0x01]);
+								});
+								if (subCmd == ~rotoScRotoDawConnected, {
+									if (~isRotoConnected.not, {
+										"Roto: Connected successfully! Initializing Session...".postln;
+										~isRotoConnected = true;
+										
+										// Send session config (matches roto_test.js behavior)
+										fork {
+											0.1.wait;
+											// Set Num Tracks = 8
+											~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScNumTracks, ~to14Bit.value(8));
+											"Roto: Sent Num Tracks (8)".postln;
+											
+											0.1.wait;
+											// Set First Track = 0
+											~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScFirstTrack, ~to14Bit.value(0));
+											"Roto: Sent First Track (0)".postln;
+
+											// Initialize all 8 tracks to "Active" state to wake up display
+											0.1.wait;
+											8.do({ |i|
+												var trackIdx = ~to14Bit.value(i);
+												var trackName = ~toAsciiPadded.value("Roto Ready", 13);
+												var color = 10; // Red/Visible color
+												var grouped = 0;
+												
+												~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetails, 
+													trackIdx ++ trackName ++ [color, grouped]);
+												0.01.wait;
+											});
+
+											// Commit updates
+											0.1.wait;
+											~sendRotoSysEx.value(~rotoCmdGeneral, ~rotoScTrackDetailsEnd);
+											"Roto: Initialized Tracks".postln;
+										};
+									});
+								});
 							});
 						});
-					}, nil, ~rotoId); // Filter by Roto Header (argTemplate)
+					}); 
+					*/ 
 					
 				}, {
 					"Roto Control not found.".postln;
