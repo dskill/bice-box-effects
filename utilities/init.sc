@@ -680,20 +680,6 @@ s.waitForBoot{
 		try {
 			MIDIClient.init;
 			"MIDI Initialized.".postln;
-
-			// --- DEBUG LOGGING START ---
-			"--- MIDI SOURCES ---".postln;
-			MIDIClient.sources.do({ |src|
-				("UID: " ++ src.uid ++ " | Device: " ++ src.device ++ " | Name: " ++ src.name).postln;
-			});
-			"--- MIDI DESTINATIONS ---".postln;
-			MIDIClient.destinations.do({ |dst|
-				("UID: " ++ dst.uid ++ " | Device: " ++ dst.device ++ " | Name: " ++ dst.name).postln;
-			});
-			MIDIFunc.trace(false); 
-			"--- DEBUG LOGGING ENABLED (Trace DISABLED to reduce noise) ---".postln;
-			// --- DEBUG LOGGING END ---
-
 			~hasMIDI = MIDIClient.sources.notEmpty;
 
 			if(~hasMIDI, {
@@ -1024,13 +1010,9 @@ s.waitForBoot{
 		
 		// MIDI CC Handler for parameter control (supports both 7-bit and 14-bit)
 		if(~midi_cc_func.notNil, { ~midi_cc_func.free });
-		"Creating MIDI CC Handler...".postln;
 		~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
 			var paramIndex, normalizedValue, paramName, paramSpec, is14Bit = false, finalValue;
 			
-			// DEBUG: Confirm handler is running
-			// ("CC Handler: ch=" ++ chan ++ " cc=" ++ ccNum ++ " val=" ++ val).postln;
-
 			// Handle CC 117 for push-to-talk functionality
 			if (chan == 15 and: { ccNum == 117 }) { // Channel 16 (15 in SC) Controller 117
 				// Send OSC message to Electron for push-to-talk control
@@ -1269,7 +1251,6 @@ s.waitForBoot{
 						}
 					} {
 						// ("MIDI CC: No active effect to control").postln;
-						("MIDI CC IGNORED: ~effect is " ++ if(~effect.isNil, "NIL", "OK") ++ ", ~effectParameterSpecs is " ++ if(~effectParameterSpecs.isNil, "NIL", "OK")).postln;
 					}
 				}
 			});
