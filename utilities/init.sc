@@ -728,21 +728,24 @@ s.waitForBoot{
 							try {
 								// Method 1: Connect using port 0 and device UID
 								MIDIIn.connect(0, src.uid);
-																		// Successfully connected to MIDI device
+								("Successfully connected to MIDI device: " ++ src.device).postln;
 							} { |error1|
-																		// Connection method 1 failed, trying method 2
+								// Connection method 1 failed, trying method 2
+								("Method 1 failed for " ++ src.device ++ ": " ++ error1.errorString).postln;
 								try {
 									// Method 2: Connect using device index
 									MIDIIn.connect(device: i);
-																				// Successfully connected via method 2
+									("Successfully connected via method 2 to: " ++ src.device).postln;
 								} { |error2|
-																				// Method 2 failed, trying method 3
+									// Method 2 failed, trying method 3
+									("Method 2 failed for " ++ src.device ++ ": " ++ error2.errorString).postln;
 									try {
 										// Method 3: Connect using just the UID
 										MIDIIn.connect(src.uid);
-																						// Successfully connected via method 3
+										("Successfully connected via method 3 to: " ++ src.device).postln;
 									} { |error3|
-																						// All MIDI connection methods failed
+										// All MIDI connection methods failed
+										("All connection methods failed for " ++ src.device).postln;
 									}
 								}
 							};
@@ -816,7 +819,13 @@ s.waitForBoot{
 					// TARGETED CONNECTION
 					if (~rotoSrc.notNil) {
 						("Connecting specifically to Roto Source: " ++ ~rotoSrc).postln;
-						MIDIIn.connect(0, ~rotoSrc.uid);
+						try {
+							MIDIIn.connect(0, ~rotoSrc.uid);
+						} { |err|
+							("Roto UID connection failed: " ++ err.errorString).postln;
+							"Attempting fallback to connectAll...".postln;
+							MIDIIn.connectAll;
+						};
 					} {
 						"WARNING: Roto Destination found but Source NOT found!".postln;
 						"Falling back to connectAll...".postln;
@@ -1270,8 +1279,8 @@ s.waitForBoot{
 		});
 	} { |error|
 		("MIDI Setup Failed: " ++ error.errorString).postln;
-		"Continuing boot without MIDI.".postln;
-		~hasMIDI = false; // Ensure ~hasMIDI is false if setup fails
+		"Continuing boot - attempting to register MIDI handlers anyway...".postln;
+		// ~hasMIDI = false; // DON'T DISABLE MIDI - Handlers might still work if connections exist at OS level!
 	};
 	// MIDI SETUP END
 
