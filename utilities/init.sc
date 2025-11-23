@@ -751,8 +751,6 @@ s.waitForBoot{
 						// Convert Int8Array (signed) to standard Array of unsigned integers (0-255)
 						var bytes = data.collect { |b| b.bitAnd(0xFF) };
 						
-						// ("DEBUG: MIDIIn SysEx received: " ++ bytes).postln; 
-						
 						// Parse using unsigned bytes
 						if (bytes.size > 5 and: { bytes[0] == 0xF0 } and: { bytes[1] == 0x00 } and: { bytes[2] == 0x22 } and: { bytes[3] == 0x03 } and: { bytes[4] == 0x02 }) {
 							 var cmdType = bytes[5];
