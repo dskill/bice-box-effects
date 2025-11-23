@@ -1012,8 +1012,23 @@ s.waitForBoot{
 			// Handle CC 117 for push-to-talk functionality
 			if (chan == 15 and: { ccNum == 117 }) { // Channel 16 (15 in SC) Controller 117
 				// Send OSC message to Electron for push-to-talk control
-				~o.sendMsg('/midi/cc117', val);
+				~o.sendMsg('/midi/push_to_talk', val);
+			};
 
+			// Handle CC 27 for push-to-talk functionality (Roto Control)
+			if (chan == 15 and: { ccNum == 27 }) {
+				// Send OSC message to Electron for push-to-talk control
+				~o.sendMsg('/midi/push_to_talk', val);
+			};
+
+			// Handle CC 20 for Previous Effect
+			if (chan == 15 and: { ccNum == 20 and: { val == 127 } }) {
+				~o.sendMsg('/midi/prev_effect');
+			};
+
+			// Handle CC 21 for Next Effect
+			if (chan == 15 and: { ccNum == 21 and: { val == 127 } }) {
+				~o.sendMsg('/midi/next_effect');
 			};
 			
 			// --- ROTO CONTROL (Channel 16) ---
