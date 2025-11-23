@@ -680,6 +680,20 @@ s.waitForBoot{
 		try {
 			MIDIClient.init;
 			"MIDI Initialized.".postln;
+
+			// --- DEBUG LOGGING START ---
+			"--- MIDI SOURCES ---".postln;
+			MIDIClient.sources.do({ |src|
+				("UID: " ++ src.uid ++ " | Device: " ++ src.device ++ " | Name: " ++ src.name).postln;
+			});
+			"--- MIDI DESTINATIONS ---".postln;
+			MIDIClient.destinations.do({ |dst|
+				("UID: " ++ dst.uid ++ " | Device: " ++ dst.device ++ " | Name: " ++ dst.name).postln;
+			});
+			MIDIFunc.trace(true); 
+			"--- DEBUG LOGGING ENABLED ---".postln;
+			// --- DEBUG LOGGING END ---
+
 			~hasMIDI = MIDIClient.sources.notEmpty;
 
 			if(~hasMIDI, {

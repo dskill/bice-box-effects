@@ -1,5 +1,8 @@
 Effect files for the Bice Box project.
 
+NOTE: on PI, you may need to stop
+   sudo systemctl stop amidiminder
+for roto control to work.
 
 ## Maintaining Shared Utilities Across Branches
 
