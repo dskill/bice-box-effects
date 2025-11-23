@@ -1261,6 +1261,7 @@ s.waitForBoot{
 						}
 					} {
 						// ("MIDI CC: No active effect to control").postln;
+						("MIDI CC IGNORED: ~effect is " ++ if(~effect.isNil, "NIL", "OK") ++ ", ~effectParameterSpecs is " ++ if(~effectParameterSpecs.isNil, "NIL", "OK")).postln;
 					}
 				}
 			});
