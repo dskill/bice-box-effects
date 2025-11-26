@@ -3,11 +3,11 @@
 (
     var defName = \baxandall_distortion;
     var specs = (
-        drive: ControlSpec(1.0, 100.0, 'exp', 0, 10.0, "x"),
-        bass: ControlSpec(-12.0, 12.0, 'lin', 0, 0.0, "dB"),
-        treble: ControlSpec(-12.0, 12.0, 'lin', 0, 0.0, "dB"),
-        level: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+        drive: ControlSpec(1.0, 100.0, 'exp', 0, 77.0, "x"),
+        bass: ControlSpec(-12.0, 12.0, 'lin', 0, 0.5, "dB"),
+        treble: ControlSpec(-12.0, 12.0, 'lin', 0, 6.2, "dB"),
+        level: ControlSpec(0.0, 1.0, 'lin', 0, 0.4, "%"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.65, "%")
     );
 
     var def = SynthDef(defName, {
