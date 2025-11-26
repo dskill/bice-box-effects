@@ -972,24 +972,29 @@ s.waitForBoot{
 				if (~effect.notNil and: {~currentSynthNumVoices > 0}) {
 					// --- POLYPHONIC LOGIC ---
 					
-					// Check if this note is already allocated (re-trigger)
-					if (~voice_allocator[num].notNil) {
-						voiceIndex = ~voice_allocator[num];
-						~voice_gates[voiceIndex] = 0; // Quick gate off for re-trigger
+				// Check if this note is already allocated (re-trigger)
+				if (~voice_allocator[num].notNil) {
+					voiceIndex = ~voice_allocator[num];
+					// Set gate off immediately, then use fork to wait and re-trigger
+					~voice_gates[voiceIndex] = 0;
+					~updateVoiceArrays.value; // Send gate-off immediately
+					// Use fork for the delayed re-trigger since .wait requires a Routine
+					fork {
 						0.01.wait; // Brief pause
 						~voice_gates[voiceIndex] = 1; // Gate back on
 						~voice_amps[voiceIndex] = vel / 127;
-					} {
-						// Allocate a new voice
-						voiceIndex = ~findFreeVoice.value;
-						~voice_allocator[num] = voiceIndex;
-						~voice_states[voiceIndex] = \active;
-						~voice_freqs[voiceIndex] = num.midicps;
-						~voice_gates[voiceIndex] = 1;
-						~voice_amps[voiceIndex] = vel / 127;
+						~updateVoiceArrays.value; // Send gate-on after delay
 					};
-					
+				} {
+					// Allocate a new voice
+					voiceIndex = ~findFreeVoice.value;
+					~voice_allocator[num] = voiceIndex;
+					~voice_states[voiceIndex] = \active;
+					~voice_freqs[voiceIndex] = num.midicps;
+					~voice_gates[voiceIndex] = 1;
+					~voice_amps[voiceIndex] = vel / 127;
 					~updateVoiceArrays.value; // Send updates to the synth
+				};
 				} {
 					// No MIDI-enabled effect synth available
 				};
