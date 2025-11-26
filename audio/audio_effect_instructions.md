@@ -4,7 +4,11 @@ These guidelines aim to maintain consistency and readability across the SuperCol
 
 ## 1. File Structure
 
--   **Shader Comment:** Start each file with a shader comment specifying the visual effect: `// shader: shader_name` (e.g., `// shader: oscilloscope`, `// shader: neon_love`).
+-   **Visualizer Comment:** Start each file with a visualizer comment specifying the visual effect to auto-load:
+    -   For GLSL shaders: `// shader: shader_name` (e.g., `// shader: oscilloscope`, `// shader: neon_love`)
+    -   For p5.js visualizers: `// p5: visualizer_name` (e.g., `// p5: palpatine_lightning`, `// p5: tuner`)
+    -   Shaders are loaded from the `shaders/` directory, p5.js sketches from the `visual/` directory.
+    -   **Note:** Visualizer names must be unique across both directories. Do not use the same base name for both a shader and a p5.js visualizer.
 -   **Encapsulation:** Wrap the entire script content within parentheses `(...)`.
 -   **Variable Declaration:** Declare `defName` as a variable at the top: `var defName = \effect_name;`
 -   **SynthDef:** Define the primary audio processing logic within a single `SynthDef(defName, { ... })`.
@@ -104,7 +108,7 @@ delay: ControlSpec(0.001, 2.0, 'exp', 0, 0.1, "s")
 This template demonstrates the standard, high-performance, mono-first signal path using the new simplified setup.
 
 ```supercollider
-// shader: oscilloscope
+// shader: oscilloscope    <-- or use: // p5: visualizer_name
 (
     var defName = \my_effect;
 
