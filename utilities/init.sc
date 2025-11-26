@@ -816,21 +816,22 @@ s.waitForBoot{
 					~rotoOut.latency = 0; // Ensure immediate transmission
 					~hasRoto = true;
 					
-					// TARGETED CONNECTION
-					if (~rotoSrc.notNil) {
-						("Connecting specifically to Roto Source: " ++ ~rotoSrc).postln;
-						try {
-							MIDIIn.connect(0, ~rotoSrc.uid);
-						} { |err|
-							("Roto UID connection failed: " ++ err.errorString).postln;
-							"Attempting fallback to connectAll...".postln;
-							MIDIIn.connectAll;
-						};
-					} {
-						"WARNING: Roto Destination found but Source NOT found!".postln;
-						"Falling back to connectAll...".postln;
-						MIDIIn.connectAll;
+				// TARGETED CONNECTION
+				if (~rotoSrc.notNil) {
+					("Connecting specifically to Roto Source: " ++ ~rotoSrc).postln;
+					try {
+						MIDIIn.connect(0, ~rotoSrc.uid);
+						"Roto MIDI input connected successfully.".postln;
+					} { |err|
+						("Roto UID connection failed: " ++ err.errorString).postln;
+						"Attempting fallback to connectAll (forked)...".postln;
+						fork { MIDIIn.connectAll; };
 					};
+				} {
+					"WARNING: Roto Destination found but Source NOT found!".postln;
+					"Roto output-only mode - continuing without Roto input.".postln;
+					// Note: NOT calling MIDIIn.connectAll - it hangs on busy ALSA ports
+				};
 
 					// Roto Handshake Loop
 					fork {
