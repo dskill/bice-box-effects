@@ -700,61 +700,13 @@ s.waitForBoot{
 				// Log the list of connected MIDI sources
 				("MIDI Sources: " ++ MIDIClient.sources).postln;
 
-				// Connect to hardware MIDI inputs, avoiding problematic system devices
-				MIDIClient.sources.do({ |src, i|
-					var deviceName = src.device.asString;
-					var sourceName = src.name.asString;
-					// Examining MIDI source
-					
-					// Skip problematic system devices that cause "Device or resource busy" errors
-					if (deviceName.contains("System") or: 
-						deviceName.contains("SuperCollider") or:
-						sourceName.contains("Timer") or:
-						sourceName.contains("Announce") or:
-						sourceName.contains("out")) {
-													// Skipping system/virtual device
-					} {
-						// Connect to pisound (Raspberry Pi) or common MIDI controllers, but avoid Midi Through if busy
-						if (deviceName.contains("pisound") or: 
-							deviceName.containsi("launchkey") or: 
-							(deviceName.containsi("midi") and: deviceName.contains("Through").not) or:
-							deviceName.containsi("keyboard") or:
-							deviceName.containsi("roto") or: // Added Roto explicitly
-							deviceName.containsi("controller")) {
-							
-															// Attempting MIDI connection
-							
-							// Try different connection methods, but avoid connectAll on Pi
-							try {
-								// Method 1: Connect using port 0 and device UID
-								MIDIIn.connect(0, src.uid);
-								("Successfully connected to MIDI device: " ++ src.device).postln;
-							} { |error1|
-								// Connection method 1 failed, trying method 2
-								("Method 1 failed for " ++ src.device ++ ": " ++ error1.errorString).postln;
-								try {
-									// Method 2: Connect using device index
-									MIDIIn.connect(device: i);
-									("Successfully connected via method 2 to: " ++ src.device).postln;
-								} { |error2|
-									// Method 2 failed, trying method 3
-									("Method 2 failed for " ++ src.device ++ ": " ++ error2.errorString).postln;
-									try {
-										// Method 3: Connect using just the UID
-										MIDIIn.connect(src.uid);
-										("Successfully connected via method 3 to: " ++ src.device).postln;
-									} { |error3|
-										// All MIDI connection methods failed
-										("All connection methods failed for " ++ src.device).postln;
-									}
-								}
-							};
-						} {
-							// Skipping non-target device
-						}
-					}
-				});
-				"MIDI connection setup complete.".postln;
+				// NOTE: We do NOT explicitly call MIDIIn.connect() here.
+				// On Linux (Pi), JACK or amidiminder typically manages MIDI routing.
+				// They connect hardware MIDI ports to SuperCollider automatically.
+				// Calling MIDIIn.connect() when a connection already exists causes
+				// "Device or resource busy" errors. By skipping explicit connections,
+				// we let the system handle routing and just create our handlers.
+				"MIDI: Relying on system (JACK/amidiminder) for MIDI routing.".postln;
 
 				// ROTO CONTROL SETUP
 				~rotoDest = MIDIClient.destinations.detect { |d| d.device.containsi("Roto") };
@@ -816,21 +768,12 @@ s.waitForBoot{
 					~rotoOut.latency = 0; // Ensure immediate transmission
 					~hasRoto = true;
 					
-				// TARGETED CONNECTION
+				// Roto input - no explicit connection needed (JACK/amidiminder handles it)
 				if (~rotoSrc.notNil) {
-					("Connecting specifically to Roto Source: " ++ ~rotoSrc).postln;
-					try {
-						MIDIIn.connect(0, ~rotoSrc.uid);
-						"Roto MIDI input connected successfully.".postln;
-					} { |err|
-						("Roto UID connection failed: " ++ err.errorString).postln;
-						"Attempting fallback to connectAll (forked)...".postln;
-						fork { MIDIIn.connectAll; };
-					};
+					("Roto Source available: " ++ ~rotoSrc).postln;
+					"Roto MIDI input ready (routed by system).".postln;
 				} {
 					"WARNING: Roto Destination found but Source NOT found!".postln;
-					"Roto output-only mode - continuing without Roto input.".postln;
-					// Note: NOT calling MIDIIn.connectAll - it hangs on busy ALSA ports
 				};
 
 					// Roto Handshake Loop
