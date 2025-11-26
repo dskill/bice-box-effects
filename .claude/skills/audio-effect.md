@@ -88,11 +88,19 @@ gain: ControlSpec(0.1, 5.0, 'exp', 0, 1.0, "x")
 delay: ControlSpec(0.001, 2.0, 'exp', 0, 0.1, "s")
 ```
 
-## Shader Comments
+## Visualizer Comments
 
-Add `// shader: visualizer_name` as the first line to auto-load a visualizer when the effect loads.
+Add a visualizer comment as the first line to auto-load a visualizer when the effect loads:
 
-Examples: `// shader: oscilloscope`, `// shader: neon_love`
+- **For GLSL shaders:** `// shader: shader_name` (loads from `shaders/` directory)
+- **For p5.js sketches:** `// p5: sketch_name` (loads from `visual/` directory)
+
+Examples:
+- `// shader: oscilloscope` → loads `shaders/oscilloscope.glsl`
+- `// shader: palpatine` → loads `shaders/palpatine_image.glsl` (multi-pass)
+- `// p5: tuner` → loads `visual/tuner.js`
+
+**Note:** Visualizer names must be unique across both directories.
 
 ## MCP Workflow
 
