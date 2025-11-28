@@ -1,4 +1,4 @@
-// shader: skull
+// shader: grunge
 // Grunge Distortion - Heavy 90s distortion pedal
 // Inspired by classic grunge tones with pre-gain, clipping, and tone shaping
 (

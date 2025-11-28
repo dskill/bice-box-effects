@@ -1,3 +1,8 @@
+---
+name: polyphonic-synth
+description: Create MIDI-controllable polyphonic synthesizers for Bice-Box. Provides templates with voice management, envelope generation, MIDI control setup, and oscillator/filter patterns for multi-voice synths.
+---
+
 # Polyphonic Synthesizer Development
 
 Create MIDI-controllable polyphonic synthesizers for Bice-Box.

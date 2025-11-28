@@ -9,7 +9,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 	vec3 c;
 	float l,z=t;
 
-	// Audio influence
+	// Audio influence - using iRMSOutput (0.0-1.0 RMS) and iAudioTexture (freq spectrum)
 	float rms = iRMSOutput;
 	float bass = texture(iAudioTexture, vec2(0.05, 0.25)).x;
 
@@ -23,7 +23,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 		// Add audio-driven distortion to the feedback loop
 		float distortion = (sin(z)+1.)*abs(sin(l*9.-z-z));
-		distortion *= (1.0 + rms * 10.5); // Amplify with RMS
+		distortion *= (1.0 + rms * 8.0); // Amplify with RMS (test change)
 
 		uv+=p/l*distortion;
 		c[i]=.01/length(mod(uv,1.)-.5);

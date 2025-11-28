@@ -1,3 +1,8 @@
+---
+name: glsl-shader
+description: Create audio-reactive GLSL visualizers for Bice-Box. Provides templates, audio uniforms (iRMSOutput, iRMSInput, iAudioTexture), coordinate patterns, and common shader functions.
+---
+
 # GLSL Shader Development
 
 Create audio-reactive GLSL visualizers for Bice-Box.

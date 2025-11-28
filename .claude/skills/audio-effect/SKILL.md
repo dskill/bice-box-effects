@@ -1,3 +1,8 @@
+---
+name: audio-effect
+description: Create standard SuperCollider audio effects for Bice-Box (delays, reverbs, filters, distortions). Provides templates, ControlSpecs, common patterns, and MCP workflow for safely creating/updating effects.
+---
+
 # Audio Effect Development
 
 Create standard SuperCollider audio effects for Bice-Box (delays, reverbs, filters, distortions, etc.).
