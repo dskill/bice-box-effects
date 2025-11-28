@@ -7,6 +7,7 @@
         drive: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
         gain: ControlSpec(0.0, 1.0, 'lin', 0, 0.8, "%"),
         tone: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%"),
+        feedback: ControlSpec(0.0, 0.95, 'lin', 0, 0.0, "%"),
         level: ControlSpec(0.0, 1.0, 'lin', 0, 0.7, "%"),
         mix: ControlSpec(0.0, 1.0, 'lin', 0, 1.0, "%")
     );
@@ -18,16 +19,25 @@
         var drive = \drive.kr(specs[\drive].default);
         var gain = \gain.kr(specs[\gain].default);
         var tone = \tone.kr(specs[\tone].default);
+        var feedback = \feedback.kr(specs[\feedback].default);
         var level = \level.kr(specs[\level].default);
         var mix = \mix.kr(specs[\mix].default);
 
         var input, preamp, clipped, filtered, wet, dry, output;
         var mono_for_analysis;
         var low_freq, high_freq;
+        var fb_sig;
 
         // Get input (stereo -> mono)
         input = In.ar(in_bus);
         dry = input;
+
+        // Feedback loop with local buffer (mono)
+        fb_sig = LocalIn.ar(1);
+        
+        // Convert stereo input to mono, add feedback
+        input = Mix.ar(input) * 0.5;
+        input = input + (fb_sig * feedback);
 
         // Pre-gain boost (emulate input gain stage)
         preamp = input * (1 + (gain * 20));
@@ -49,8 +59,11 @@
         // Output level control
         wet = filtered * level * 0.5;
 
-        // Mix wet/dry
-        output = (dry * (1 - mix)) + (wet * mix);
+        // Mix wet/dry (convert dry to mono first)
+        output = ((Mix.ar(dry) * 0.5) * (1 - mix)) + (wet * mix);
+
+        // Send feedback signal back to the beginning
+        LocalOut.ar(output);
 
         // Analysis output
         mono_for_analysis = output;
