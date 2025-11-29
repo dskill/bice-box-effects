@@ -680,64 +680,33 @@ s.waitForBoot{
 		try {
 			MIDIClient.init;
 			"MIDI Initialized.".postln;
+
+			// --- DEBUG LOGGING START ---
+			"--- MIDI SOURCES ---".postln;
+			MIDIClient.sources.do({ |src|
+				("UID: " ++ src.uid ++ " | Device: " ++ src.device ++ " | Name: " ++ src.name).postln;
+			});
+			"--- MIDI DESTINATIONS ---".postln;
+			MIDIClient.destinations.do({ |dst|
+				("UID: " ++ dst.uid ++ " | Device: " ++ dst.device ++ " | Name: " ++ dst.name).postln;
+			});
+			MIDIFunc.trace(false); 
+			"--- DEBUG LOGGING ENABLED (Trace DISABLED to reduce noise) ---".postln;
+			// --- DEBUG LOGGING END ---
+
 			~hasMIDI = MIDIClient.sources.notEmpty;
 
 			if(~hasMIDI, {
 				// Log the list of connected MIDI sources
 				("MIDI Sources: " ++ MIDIClient.sources).postln;
 
-				// Connect to hardware MIDI inputs, avoiding problematic system devices
-				MIDIClient.sources.do({ |src, i|
-					var deviceName = src.device.asString;
-					var sourceName = src.name.asString;
-					// Examining MIDI source
-					
-					// Skip problematic system devices that cause "Device or resource busy" errors
-					if (deviceName.contains("System") or: 
-						deviceName.contains("SuperCollider") or:
-						sourceName.contains("Timer") or:
-						sourceName.contains("Announce") or:
-						sourceName.contains("out")) {
-													// Skipping system/virtual device
-					} {
-						// Connect to pisound (Raspberry Pi) or common MIDI controllers, but avoid Midi Through if busy
-						if (deviceName.contains("pisound") or: 
-							deviceName.containsi("launchkey") or: 
-							(deviceName.containsi("midi") and: deviceName.contains("Through").not) or:
-							deviceName.containsi("keyboard") or:
-							deviceName.containsi("roto") or: // Added Roto explicitly
-							deviceName.containsi("controller")) {
-							
-															// Attempting MIDI connection
-							
-							// Try different connection methods, but avoid connectAll on Pi
-							try {
-								// Method 1: Connect using port 0 and device UID
-								MIDIIn.connect(0, src.uid);
-																		// Successfully connected to MIDI device
-							} { |error1|
-																		// Connection method 1 failed, trying method 2
-								try {
-									// Method 2: Connect using device index
-									MIDIIn.connect(device: i);
-																				// Successfully connected via method 2
-								} { |error2|
-																				// Method 2 failed, trying method 3
-									try {
-										// Method 3: Connect using just the UID
-										MIDIIn.connect(src.uid);
-																						// Successfully connected via method 3
-									} { |error3|
-																						// All MIDI connection methods failed
-									}
-								}
-							};
-						} {
-							// Skipping non-target device
-						}
-					}
-				});
-				"MIDI connection setup complete.".postln;
+				// NOTE: We do NOT explicitly call MIDIIn.connect() here.
+				// On Linux (Pi), JACK or amidiminder typically manages MIDI routing.
+				// They connect hardware MIDI ports to SuperCollider automatically.
+				// Calling MIDIIn.connect() when a connection already exists causes
+				// "Device or resource busy" errors. By skipping explicit connections,
+				// we let the system handle routing and just create our handlers.
+				"MIDI: Relying on system (JACK/amidiminder) for MIDI routing.".postln;
 
 				// ROTO CONTROL SETUP
 				~rotoDest = MIDIClient.destinations.detect { |d| d.device.containsi("Roto") };
@@ -799,15 +768,13 @@ s.waitForBoot{
 					~rotoOut.latency = 0; // Ensure immediate transmission
 					~hasRoto = true;
 					
-					// TARGETED CONNECTION
-					if (~rotoSrc.notNil) {
-						("Connecting specifically to Roto Source: " ++ ~rotoSrc).postln;
-						MIDIIn.connect(0, ~rotoSrc.uid);
-					} {
-						"WARNING: Roto Destination found but Source NOT found!".postln;
-						"Falling back to connectAll...".postln;
-						MIDIIn.connectAll;
-					};
+				// Roto input - no explicit connection needed (JACK/amidiminder handles it)
+				if (~rotoSrc.notNil) {
+					("Roto Source available: " ++ ~rotoSrc).postln;
+					"Roto MIDI input ready (routed by system).".postln;
+				} {
+					"WARNING: Roto Destination found but Source NOT found!".postln;
+				};
 
 					// Roto Handshake Loop
 					fork {
@@ -949,24 +916,29 @@ s.waitForBoot{
 				if (~effect.notNil and: {~currentSynthNumVoices > 0}) {
 					// --- POLYPHONIC LOGIC ---
 					
-					// Check if this note is already allocated (re-trigger)
-					if (~voice_allocator[num].notNil) {
-						voiceIndex = ~voice_allocator[num];
-						~voice_gates[voiceIndex] = 0; // Quick gate off for re-trigger
+				// Check if this note is already allocated (re-trigger)
+				if (~voice_allocator[num].notNil) {
+					voiceIndex = ~voice_allocator[num];
+					// Set gate off immediately, then use fork to wait and re-trigger
+					~voice_gates[voiceIndex] = 0;
+					~updateVoiceArrays.value; // Send gate-off immediately
+					// Use fork for the delayed re-trigger since .wait requires a Routine
+					fork {
 						0.01.wait; // Brief pause
 						~voice_gates[voiceIndex] = 1; // Gate back on
 						~voice_amps[voiceIndex] = vel / 127;
-					} {
-						// Allocate a new voice
-						voiceIndex = ~findFreeVoice.value;
-						~voice_allocator[num] = voiceIndex;
-						~voice_states[voiceIndex] = \active;
-						~voice_freqs[voiceIndex] = num.midicps;
-						~voice_gates[voiceIndex] = 1;
-						~voice_amps[voiceIndex] = vel / 127;
+						~updateVoiceArrays.value; // Send gate-on after delay
 					};
-					
+				} {
+					// Allocate a new voice
+					voiceIndex = ~findFreeVoice.value;
+					~voice_allocator[num] = voiceIndex;
+					~voice_states[voiceIndex] = \active;
+					~voice_freqs[voiceIndex] = num.midicps;
+					~voice_gates[voiceIndex] = 1;
+					~voice_amps[voiceIndex] = vel / 127;
 					~updateVoiceArrays.value; // Send updates to the synth
+				};
 				} {
 					// No MIDI-enabled effect synth available
 				};
@@ -1001,14 +973,13 @@ s.waitForBoot{
 		
 		// MIDI CC Handler for parameter control (supports both 7-bit and 14-bit)
 		if(~midi_cc_func.notNil, { ~midi_cc_func.free });
+		"Creating MIDI CC Handler...".postln;
 		~midi_cc_func = MIDIFunc.cc({ |val, ccNum, chan, src|
 			var paramIndex, normalizedValue, paramName, paramSpec, is14Bit = false, finalValue;
 			
-			// Debug logging for ALL MIDI CC
-			// ("MIDI CC Received: Channel " ++ chan ++ ", CC " ++ ccNum ++ ", Value " ++ val).postln;
-			
-			// MIDI CC processing (debug logging removed for performance)
-			
+			// DEBUG: Confirm handler is running
+			// ("CC Handler: ch=" ++ chan ++ " cc=" ++ ccNum ++ " val=" ++ val).postln;
+
 			// Handle CC 117 for push-to-talk functionality
 			if (chan == 15 and: { ccNum == 117 }) { // Channel 16 (15 in SC) Controller 117
 				// Send OSC message to Electron for push-to-talk control
@@ -1247,6 +1218,7 @@ s.waitForBoot{
 						}
 					} {
 						// ("MIDI CC: No active effect to control").postln;
+						("MIDI CC IGNORED: ~effect is " ++ if(~effect.isNil, "NIL", "OK") ++ ", ~effectParameterSpecs is " ++ if(~effectParameterSpecs.isNil, "NIL", "OK")).postln;
 					}
 				}
 			});
@@ -1256,8 +1228,8 @@ s.waitForBoot{
 		});
 	} { |error|
 		("MIDI Setup Failed: " ++ error.errorString).postln;
-		"Continuing boot without MIDI.".postln;
-		~hasMIDI = false; // Ensure ~hasMIDI is false if setup fails
+		"Continuing boot - attempting to register MIDI handlers anyway...".postln;
+		// ~hasMIDI = false; // DON'T DISABLE MIDI - Handlers might still work if connections exist at OS level!
 	};
 	// MIDI SETUP END
 
