@@ -1,4 +1,5 @@
 // shader: neon_geometrics
+// category: Synth
 
 (
     var defName = \neon_geometrics;

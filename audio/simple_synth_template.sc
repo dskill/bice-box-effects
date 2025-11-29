@@ -1,5 +1,6 @@
 // Simple polyphonic synthesizer template
 // This demonstrates how easy it is to create new polyphonic effects
+// category: Synth
 
 (
     var defName = \simple_synth_template;

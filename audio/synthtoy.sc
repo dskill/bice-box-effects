@@ -1,4 +1,5 @@
 // shader: fractal_waves
+// category: Synth
 
 (
     var defName = \synthtoy;

@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \satanic_organ;
     var numVoices = 8; // Polyphonic MIDI voices
