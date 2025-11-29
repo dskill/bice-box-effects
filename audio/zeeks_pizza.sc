@@ -1,3 +1,4 @@
+// category: Experimental
 // Pizza Phaser Effect
 // Combines phaser with amplitude modulation for a "hungry to full" cycle effect
 (

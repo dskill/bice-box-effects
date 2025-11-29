@@ -1,3 +1,4 @@
+// category: Modulation
 (
     var defName = \phaser_2d;
     var specs = (

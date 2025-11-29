@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Delay & Reverb
 (
     var defName = \granular_delay;
     var specs = (

@@ -1,4 +1,5 @@
 // shader: scope
+// category: Modulation
 (
     var defName = \flanger;
     var specs = (

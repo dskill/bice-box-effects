@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Modulation
 (
     var defName = \tremolo;
     var specs = (

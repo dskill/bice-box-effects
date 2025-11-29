@@ -1,4 +1,5 @@
 // shader: neon_love
+// category: Experimental
 (
     var defName = \neon_love;
     var specs = (

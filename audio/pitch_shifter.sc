@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Pitch
 (
     var defName = \pitch_shifter;
     var specs = (

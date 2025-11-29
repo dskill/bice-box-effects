@@ -1,4 +1,5 @@
 // shader: curling_smoke
+// category: Experimental
 (
     var defName = \flames;
     var specs = (

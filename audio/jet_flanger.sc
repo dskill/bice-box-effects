@@ -1,4 +1,5 @@
 // shader: radial_fft_line
+// category: Modulation
 // Jet Flanger - Extreme 90s jet flanger effect
 // Inspired by classic through-zero flanging with dramatic swooshes
 (

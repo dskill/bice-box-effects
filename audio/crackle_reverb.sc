@@ -1,4 +1,5 @@
 // shader: outrun
+// category: Delay & Reverb
 (
     var defName = \crackle_reverb;
     var specs = (

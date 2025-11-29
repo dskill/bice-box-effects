@@ -1,4 +1,5 @@
 // shader: moebius
+// category: Filter
 
 (
     var defName = \bands;

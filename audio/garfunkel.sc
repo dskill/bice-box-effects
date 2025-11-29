@@ -1,4 +1,5 @@
 // shader: scope
+// category: Experimental
 (
     var defName = \garfunkel;
     var specs = (

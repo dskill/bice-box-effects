@@ -1,4 +1,5 @@
 // shader: fire3d
+// category: Distortion
 
 (
     var defName = \triangle_distortion;

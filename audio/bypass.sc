@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Utility
 (
     var defName = \bypass;
     var specs = (

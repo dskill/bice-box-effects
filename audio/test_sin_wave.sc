@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Utility
 
 (
     var defName = \test_sin_wave;

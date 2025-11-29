@@ -1,4 +1,5 @@
 // shader: skull
+// category: Distortion
 
 (
     var defName = \bit_crusher;

@@ -1,4 +1,5 @@
 // shader: palpatine
+// category: Experimental
 (
     var defName = \palpatine;
     var specs = (

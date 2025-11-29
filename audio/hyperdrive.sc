@@ -1,4 +1,5 @@
 // shader: silexar_ascii
+// category: Distortion
 (
     var defName = \hyperdrive;
     var specs = (

@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Delay & Reverb
 (
     var defName = \spectral_freezing_delay;
     var specs = (

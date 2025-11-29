@@ -1,4 +1,5 @@
 // shader: fft_tunnel
+// category: Filter
 (
     var defName = \autowah;
     var specs = (

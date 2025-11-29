@@ -1,4 +1,5 @@
 // shader: kaleidoscope
+// category: Experimental
 (
     var defName = \kaleidoscope;
     var specs = (

@@ -1,4 +1,5 @@
 // shader: radial_fft_line
+// category: Delay & Reverb
 (
     var defName = \ping_pong_delay;
     var specs = (

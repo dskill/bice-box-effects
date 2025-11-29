@@ -1,3 +1,4 @@
+// category: Modulation
 (
     var defName = \electremolo;
     var specs = (

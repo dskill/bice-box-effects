@@ -1,4 +1,5 @@
 // shader: outrun
+// category: Experimental
 (
     var defName = \mbv;
     var specs = (

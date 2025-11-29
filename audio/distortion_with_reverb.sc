@@ -1,4 +1,5 @@
 // shader: skull
+// category: Delay & Reverb
 
 (
     var defName = \distortion_with_reverb;

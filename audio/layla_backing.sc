@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Experimental
 (
     var defName = \layla_backing;
     
