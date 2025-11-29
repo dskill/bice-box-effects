@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \drews_dark_synth;
     var numVoices = 8;

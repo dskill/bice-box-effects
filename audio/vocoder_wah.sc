@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Experimental
 (
     var defName = \vocoder_wah;
     var specs = (

@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Experimental
 (
     var defName = \guitar_to_midi;
     var specs = (

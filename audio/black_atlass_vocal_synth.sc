@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \black_atlass_vocal_synth;
     var numVoices = 8;

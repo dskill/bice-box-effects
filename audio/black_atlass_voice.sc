@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Experimental
 (
     var defName = \black_atlass_voice;
     var specs = (

@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \luscious_synth;
     var numVoices = 8;

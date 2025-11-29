@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \art_decade_synth;
     var numVoices = 8;

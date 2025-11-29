@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \the_ascent_sound;
     var numVoices = 12;

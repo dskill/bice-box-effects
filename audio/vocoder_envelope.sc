@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \vocoder_envelope;
     var numVoices = 8;

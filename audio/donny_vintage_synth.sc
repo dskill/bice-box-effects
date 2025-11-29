@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \donny_vintage_synth;
     var numVoices = 8;

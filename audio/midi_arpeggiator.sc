@@ -1,4 +1,5 @@
 // shader: oscilloscope
+// category: Synth
 (
     var defName = \midi_arpeggiator;
     var numVoices = 8; // Maximum polyphony for key tracking
