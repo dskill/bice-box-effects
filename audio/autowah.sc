@@ -9,9 +9,9 @@
         max_freq: ControlSpec(500, 8000, 'exp', 0, 2000, "Hz"),
         octave_mult: ControlSpec(0.25, 4.0, 'exp', 0, 1.0, "x"),
         resonance: ControlSpec(0.1, 0.98, 'lin', 0, 0.7, "%"),
-        attack: ControlSpec(0.001, 0.2, 'exp', 0, 0.01, "s"),
+        attack: ControlSpec(0.001, 0.5, 'exp', 0, 0.01, "s"),
         decay: ControlSpec(0.05, 4.0, 'exp', 0, 0.3, "s"),
-        lfo_rate: ControlSpec(0.0, 10.0, 'exp', 0, 0.0, "Hz"),
+        lfo_rate: ControlSpec(0.0, 10.0, 'lin', 0, 0.0, "Hz"),
         lfo_depth: ControlSpec(0.0, 0.5, 'lin', 0, 0.0, "%"),
         saturation: ControlSpec(0.0, 2.0, 'lin', 0, 0.0, "x"),
         mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.8, "%")

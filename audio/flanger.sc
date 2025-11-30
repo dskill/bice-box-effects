@@ -1,13 +1,13 @@
-// shader: scope
+// shader: fireflow
 // category: Modulation
 (
     var defName = \flanger;
     var specs = (
-        rate: ControlSpec(0.01, 0.1, 'exp', 0, 0.5, "Hz"),
-        depth: ControlSpec(0.0001, 0.01, 'lin', 0, 0.002, "s"),
-        feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.5, "%"),
-        center: ControlSpec(0.0001, 0.02, 'lin', 0, 0.005, "s"),
-        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.5, "%")
+        rate: ControlSpec(0.01, 0.1, 'exp', 0, 0.06, "Hz"),
+        depth: ControlSpec(0.0001, 0.01, 'lin', 0, 0.01, "s"),
+        feedback: ControlSpec(0.0, 0.99, 'lin', 0, 0.86, "%"),
+        center: ControlSpec(0.0001, 0.02, 'lin', 0, 0.00, "s"),
+        mix: ControlSpec(0.0, 1.0, 'lin', 0, 0.97, "%")
     );
 
     var def = SynthDef(defName, {
