@@ -768,10 +768,22 @@ s.waitForBoot{
 					~rotoOut.latency = 0; // Ensure immediate transmission
 					~hasRoto = true;
 					
-				// Roto input - no explicit connection needed (JACK/amidiminder handles it)
+				// Roto input connection
 				if (~rotoSrc.notNil) {
 					("Roto Source available: " ++ ~rotoSrc).postln;
-					"Roto MIDI input ready (routed by system).".postln;
+					// On macOS, we need explicit MIDI connections.
+					// On Linux (Pi), JACK/amidiminder handles routing automatically.
+					if (thisProcess.platform.name == \osx) {
+						"macOS detected - connecting to Roto MIDI input explicitly.".postln;
+						try {
+							MIDIIn.connect(0, ~rotoSrc.uid);
+							"Roto MIDI input connected successfully.".postln;
+						} { |err|
+							("Roto connection failed: " ++ err.errorString).postln;
+						};
+					} {
+						"Linux detected - relying on system MIDI routing.".postln;
+					};
 				} {
 					"WARNING: Roto Destination found but Source NOT found!".postln;
 				};
