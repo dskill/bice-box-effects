@@ -1,138 +1,184 @@
-// resolution: 1.0
+// resolution: 0.5
 
 #define PI 3.14159265359
-#define SAMPLERATE 48000.0
-#define FFT_ANALYSIS_SIZE_SC 2048.0
-#define NUM_FFT_BINS_IN_TEXTURE 512.0
+#define TAU 6.28318530718
 
-#define A4_FREQ 440.0
-#define A4_MIDI_NOTE 69.0
-#define NUM_SEMITONES 12.0
-
-#define START_MIDI_NOTE_DISPLAY 28.0 // E1
-#define NUM_OCTAVES_DISPLAY 6.0 // Total octaves the spiral will represent
-
-// Colors
-const vec3 DARK_CYAN = vec3(0.0, 0.145, 0.545);
-const vec3 BRIGHT_PURPLE = vec3(1.025, 0.704, 1.0);
-const vec3 BACKGROUND_COLOR = vec3(0.02, 0.02, 0.03);
-
-float midiToFreq(float midiNote) {
-    return A4_FREQ * pow(2.0, (midiNote - A4_MIDI_NOTE) / NUM_SEMITONES);
+// Audio texture helpers
+float getBass() {
+    return texture(iAudioTexture, vec2(0.05, 0.25)).x;
 }
 
-// Helper to get normalized (0-1) FFT magnitude for a given MIDI note
-float getNormalizedFFTForMidiNote(float midiNote, float sc_bin_freq_step) {
-    float freq = midiToFreq(midiNote);
-    float target_sc_bin_float = freq / sc_bin_freq_step;
-    float fft_mag_log10 = 0.0; // Default to silence
-
-    if (target_sc_bin_float >= 0.0 && target_sc_bin_float < NUM_FFT_BINS_IN_TEXTURE) {
-        float u_tex_coord = target_sc_bin_float / NUM_FFT_BINS_IN_TEXTURE;
-        // FFT data in iAudioTexture is already log10 scaled, typically in a range like -2 to 1
-        fft_mag_log10 = texture(iAudioTexture, vec2(u_tex_coord, 0.25)).x;
-    }
-    // Normalize the log10 magnitude (e.g., -2 to 1) to a 0-1 range
-    return clamp((fft_mag_log10), 0.0, 1.0);
+float getMid() {
+    return texture(iAudioTexture, vec2(0.3, 0.25)).x;
 }
 
-float generateRadialFFT(vec2 uv) {
-    float min_spiral_radius = 0.05; // Visual minimum radius of the spiral
-    float max_spiral_radius = 0.45; // Visual maximum radius of the spiral
-
-    float pixel_angle = atan(uv.y, uv.x); // -PI to PI
-    float pixel_radius = length(uv);
-
-    // Map pixel coordinates to spiral parameter t_spiral (0 to 1)
-    float t_radius_component = clamp((pixel_radius - min_spiral_radius) / (max_spiral_radius - min_spiral_radius), 0.0, 1.0);
-    float t_angle_component = (mod(pixel_angle + PI * 0.5 + PI * 2.0, PI * 2.0)) / (PI * 2.0);
-    float t_spiral = t_radius_component + (t_angle_component / NUM_OCTAVES_DISPLAY);
-
-    // Find best t_spiral for current pixel
-    float estimated_t = -1.0;
-    float smallest_dist_sq = 1e10;
-
-    for(float octave = 0.0; octave < NUM_OCTAVES_DISPLAY; octave += 1.0) {
-        float angle_offset_for_octave = octave * 2.0 * PI;
-        float target_total_angle = mod(pixel_angle + PI*0.5 + PI*2.0, PI*2.0) + angle_offset_for_octave;
-        
-        float t_candidate = target_total_angle / (NUM_OCTAVES_DISPLAY * 2.0 * PI);
-        t_candidate = clamp(t_candidate, 0.0, 1.0);
-
-        float ideal_radius_for_t_candidate = mix(min_spiral_radius, max_spiral_radius, t_candidate);
-        float dist_sq = pow(pixel_radius - ideal_radius_for_t_candidate, 2.0);
-        
-        if(dist_sq < smallest_dist_sq) {
-            smallest_dist_sq = dist_sq;
-            estimated_t = t_candidate;
-        }
-    }
-    
-    if (estimated_t >= 0.0) {
-        float current_midi_note = START_MIDI_NOTE_DISPLAY + estimated_t * (NUM_OCTAVES_DISPLAY * NUM_SEMITONES - 1.0);
-        float sc_bin_freq_step = SAMPLERATE / FFT_ANALYSIS_SIZE_SC;
-        float fft_intensity = getNormalizedFFTForMidiNote(current_midi_note, sc_bin_freq_step);
-
-        float ideal_radius_at_t = mix(min_spiral_radius, max_spiral_radius, estimated_t);
-        float displacement_scale = 0.03;
-        float perturbed_radius = ideal_radius_at_t + (fft_intensity - 0.5) * 2.0 * displacement_scale;
-
-        float line_thickness = 0.006 + fft_intensity * 0.01;
-        float radial_distance_to_line = abs(pixel_radius - perturbed_radius);
-        float line_sdf_value = smoothstep(line_thickness, line_thickness * 0.3, radial_distance_to_line);
-
-        if (line_sdf_value > 0.0) {
-            return line_sdf_value * (0.7 + fft_intensity * 0.3);
-        }
-    }
-    
-    return 0.0;
+float getHigh() {
+    return texture(iAudioTexture, vec2(0.7, 0.25)).x;
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+// FFT data: x = frequency bin (0-1 maps to 512 bins, low to high freq)
+// Located at y = 0.25
+float getFFT(float freqX) {
+    return texture(iAudioTexture, vec2(clamp(freqX, 0.0, 1.0), 0.25)).x;
+}
+
+// Waveform data: x = time sample (0-1 maps to 512 samples)
+// Located at y = 0.75 - this wraps naturally around a circle!
+float getWaveform(float timeX) {
+    return texture(iAudioTexture, vec2(timeX, 0.75)).x;
+}
+
+// Smoothed waveform for ring displacement
+float getWaveformSmooth(float x) {
+    float width = 0.02;
+    float sum = 0.0;
+    sum += getWaveform(mod(x - width, 1.0)) * 0.25;
+    sum += getWaveform(x) * 0.5;
+    sum += getWaveform(mod(x + width, 1.0)) * 0.25;
+    return sum;
+}
+
+mat2 rot(float a) {
+    float c = cos(a), s = sin(a);
+    return mat2(c, -s, s, c);
+}
+
+// Smooth noise for tunnel distortion
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(hash(i), hash(i + vec2(1, 0)), f.x),
+        mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x),
+        f.y
+    );
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
-    vec2 texel = 1.0 / iResolution.xy;
-    texel *= 2.0;
-    
-    // Center coordinates for zoom effect
-    vec2 center = vec2(0.5, 0.5);
-    vec2 centered_uv = uv - center;
-    
-    // Zoom factor - slowly zoom into the center
-    float zoom_speed = 0.997; // Slightly less than 1.0 for inward zoom
-    vec2 zoomed_uv = centered_uv * zoom_speed + center;
-    
-    // Sample previous frame with zoom effect
-    vec4 prev = texture(iChannel0, zoomed_uv);
-    
-    // Blur/diffusion sampling from neighbors
-    vec4 prevUp = texture(iChannel0, zoomed_uv - vec2(0.0, texel.y * 2.0));
-    vec4 prevDown = texture(iChannel0, zoomed_uv + vec2(0.0, texel.y * 2.0));
-    vec4 prevLeft = texture(iChannel0, zoomed_uv - vec2(texel.x * 2.0, 0.0));
-    vec4 prevRight = texture(iChannel0, zoomed_uv + vec2(texel.x * 2.0, 0.0));
-    
-    // Accumulation with blur
-    vec4 accumulation = (prevUp + prevDown + prevLeft + prevRight) * 0.0 + prev * .98;
-    accumulation *= 0.995; // Slight decay to prevent infinite buildup
-    
-    // Generate new FFT radial content
-    vec2 uv_center_offset = fragCoord.xy - 0.5 * iResolution.xy;
-    vec2 uv_centered = uv_center_offset / iResolution.y;
-    
-    float fft_line = generateRadialFFT(uv_centered);
-    
-    // Color the FFT line
-    vec3 fft_color = mix(DARK_CYAN, BRIGHT_PURPLE, fft_line) * fft_line;
-    
-    // Combine accumulation with new content
-    vec3 final_color = accumulation.rgb + fft_color;
-    
-    // Add subtle vignette to enhance tunnel effect
-    //vec2 vignette_uv = abs(uv - 0.5);
-    //float vignette = 1.0 - smoothstep(0.3, 0.7, length(vignette_uv));
-    //final_color *= (0.6 + 0.4 * vignette);
+    vec2 p = (fragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
 
-    // Apply tanh tone mapping to prevent overexposure
-    
-    fragColor = vec4(final_color, 1.0);
-} 
+    // Audio values
+    float bass = getBass();
+    float mid = getMid();
+    float high = getHigh();
+    float rms = iRMSOutput;
+
+    // Time with audio influence
+    float t = iRMSTime * 0.3;
+
+    // Convert to polar coordinates
+    float angle = atan(p.y, p.x);
+    float radius = length(p);
+
+    // Tunnel zoom effect - pull toward center over time
+    vec2 center = vec2(0.5);
+    vec2 centered_uv = uv - center;
+    float zoom = 0.985 - rms * 0.01; // Faster zoom with louder audio
+    vec2 zoomed_uv = centered_uv * zoom + center;
+
+    // Sample previous frame with zoom
+    vec4 prev = texture(iChannel0, zoomed_uv);
+
+    // Rotation based on audio
+    float rotAmount = t * 0.2 + bass * 0.3;
+    p *= rot(rotAmount);
+    angle = atan(p.y, p.x);
+
+    // Map angle to waveform sample position (0 to 1)
+    // Angle goes from -PI to PI, we want 0 to 1
+    float wavePos = (angle + PI) / TAU;
+
+    // Get waveform value for this angle - this creates the circular waveform display
+    float wave = getWaveformSmooth(wavePos);
+    // Waveform is 0-1, center it around 0.5 and scale
+    float waveDisplacement = (wave - 0.5) * 2.0; // Now -1 to 1
+
+    // Multiple concentric rings displaced by waveform
+    float rings = 0.0;
+    float ringColorMix = 0.0;
+    for (float i = 0.0; i < 6.0; i++) {
+        float ringRadius = 0.06 + i * 0.07;
+
+        // Each ring samples waveform with slight time offset for ripple effect
+        float waveOffset = getWaveformSmooth(mod(wavePos + i * 0.05, 1.0));
+        float waveDisp = (waveOffset - 0.5) * 2.0;
+
+        // Perturb ring radius by waveform
+        float displacement = 0.04 + i * 0.01; // Outer rings displace more
+        float perturbedRadius = ringRadius + waveDisp * displacement;
+
+        // Breathing effect - rings slightly pulse
+        perturbedRadius += sin(t * 3.0 + i * 1.2) * 0.006 * (1.0 + bass);
+
+        // Ring width based on FFT bass for thickness variation
+        float ringWidth = 0.010 + bass * 0.015;
+
+        // Ring SDF with glow
+        float ring = abs(radius - perturbedRadius);
+        float ringIntensity = smoothstep(ringWidth, 0.0, ring);
+
+        // Add soft glow around each ring
+        ringIntensity += smoothstep(ringWidth * 4.0, 0.0, ring) * 0.2;
+
+        // Vary intensity per ring
+        rings += ringIntensity * (0.6 + i * 0.08);
+        ringColorMix += ringIntensity * i / 6.0;
+    }
+
+    // Tunnel walls - radial lines that create depth illusion
+    float segments = 16.0;
+    float segmentAngle = mod(angle * segments / TAU + t * 1.5, 1.0);
+    float tunnelLines = smoothstep(0.42, 0.5, segmentAngle) * smoothstep(0.58, 0.5, segmentAngle);
+    tunnelLines *= smoothstep(0.5, 0.08, radius); // Fade toward center
+    tunnelLines *= 0.2 + high * 0.5;
+
+    // Add secondary spinning lines going opposite direction
+    float segments2 = 8.0;
+    float segmentAngle2 = mod(angle * segments2 / TAU - t * 0.8, 1.0);
+    float tunnelLines2 = smoothstep(0.35, 0.5, segmentAngle2) * smoothstep(0.65, 0.5, segmentAngle2);
+    tunnelLines2 *= smoothstep(0.45, 0.15, radius);
+    tunnelLines2 *= 0.15 + mid * 0.3;
+
+    // Color palette - shift with audio
+    vec3 col1 = vec3(0.1, 0.5, 1.0);   // Electric blue
+    vec3 col2 = vec3(1.0, 0.1, 0.6);   // Hot pink
+    vec3 col3 = vec3(0.0, 1.0, 0.7);   // Cyan
+    vec3 col4 = vec3(0.6, 0.2, 1.0);   // Purple
+
+    float colorShift = sin(t * 0.4 + bass * 2.0) * 0.5 + 0.5;
+    vec3 ringColor = mix(col1, col2, colorShift);
+    ringColor = mix(ringColor, col3, ringColorMix);
+    ringColor = mix(ringColor, col4, high * 0.5);
+
+    // Tunnel line colors - different for each layer
+    vec3 lineColor1 = mix(col3, col1, sin(angle * 2.0 + t) * 0.5 + 0.5);
+    vec3 lineColor2 = mix(col4, col2, cos(angle * 1.5 - t) * 0.5 + 0.5);
+
+    // Combine new elements
+    vec3 newColor = rings * ringColor * (1.2 + rms * 1.5);
+    newColor += tunnelLines * lineColor1 * 0.4;
+    newColor += tunnelLines2 * lineColor2 * 0.3;
+
+    // Center glow - pulsing with bass
+    float centerGlow = exp(-radius * 5.0) * (0.4 + bass * 0.6);
+    vec3 glowColor = mix(col2, col3, sin(t * 2.0) * 0.5 + 0.5);
+    newColor += centerGlow * glowColor;
+
+    // Outer edge subtle glow
+    float edgeGlow = smoothstep(0.3, 0.5, radius) * 0.1 * (1.0 + mid);
+    newColor += edgeGlow * col4;
+
+    // Decay previous frame
+    vec3 accumulated = prev.rgb * (0.92 + rms * 0.05);
+
+    // Combine
+    vec3 finalColor = accumulated + newColor;
+
+    fragColor = vec4(finalColor, 1.0);
+}
