@@ -1,5 +1,6 @@
 // shader: fft_tunnel
 // category: Modulation
+// description: Lush analog chorus with multi-voice LFO modulation
 // Analog Chorus - Lush 90s chorus ensemble
 // Inspired by classic Boss CE-2/CH-1 style chorus pedals
 (

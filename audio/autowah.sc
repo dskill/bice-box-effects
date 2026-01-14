@@ -1,5 +1,6 @@
 // shader: fft_tunnel
 // category: Filter
+// description: Envelope-driven wah with resonance, LFO, and drive
 (
     var defName = \autowah;
     var specs = (
@@ -79,8 +80,8 @@
         // Analysis output - the signal is already mono, so no Mix.ar needed
         mono_for_analysis = saturated;
         Out.ar(analysis_out_bus, mono_for_analysis);
-        
-        // Main output - duplicate the mono signal to create a stereo pair
+
+        // Main output - copy mono to stereo
         Out.ar(out, [saturated, saturated]);
     });
     def.add;
@@ -88,4 +89,4 @@
 
     // Register specs and create the synth
     ~setupEffect.value(defName, specs);
-) 
+)

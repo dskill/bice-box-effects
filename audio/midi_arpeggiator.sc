@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: MIDI arpeggiator synth with filter and envelope
 (
     var defName = \midi_arpeggiator;
     var numVoices = 8; // Maximum polyphony for key tracking

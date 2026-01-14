@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: Guitar-driven synth harmony with scale and envelope
 (
     var defName = \guitar_harmony_synth;
     var specs = (

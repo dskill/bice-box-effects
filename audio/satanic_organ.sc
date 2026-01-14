@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: MIDI
+// description: Polyphonic organ with drawbars and dark modulation
 (
     var defName = \satanic_organ;
     var numVoices = 8; // Polyphonic MIDI voices

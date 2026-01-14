@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Delay & Reverb
+// description: Granular delay with pitch shift and feedback
 (
     var defName = \granular_delay;
     var specs = (

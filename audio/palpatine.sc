@@ -1,5 +1,6 @@
 // shader: palpatine
 // category: Experimental
+// description: Aggressive drive with modulation, delay, and reverb
 (
     var defName = \palpatine;
     var specs = (

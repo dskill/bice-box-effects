@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Pitch
+// description: Pitch shifter with semitone control and mix
 (
     var defName = \pitch_shifter;
     var specs = (

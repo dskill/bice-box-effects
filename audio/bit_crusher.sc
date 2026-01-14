@@ -1,5 +1,6 @@
 // shader: skull
 // category: Distortion
+// description: Bitcrusher with sample-rate reduction, reverb, and delay
 
 (
     var defName = \bit_crusher;

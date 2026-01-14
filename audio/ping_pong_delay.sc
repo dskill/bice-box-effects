@@ -1,5 +1,6 @@
 // shader: radial_fft_line
 // category: Delay & Reverb
+// description: Stereo ping-pong delay with feedback and mix
 (
     var defName = \ping_pong_delay;
     var specs = (

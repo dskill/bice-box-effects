@@ -1,5 +1,6 @@
 // shader: moebius
 // category: Filter
+// description: Tone-shaped drive with multiband EQ shelves
 
 (
     var defName = \bands;
@@ -50,4 +51,4 @@
 
     // Register specs and create the synth
     ~setupEffect.value(defName, specs);
-) 
+)  

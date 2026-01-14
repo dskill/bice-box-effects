@@ -1,5 +1,6 @@
 // shader: radial_fft_line
 // category: Modulation
+// description: Jet flanger with through-zero sweep and feedback
 // Jet Flanger - Extreme 90s jet flanger effect
 // Inspired by classic through-zero flanging with dramatic swooshes
 (

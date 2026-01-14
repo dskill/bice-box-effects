@@ -1,5 +1,6 @@
 // shader: skull
 // category: Delay & Reverb
+// description: Drive and tone shaping into blended reverb
 
 (
     var defName = \distortion_with_reverb;

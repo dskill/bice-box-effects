@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Utility
+// description: Test sine wave generator with frequency and level
 
 (
     var defName = \test_sin_wave;

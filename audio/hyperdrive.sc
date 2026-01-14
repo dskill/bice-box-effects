@@ -1,5 +1,6 @@
 // shader: silexar_ascii
 // category: Distortion
+// description: High-gain drive with Moog filter tone shaping
 (
     var defName = \hyperdrive;
     var specs = (

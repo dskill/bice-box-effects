@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Modulation
+// description: Amplitude tremolo with rate and depth
 (
     var defName = \tremolo;
     var specs = (

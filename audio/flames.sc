@@ -1,5 +1,6 @@
 // shader: curling_smoke
 // category: Experimental
+// description: Distortion with resonant tone and flame modulation
 (
     var defName = \flames;
     var specs = (

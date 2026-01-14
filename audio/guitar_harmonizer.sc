@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: Pitch-tracked harmony generator with interval control
 (
     var defName = \guitar_harmonizer;
     var specs = (

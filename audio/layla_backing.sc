@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: Chordal backing generator with tempo and progression control
 (
     var defName = \layla_backing;
     

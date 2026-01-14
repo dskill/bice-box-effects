@@ -1,5 +1,6 @@
 // p5: tuner
 // category: Utility
+// description: Pitch tuner with smoothing and confidence
 (
     var defName = \tuner;
     var specs = (

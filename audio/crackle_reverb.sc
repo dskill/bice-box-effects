@@ -1,5 +1,6 @@
 // shader: outrun
 // category: Delay & Reverb
+// description: Reverb with crackle-distortion tail and room control
 (
     var defName = \crackle_reverb;
     var specs = (

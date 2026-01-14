@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Modulation
+// description: FFT bin shifter with feedback and mix
 (
     var defName = \vocorotator;
     var specs = (

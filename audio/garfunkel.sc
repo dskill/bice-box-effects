@@ -1,5 +1,6 @@
 // shader: scope
 // category: Experimental
+// description: Shimmering stereo verb with detune and doubling
 (
     var defName = \garfunkel;
     var specs = (

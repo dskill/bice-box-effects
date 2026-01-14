@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: Vocoder-style envelope follower with band controls
 (
     var defName = \vocoder_envelope;
     var numVoices = 8;

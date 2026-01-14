@@ -1,5 +1,6 @@
 // shader: grunge
 // category: Distortion
+// description: Heavy grunge distortion with tone and feedback
 // Grunge Distortion - Heavy 90s distortion pedal
 // Inspired by classic grunge tones with pre-gain, clipping, and tone shaping
 (

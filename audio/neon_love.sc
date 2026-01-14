@@ -1,5 +1,6 @@
 // shader: neon_love
 // category: Experimental
+// description: Dreamy reverb-flanger with intensity and speed
 (
     var defName = \neon_love;
     var specs = (

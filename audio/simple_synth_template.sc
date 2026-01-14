@@ -1,6 +1,8 @@
+// shader: oscilloscope
+// category: MIDI
+// description: Polyphonic synth template with ADSR and filter shaping
 // Simple polyphonic synthesizer template
 // This demonstrates how easy it is to create new polyphonic effects
-// category: MIDI
 
 (
     var defName = \simple_synth_template;
@@ -29,54 +31,52 @@
         var decay = \decay.kr(specs[\decay].default);
         var sustain = \sustain.kr(specs[\sustain].default);
         var release = \release.kr(specs[\release].default);
-        var voice_freqs = \voice_freqs.kr(Array.fill(numVoices, 440));
-        var voice_gates = \voice_gates.kr(Array.fill(numVoices, 0));
-        var voice_amps = \voice_amps.kr(Array.fill(numVoices, 0));
-        var voice_signals, mixed_voices, final_sig, mono_for_analysis;
         
-        // Generate all voices
-        voice_signals = Array.fill(numVoices, { |i|
-            var freq, gate, vel_amp;
-            var env, wave, voice_out;
+        var sig, env, gate, freq, vel, amp_vel;
+        var mono_for_analysis;
+        var voice, voices, out_sig;
+        
+        // MIDI setup
+        var note = \note.kr(60);  // MIDI note number
+        var velocity = \velocity.kr(64);  // MIDI velocity (0-127)
+        var gateTrig = \gate.kr(0);  // Gate signal (0 or 1)
 
-            // Access the parameters for the current voice
-            freq = voice_freqs[i];
-            gate = voice_gates[i];
-            vel_amp = voice_amps[i];
-            
-            // ADSR envelope using the parameters
-            env = EnvGen.ar(Env.adsr(attack, decay, sustain, release), gate);
-            
-            // Choose waveform based on wave_type parameter
-            wave = Select.ar(wave_type, [
-                SinOsc.ar(freq),    // 0 = sine
-                Saw.ar(freq),       // 1 = saw  
-                Pulse.ar(freq, 0.5) // 2 = square
-            ]);
-            
-            // Apply envelope and velocity
-            voice_out = wave * env * vel_amp;
-            voice_out;
-        });
-        
-        // Mix all voices together
-        mixed_voices = Mix.ar(voice_signals);
-        
+        // Convert MIDI note to frequency
+        freq = note.midicps;
+        amp_vel = velocity / 127;
+
+        // ADSR envelope
+        env = EnvGen.kr(
+            Env.adsr(attack, decay, sustain, release),
+            gateTrig,
+            doneAction: 0
+        );
+
+        // Oscillator based on wave type
+        sig = Select.ar(wave_type, [
+            SinOsc.ar(freq),
+            Saw.ar(freq),
+            Pulse.ar(freq, 0.5)
+        ]);
+
         // Apply filter
-        final_sig = RLPF.ar(mixed_voices, filter_freq, 0.3);
-        
-        // Apply global amplitude
-        final_sig = final_sig * amp;
-        
-        // Prepare mono signal for analysis
-        mono_for_analysis = final_sig;
+        sig = LPF.ar(sig, filter_freq);
 
-        Out.ar(out, [final_sig, final_sig]);
+        // Apply envelope and amplitude
+        sig = sig * env * amp * amp_vel;
+
+        // Output
+        out_sig = sig;  // Mono output
+        Out.ar(out, [out_sig, out_sig]);
+        
+        // Analysis output (mono)
+        mono_for_analysis = out_sig;
         Out.ar(analysis_out_bus, mono_for_analysis);
     });
-    def.add;
-    "Effect SynthDef 'simple_synth_template' (polyphonic) added".postln;
 
-    // Register specs and create the synth - NOTE THE \poly MIDI MODE!
-    ~setupEffect.value(defName, specs, [], numVoices);
-) 
+    def.add;
+    "Effect SynthDef 'simple_synth_template' added".postln;
+
+    // Create polyphonic synth using setupPolyEffect
+    ~setupPolyEffect.value(defName, specs, numVoices);
+)

@@ -1,5 +1,6 @@
 // shader: neon_geometrics
 // category: MIDI
+// description: Synthwave polysynth with chorus, delay, and glow
 
 (
     var defName = \neon_geometrics;

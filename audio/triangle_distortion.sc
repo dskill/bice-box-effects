@@ -1,5 +1,6 @@
 // shader: fire3d
 // category: Distortion
+// description: Triangle-wave drive with tone and mix
 
 (
     var defName = \triangle_distortion;

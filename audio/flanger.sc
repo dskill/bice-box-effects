@@ -1,5 +1,6 @@
 // shader: fireflow
 // category: Modulation
+// description: Classic flanger with feedback and LFO sweep
 (
     var defName = \flanger;
     var specs = (

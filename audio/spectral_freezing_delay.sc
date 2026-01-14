@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Delay & Reverb
+// description: Spectral freeze delay with feedback and pitch shift
 (
     var defName = \spectral_freezing_delay;
     var specs = (

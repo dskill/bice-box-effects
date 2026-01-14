@@ -1,5 +1,6 @@
 // shader: skull
 // category: Distortion
+// description: Baxandall EQ with tanh drive and blend control
 
 (
     var defName = \baxandall_distortion;

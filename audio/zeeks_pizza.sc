@@ -1,4 +1,6 @@
+// shader: oscilloscope
 // category: Experimental
+// description: Phaser and AM blend for a hungry-to-full cycle
 // Pizza Phaser Effect
 // Combines phaser with amplitude modulation for a "hungry to full" cycle effect
 (
@@ -18,40 +20,43 @@
         var analysis_out_bus = \analysis_out_bus.kr;
         // Phaser parameters
         var rate = \rate.kr(specs[\rate].default); // Speed of phaser oscillation
-        var depth = \depth.kr(specs[\depth].default); // Depth of phaser effect
+        var depth = \depth.kr(specs[\depth].default); // Depth of phaser modulation
+        // Amplitude modulation parameters
+        var modRate = \modRate.kr(specs[\modRate].default); // Speed of amplitude modulation
+        var modDepth = \modDepth.kr(specs[\modDepth].default); // Depth of amplitude modulation
+        var mix = \mix.kr(specs[\mix].default); // Mix between dry and wet
+        
+        var sig, dry, phased, modulated, final, mono_for_analysis;
+        var phaser, lfo, modulator;
+        
+        // Input signal
+        sig = In.ar(in_bus); // Mono input
+        dry = sig;
+
+        // Phaser effect: modulated all-pass filters
+        lfo = SinOsc.kr(rate, 0).range(0.001, 0.01) * depth;
+        phaser = sig;
+        4.do({
+            phaser = AllpassC.ar(phaser, 0.01, lfo, 0.2);
+        });
+
         // Amplitude modulation
-        var modRate = \modRate.kr(specs[\modRate].default); // Speed of AM
-        var modDepth = \modDepth.kr(specs[\modDepth].default); // Depth of AM
-        // Mix
-        var mix = \mix.kr(specs[\mix].default);
+        modulator = SinOsc.kr(modRate, 0).range(1.0 - modDepth, 1.0 + modDepth);
+        modulated = phaser * modulator;
 
-        var input, numStages = 6, freq = 100, modPhase, phaser, output, mono_for_analysis;
-        
-        input = In.ar(in_bus); // Assuming mono input
-        
-        // Create phaser effect
-        modPhase = SinOsc.kr(rate, 0, depth * 800, 1000 + freq);
-        phaser = input;
-        numStages.do {
-            phaser = AllpassL.ar(phaser, 0.1, modPhase.reciprocal, 0);
-        };
-        
-        // Add amplitude modulation
-        output = phaser * (1 - (modDepth * SinOsc.kr(modRate)));
-        
-        // Mix dry and wet signals
-        output = (input * (1 - mix)) + (output * mix);
+        // Mix dry and wet
+        final = XFade2.ar(dry, modulated, mix * 2 - 1);
 
-        // Prepare mono signal for analysis
-        // Assuming 'output' is mono here
-        mono_for_analysis = output;
-          
-        Out.ar(out, [output, output]); // Output mono 'output' as stereo
+        // Analysis output
+        mono_for_analysis = final;
         Out.ar(analysis_out_bus, mono_for_analysis);
+
+        // Output stereo
+        Out.ar(out, [final, final]);
     });
     def.add;
     "Effect SynthDef 'zeeks_pizza' added".postln;
 
     // Register specs and create the synth
     ~setupEffect.value(defName, specs);
-) 
+)

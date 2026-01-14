@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: Pitch-tracked guitar arpeggiator with interval steps
 (
     var defName = \guitar_arpeggiator;
     var specs = (

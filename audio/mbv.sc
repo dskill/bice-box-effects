@@ -1,5 +1,6 @@
 // shader: outrun
 // category: Experimental
+// description: Shoegaze wash with reverse verb and pitch warble
 (
     var defName = \mbv;
     var specs = (

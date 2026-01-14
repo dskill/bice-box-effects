@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: Guitar pitch-to-MIDI tracker with gating
 (
     var defName = \guitar_to_midi;
     var specs = (
@@ -58,7 +59,7 @@
         
         // Detect note changes
         prev_midi_note = Delay1.kr(midi_note);
-        note_changed = (midi_note != prev_midi_note);
+        note_changed = Changed.kr(midi_note);
         
         // Create gate signal based on amplitude and pitch detection confidence
         gate_sig = (amplitude > gate_threshold) * hasFreq;
@@ -68,21 +69,24 @@
         
         // Send MIDI data when conditions are met
         SendReply.kr(
-            trigger: (note_changed * (retrigger_timer > retrigger_time) * gate_sig),
-            cmdName: '/guitar_midi_note_on',
-            values: [midi_note, (amplitude * 127).clip(1, 127)]
+            (note_changed * (retrigger_timer > retrigger_time) * gate_sig),
+            '/guitar_midi_note_on',
+            [midi_note, (amplitude * 127).clip(1, 127)]
         );
         
         // Send note off when amplitude drops
         SendReply.kr(
-            trigger: Trig1.kr((amplitude < (gate_threshold * 0.5)), 0.1),
-            cmdName: '/guitar_midi_note_off', 
-            values: [midi_note]
+            Trig1.kr((amplitude < (gate_threshold * 0.5)), 0.1),
+            '/guitar_midi_note_off',
+            [midi_note]
         );
         
         // Debug info
-        SendReply.kr(Impulse.kr(5), '/guitar_pitch_debug', 
-            [freq, hasFreq, amplitude, midi_note, gate_sig]);
+        SendReply.kr(
+            Impulse.kr(5),
+            '/guitar_pitch_debug',
+            [freq, hasFreq, amplitude, midi_note, gate_sig]
+        );
         
         // Analysis output (mono)
         mono_for_analysis = Mix.ar(sig);

@@ -1,5 +1,6 @@
 // shader: fractal_waves
 // category: MIDI
+// description: Polyphonic synth with wave mix, vibrato, and noise
 
 (
     var defName = \synthtoy;

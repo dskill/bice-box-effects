@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Experimental
+// description: Vocoder wah with envelope sweep and resonance
 (
     var defName = \vocoder_wah;
     var specs = (

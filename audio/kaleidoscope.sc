@@ -1,5 +1,6 @@
 // shader: kaleidoscope
 // category: Experimental
+// description: Shimmering delay with sparkles, rotation, and pitch shift
 (
     var defName = \kaleidoscope;
     var specs = (

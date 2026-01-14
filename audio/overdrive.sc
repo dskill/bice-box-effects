@@ -1,5 +1,6 @@
 // shader: skull
 // category: Distortion
+// description: Classic overdrive with tone and mix
 
 (
     var defName = \overdrive;

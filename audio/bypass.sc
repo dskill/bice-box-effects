@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Utility
+// description: Clean passthrough with gain trim
 (
     var defName = \bypass;
     var specs = (
