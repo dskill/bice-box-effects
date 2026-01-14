@@ -39,4 +39,4 @@ Then EXIT immediately. One effect per session.
 
 ## Lessons Learned
 <!-- Add notes here when effects fail - these inform future iterations -->
-- MCP create_or_update_audio_effect tool has a race condition: SynthDef.add completes but server hasn't received the SynthDef yet when test runs. All tested effects compile successfully (tape_saturation, ring_modulator, simple_lpf) but fail the instantiation test. This prevents file saving. Need Drew to fix MCP timing issue or provide alternative save method.
+- (none yet)
