@@ -36,7 +36,9 @@ while true; do
     # Run Claude
     iteration=$((iteration + 1))
     echo "=== Iteration $iteration ===" | tee -a "$OUTPUT_LOG"
-    script -q -a "$OUTPUT_LOG" claude --max-turns 20 --verbose -p "$(cat RALPH_GOAL.md)"
+    claude --max-turns 20 -p "$(cat RALPH_GOAL.md)" --output-format stream-json 2>&1 | \
+        tee -a "$OUTPUT_LOG" | \
+        jq -r --unbuffered 'select(.type == "assistant") | .message.content[]? | select(.type == "text") | .text // empty' 2>/dev/null
 
     # Check for stagnation (no new effects after N iterations)
     current_effect_count=$(grep "Effects:" "$PROGRESS_FILE" 2>/dev/null | sed 's/Effects: \([0-9]*\).*/\1/' || echo 0)
