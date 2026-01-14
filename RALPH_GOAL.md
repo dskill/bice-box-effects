@@ -18,7 +18,10 @@ bypass, analog_chorus, autowah, bands, baxandall_distortion, bit_crusher, bitcru
 
 ## Generation Guidelines
 
-Use the `@audio-effect` skill to create effects. Push into NEW territory - ideas:
+**NOTE:** The Skill tool doesn't work in `-p` mode. Read the skill file directly:
+`.claude/skills/audio-effect/SKILL.md`
+
+Push into NEW territory - ideas:
 - Spectral mangling (convolution, vocoding, spectral delay)
 - Unusual modulation sources (chaos, envelope followers, pitch tracking)
 - Textural effects (noise gating, resonator banks, comb filters)
