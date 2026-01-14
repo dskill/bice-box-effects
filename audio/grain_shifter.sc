@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Pitch
+// description: Granular pitch shifter with textural glitch
 (
     var defName = \grain_shifter;
     var specs = (

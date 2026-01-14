@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Modulation
+// description: Frequency shifter with Hilbert transform and LFO
 (
     var defName = \freq_shifter;
     var specs = (

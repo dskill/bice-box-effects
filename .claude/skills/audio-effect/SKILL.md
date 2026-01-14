@@ -18,7 +18,8 @@ Create standard SuperCollider audio effects for Bice-Box (delays, reverbs, filte
 - **If faders don't appear in UI, check filename vs defName first!**
 
 ### Other Critical Rules
-- **First two lines must be comments**: `// shader: <name>` and `// category: <category>`
+- **First THREE lines must be comments**: `// shader: <name>`, `// category: <category>`, and `// description: <brief description>`
+- **Description must be a single line** (~60-80 chars): concise summary of what the effect does
 - **All variables in ONE block** after parameters - NO `var` declarations anywhere else
 - **Use specs defaults**: `\param.kr(specs[\param].default)`
 - **Mono-first**: Process in mono, output `[processed, processed]`
@@ -30,6 +31,7 @@ Create standard SuperCollider audio effects for Bice-Box (delays, reverbs, filte
 ```supercollider
 // shader: oscilloscope
 // category: Modulation
+// description: Brief single-line summary of what this effect does
 (
     var defName = \effect_name;  // ← MUST match filename exactly!
     var specs = (

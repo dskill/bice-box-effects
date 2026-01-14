@@ -1,5 +1,6 @@
 // shader: plasma_globe
 // category: Filter
+// description: Harmonic resonator bank with tuned comb filters
 (
     var defName = \resonator;
     var specs = (

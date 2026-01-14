@@ -1,5 +1,6 @@
 // shader: kaleidoscope
 // category: Modulation
+// description: Frequency-split tremolo with phase-shifted LFOs
 (
     var defName = \harmonic_tremolo;
     var specs = (

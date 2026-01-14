@@ -1,5 +1,6 @@
 // shader: oscilloscope
-// category: Filter
+// category: Dynamics
+// description: Three-band compressor with per-band dynamics
 (
     var defName = \multiband_comp;  // MUST match filename exactly!
     var specs = (

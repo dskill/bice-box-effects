@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Modulation
+// description: Envelope follower gate with rhythmic patterns
 (
     var defName = \env_gate;
     var specs = (

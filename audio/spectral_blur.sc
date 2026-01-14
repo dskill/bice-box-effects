@@ -1,5 +1,6 @@
 // shader: oscilloscope
-// category: Experimental
+// category: Spectral
+// description: FFT spectral mangler with freeze and blur
 (
     var defName = \spectral_blur;
     var specs = (

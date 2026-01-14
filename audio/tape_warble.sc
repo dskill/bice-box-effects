@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Modulation
+// description: Analog tape degradation with pitch warble and flutter
 (
     var defName = \tape_warble;
     var specs = (

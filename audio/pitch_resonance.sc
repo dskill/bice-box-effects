@@ -1,5 +1,6 @@
 // shader: oscilloscope
 // category: Filter
+// description: Pitch-tracked resonant filter bank
 (
     var defName = \pitch_resonance;
     var specs = (

@@ -1,5 +1,6 @@
 // shader: kaleidoscope
 // category: Delay & Reverb
+// description: Granular convolution reverb with shimmer
 (
     var defName = \spectral_convolve;
     var specs = (
