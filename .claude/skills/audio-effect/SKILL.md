@@ -18,6 +18,7 @@ Create standard SuperCollider audio effects for Bice-Box (delays, reverbs, filte
 - **If faders don't appear in UI, check filename vs defName first!**
 
 ### Other Critical Rules
+- **First two lines must be comments**: `// shader: <name>` and `// category: <category>`
 - **All variables in ONE block** after parameters - NO `var` declarations anywhere else
 - **Use specs defaults**: `\param.kr(specs[\param].default)`
 - **Mono-first**: Process in mono, output `[processed, processed]`
@@ -28,6 +29,7 @@ Create standard SuperCollider audio effects for Bice-Box (delays, reverbs, filte
 
 ```supercollider
 // shader: oscilloscope
+// category: Modulation
 (
     var defName = \effect_name;  // ← MUST match filename exactly!
     var specs = (
@@ -106,6 +108,29 @@ Examples:
 - `// p5: tuner` → loads `visual/tuner.js`
 
 **Note:** Visualizer names must be unique across both directories.
+
+## Category Comments
+
+Add a category comment on line 2 (after the visualizer comment) to organize effects in the UI:
+
+```supercollider
+// shader: oscilloscope
+// category: Distortion
+```
+
+**Example categories:**
+- **Distortion** - overdrive, fuzz, saturation, bitcrushing
+- **Modulation** - chorus, flanger, phaser, tremolo, vibrato
+- **Delay** - echo, ping-pong, tape delay, multi-tap
+- **Reverb** - room, hall, shimmer, ambient
+- **Filter** - wah, EQ, resonant filters
+- **Pitch** - harmonizer, octaver, pitch shifter
+- **Dynamics** - compressor, limiter, gate, expander
+- **Spectral** - vocoder, freeze, FFT effects
+- **Lo-Fi** - tape, vinyl, degradation, noise
+- **Utility** - tuner, bypass, test tones
+
+but feel free to create new categories as needed.
 
 ## MCP Workflow
 
