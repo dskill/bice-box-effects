@@ -36,10 +36,10 @@ while true; do
     # Run Claude
     iteration=$((iteration + 1))
     echo "=== Iteration $iteration ===" | tee -a "$OUTPUT_LOG"
-    claude --max-turns 20 --verbose -p "$(cat RALPH_GOAL.md)" 2>&1 | tee -a "$OUTPUT_LOG"
+    script -q -a "$OUTPUT_LOG" claude --max-turns 20 --verbose -p "$(cat RALPH_GOAL.md)"
 
     # Check for stagnation (no new effects after N iterations)
-    current_effect_count=$(grep -oP "Effects: \K\d+" "$PROGRESS_FILE" 2>/dev/null || echo 0)
+    current_effect_count=$(grep "Effects:" "$PROGRESS_FILE" 2>/dev/null | sed 's/Effects: \([0-9]*\).*/\1/' || echo 0)
     if [ "$current_effect_count" -eq "$last_effect_count" ]; then
         stagnation=$((stagnation + 1))
         echo "No progress. Stagnation count: $stagnation/$STAGNATION_LIMIT"
