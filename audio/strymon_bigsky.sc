@@ -1,4 +1,4 @@
-// shader: cloud diving
+// shader: grunge
 // category: Reverb
 // description: Strymon BigSky reverb with lush Cloud/Shimmer tails and huge space
 (
