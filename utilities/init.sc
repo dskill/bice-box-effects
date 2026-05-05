@@ -1164,9 +1164,20 @@ s.waitForBoot{
 
 			};
 			
+			// --- MIDI FIGHTER TWISTER (chan==0 / MIDI ch 1, CCs 0-15, 7-bit absolute) ---
+			// 4x4 = 16 encoders, factory default config. Encoder N maps to the Nth
+			// param of the loaded effect (alphabetical order — matches UI fader layout
+			// at line ~1183). Placed after Scheme 1/2 so overlapping CCs 1-8 are
+			// claimed by the Twister rather than the 14-bit BCR scheme.
+			if (chan == 0 and: { ccNum >= 0 and: { ccNum <= 15 } }) {
+				paramIndex = ccNum;
+				is14Bit = false;
+				normalizedValue = val / 127.0;
+			};
+
 			// Legacy 7-bit MIDI support removed for CC 21-28 (now used for 14-bit MSB)
 			// If you need 7-bit support, use a different CC range or configure your controller differently
-			
+
 			// Process parameter update for 14-bit controllers
 			if (normalizedValue.notNil) {
 					
